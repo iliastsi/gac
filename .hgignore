@@ -1,0 +1,8 @@
+# use global syntax
+syntax: glob
+
+*.hi
+*.o
+Lexer.hs
+*~
+*.tar.gz
