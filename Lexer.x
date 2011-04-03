@@ -24,7 +24,7 @@ tokens :-
 
 {
 
-data Token = T_Int Int
+data Token = T_Int Float
            | T_Plus
            | T_Minus
            | T_Mul
