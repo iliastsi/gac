@@ -7,10 +7,9 @@ import Lexer
 %tokentype { Token }
 %error { parseError }
 
-%right '+'
-%right '-'
-%right '*'
-%right '/'
+%left '+' '-'
+%left '*' '/'
+%nonassoc '(' ')'
 
 %token
   int   { T_Int $$ }
@@ -28,12 +27,8 @@ Exp :
     '(' Exp ')'       { $2 }
   | Exp '*' Exp       { $1 * $3 }
   | Exp '/' Exp       { $1 / $3 }
-  | Exp_              { $1 }
-
-Exp_ :
-    '(' Exp_ ')'      { $2 }
-  | Exp_ '+' Exp_     { $1 + $3 }
-  | Exp_ '-' Exp_     { $1 - $3 }
+  | Exp '+' Exp     { $1 + $3 }
+  | Exp '-' Exp     { $1 - $3 }
   | int               { $1 }
 
 
