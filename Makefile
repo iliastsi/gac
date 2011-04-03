@@ -1,8 +1,8 @@
 LEX = alex
 #LFLAGS = --ghc
-HFLAGS = -funbox-strict-fields
+HFLAGS = -funbox-strict-fields -fglasgow-exts
 YACC = happy
-YFLAGS = -i
+YFLAGS = -i -a -g -c
 
 SRC = Lexer Main Parser
 GEN = $(addsuffix .hs, Lexer Parser)
