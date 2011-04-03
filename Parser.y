@@ -6,6 +6,7 @@ import Lexer
 %name parser
 %tokentype { Token }
 %error { parseError }
+%monad { E } { thenE } { returnE }
 
 %left '+' '-'
 %left '*' '/'
@@ -24,17 +25,36 @@ import Lexer
 %%
 
 Exp :
-    '(' Exp ')'       { $2 }
-  | Exp '*' Exp       { $1 * $3 }
-  | Exp '/' Exp       { $1 / $3 }
+    '(' Exp ')'     {% returnE $2 }
+  | Exp '*' Exp     { $1 * $3 }
+  | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
-  | int               { $1 }
+  | int             { $1 }
 
 
 {
 
-parseError :: [Token] -> a
-parseError _ = error "Parse Error"
+data E a = Ok a | Failed String deriving (Show)
+
+thenE :: E a -> (a -> E b) -> E b
+m `thenE` k =
+  case m of
+    Ok a     -> k a
+    Failed e -> Failed e
+
+returnE :: a -> E a
+returnE a = Ok a
+
+failE :: String -> E a
+failE err = Failed err
+
+catchE :: E a -> (String -> E a) -> E a
+catchE m k =
+  case m of
+    Ok a     -> Ok a
+    Failed e -> k e
+
+parseError tok             = failE "error"
 
 }

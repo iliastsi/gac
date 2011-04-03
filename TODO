@@ -1,0 +1,3 @@
+* Change Lexer to return ([Token], String) for every rule
+
+* Add Position to all tokens from Lexer
