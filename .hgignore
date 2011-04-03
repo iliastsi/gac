@@ -4,5 +4,7 @@ syntax: glob
 *.hi
 *.o
 Lexer.hs
+Parser.hs
+Parser.info
 *~
 *.tar.gz

@@ -6,22 +6,31 @@ module Lexer(lexer
 %wrapper "monad"
 
 $digit = 0-9
-$white = [\ \t\r\n]
-$new_line = \n
+--$white = [\ \t\r\n]
 
 tokens :-
 
     $white+       { mySkip }
     $digit+       { \(_,_,s) l -> return (T_Int (read $ take l s)) }
+    "+"           { \input len -> return T_Plus }
+    "-"           { \input len -> return T_Minus }
+    "*"           { \input len -> return T_Mul }
+    "/"           { \input len -> return T_Div }
+    "("           { \input len -> return T_L }
+    ")"           { \input len -> return T_R }
     .             { lexWarning "Unknown Char" }
-
 
 
 
 {
 
 data Token = T_Int Int
-           | T_Unknown
+           | T_Plus
+           | T_Minus
+           | T_Mul
+           | T_Div
+           | T_L
+           | T_R
            | T_EOF
            | T_WARN String
              deriving (Eq, Show)
