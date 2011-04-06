@@ -35,25 +35,20 @@ Exp :
 
 {
 
-data E a = Ok a | Failed String deriving (Show)
+type E a = Either String a
 
 thenE :: E a -> (a -> E b) -> E b
 m `thenE` k =
   case m of
-    Ok a     -> k a
-    Failed e -> Failed e
+    Right a -> k a
+    Left e  -> Left e
 
 returnE :: a -> E a
-returnE a = Ok a
+returnE a = Right a
 
 failE :: String -> E a
-failE err = Failed err
+failE err = Left err
 
-catchE :: E a -> (String -> E a) -> E a
-catchE m k =
-  case m of
-    Ok a     -> Ok a
-    Failed e -> k e
 
 parseError tok             = failE "error"
 

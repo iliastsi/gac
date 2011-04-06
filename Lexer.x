@@ -17,7 +17,7 @@ tokens :-
     "*"           { \input len -> return T_Mul }
     "/"           { \input len -> return T_Div }
     "("           { \input len -> return T_L }
-    ")"           { \input len -> return T_R }
+    <next> ")"           { \input len -> return T_R }
     .             { lexWarning "Unknown Char" }
 
 
