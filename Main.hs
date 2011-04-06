@@ -7,7 +7,8 @@ import Parser
 main = do
     s <- getContents
     let tokens = extractLex $ lexer s
-    print (parser tokens)
+--    p <- parser tokens
+    print (runWriter $ parser tokens)
 
 printLex :: Either String ([Token], [String]) -> IO ()
 printLex (Left msg) = print msg

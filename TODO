@@ -2,4 +2,4 @@
 
 * Add Position to all tokens from Lexer
 
-* Convert Parser to IO monadic lexer
+* Convert Parser to IO monadic lexer or use Writer monad

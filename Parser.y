@@ -1,12 +1,13 @@
 {
 module Parser where
 import Lexer
+import Control.Monad.Writer(mempty, mappend)
 }
 
 %name parser
 %tokentype { Token }
 %error { parseError }
-%monad { E } { thenE } { returnE }
+%monad { Writer } { thenW } { returnW }
 
 %left '+' '-'
 %left '*' '/'
@@ -25,7 +26,7 @@ import Lexer
 %%
 
 Exp :
-    '(' Exp ')'     {% returnE $2 }
+    '(' Exp ')'     { $2 }
   | Exp '*' Exp     { $1 * $3 }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
@@ -35,21 +36,14 @@ Exp :
 
 {
 
-type E a = Either String a
+newtype Writer a = Writer { runWriter :: (a, [String]) }
 
-thenE :: E a -> (a -> E b) -> E b
-m `thenE` k =
-  case m of
-    Right a -> k a
-    Left e  -> Left e
+(Writer (x,v)) `thenW` f = let (Writer (y, v')) = f x in Writer (y, v `mappend` v')
 
-returnE :: a -> E a
-returnE a = Right a
-
-failE :: String -> E a
-failE err = Left err
+returnW x = Writer (x, mempty)
 
 
-parseError tok             = failE "error"
+parseError _ = Writer (5, ["ilias error"])
+
 
 }
