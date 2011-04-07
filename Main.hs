@@ -5,10 +5,10 @@ import Lexer
 import Parser
 
 main = do
-    s <- getLine
+    s <- getContents
     let tokens = extractLex $ lexer ( s ++ "\n" )
 --    p <- parser tokens
-    print $ (runParser $ parser tokens) "foo"
+    print  (parser tokens)
     main
 
 printLex :: Either String ([Token], [String]) -> IO ()

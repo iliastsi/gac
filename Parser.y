@@ -39,7 +39,7 @@ Exp ::              { Float }
 
 {
 
-newtype P a = P { runParser :: String -> ParseResult a }
+type P a = ParseResult a
 
 data ParseResult a
   = Ok a
@@ -47,18 +47,17 @@ data ParseResult a
   deriving (Show)
 
 thenP :: P a -> (a -> P b) -> P b
-m `thenP` k = P $ \s ->
-  case runParser m s of 
-    Ok a -> runParser (k a) s
+m `thenP` k =
+  case m of 
+    Ok a -> (k a)
     Failed e -> Failed e
 
 returnP :: a -> P a
-returnP a = P $ \s -> Ok a
+returnP a = Ok a
 
 failP :: String -> P a
-failP err = P $ \s -> Failed err
+failP err = Failed err
 
-parseError (t:tok) = P $ \s -> Failed ( "grave error " ++ (show t) )
-
+parseError (t:tok) = Failed ( "grave error " ++ (show t) )
 
 }
