@@ -8,7 +8,7 @@ main = do
     s <- getLine
     let tokens = extractLex $ lexer ( s ++ "\n" )
 --    p <- parser tokens
-    print (runWriter $ parser tokens)
+    print $ (runParser $ parser tokens) "foo"
     main
 
 printLex :: Either String ([Token], [String]) -> IO ()
