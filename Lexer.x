@@ -6,11 +6,12 @@ module Lexer(lexer
 %wrapper "monad"
 
 $digit = 0-9
---$white = [\ \t\r\n]
+$white = [\ \t\r]
 
 tokens :-
 
     $white+       { mySkip }
+    \n+           { \input len -> return T_NewLine }
     $digit+       { \(_,_,s) l -> return (T_Int (read $ take l s)) }
     "+"           { \input len -> return T_Plus }
     "-"           { \input len -> return T_Minus }
@@ -31,6 +32,7 @@ data Token = T_Int Float
            | T_Div
            | T_L
            | T_R
+           | T_NewLine
            | T_EOF
            | T_WARN String
              deriving (Eq, Show)
