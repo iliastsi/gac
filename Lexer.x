@@ -49,7 +49,8 @@ lexer :: (Token -> P a) -> P a
 lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) ->
   case alexScan inp 0 of
     AlexEOF -> runParser (cont T_EOF) inp
-    AlexError _ -> error (lexError "lexical error" str pos)
+--    AlexError _ -> error (lexError "lexical error" str pos)
+    AlexError (x',y',(z:zs)) -> let (x,v) = runParser (lexer cont) (x',y',zs) in (x,"My lex Error":v)
     AlexSkip inp' len -> runParser (lexer cont) inp'
     AlexToken inp' len act ->
       let (tok, new_sc) = act pos (take len str) 0
