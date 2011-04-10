@@ -31,7 +31,7 @@ Prog
 
 Exp :
     '(' Exp ')'     { $2 }
-  | '(' Exp error Anys   {% P $ \inp sc -> (0, ["Unclosed Brasset"]) }
+  | '(' Exp error Anys   {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Bracket" p]) }
   | Exp '*' Exp     { $1 * $3 }
   | Exp '*' error   {% P $ \inp sc -> (0, ["Unclosed Mult"]) }
   | Exp '/' Exp     { $1 / $3 }
@@ -55,7 +55,10 @@ Any
 
 {
 
---parseError :: P a
-parseError = error ("Error in token: ")-- ++ (show tk))
+parseError :: Token -> P a
+parseError _ = P $ \inp sc -> error ("We have to put something in here")
+
+parseWarning :: String ->AlexPosn -> String
+parseWarning msg pos = (showPosn pos ++ ":  " ++ msg)
 
 }
