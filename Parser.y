@@ -6,7 +6,7 @@ import Lexer
 %name parser Prog
 %tokentype { Token }
 %error { parseError }
-%monad { P } { thenP } { returnP }
+%monad { P }
 %lexer { lexer } { T_EOF }
 
 %left '+' '-'
@@ -31,9 +31,9 @@ Prog
 
 Exp :
     '(' Exp ')'     { $2 }
-  | '(' Exp error Anys   {% \inp -> (0, ["Unclosed Brasset"]) }
+  | '(' Exp error Anys   {% P $ \inp -> (0, ["Unclosed Brasset"]) }
   | Exp '*' Exp     { $1 * $3 }
-  | Exp '*' error   {% \inp -> (0, ["Unclosed Mult"]) }
+  | Exp '*' error   {% P $ \inp -> (0, ["Unclosed Mult"]) }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
@@ -56,6 +56,6 @@ Any
 {
 
 --parseError :: P a
-parseError = \tk -> error ("Error in token: " ++ (show tk))
+parseError = error ("Error in token: ")-- ++ (show tk))
 
 }

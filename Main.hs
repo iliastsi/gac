@@ -6,7 +6,7 @@ import Parser
 
 main = do
     str <- getContents
-    print $ parser (alexStartPos,'\n',str)
+    print $ runParser parser (alexStartPos,'\n',str)
 --    let tokens = extractLex $ lexer ( s ++ "\n" )
 --    p <- parser tokens
 --    print  (runWriter $ parser tokens)

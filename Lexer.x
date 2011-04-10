@@ -46,15 +46,15 @@ data Token
 
 -- This is the main Lexer function
 lexer :: (Token -> P a) -> P a
-lexer cont inp@(pos@(AlexPn a l c),_,str) =
+lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) ->
   case alexScan inp 0 of
-    AlexEOF -> cont T_EOF inp
+    AlexEOF -> runParser (cont T_EOF) inp
     AlexError _ -> error (lexError "lexical error" str pos)
-    AlexSkip inp' len -> lexer cont inp'
+    AlexSkip inp' len -> runParser (lexer cont) inp'
     AlexToken inp' len act ->
       let (tok, new_sc) = act pos (take len str) 0
       in
-        cont tok inp'
+        runParser (cont tok) inp'
 
 -- An error encountered
 lexError :: String -> String -> AlexPosn -> String
@@ -84,15 +84,14 @@ showPosn (AlexPn _ line col) = show line ++ ':' : show col
 
 type StartCode = Int
 
-type P a = AlexInput -> (a, [String])
+newtype P a = P { runParser :: AlexInput -> (a, [String]) }
 
-m `thenP` k = \inp ->
-    let (x, v)  = m inp
-        (y, v') = (k x) inp
+instance Monad P where
+  m >>= k = P $ \inp ->
+    let (x, v)  = runParser m inp
+        (y, v') = runParser (k x) inp
     in
     (y, v ++ v')
-
-
-returnP a = \inp -> (a, [])
+  return a = P $ \inp -> (a, [])
 
 }
