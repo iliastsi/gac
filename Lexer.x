@@ -21,7 +21,7 @@ tokens :-
     "/"           { \p s x -> (T_Div, x) }
     "("           { \p s x -> (T_L, x) }
     ")"           { \p s x -> (T_R, x) }
---    .             { lexWarning "Unknown Char" }
+    .             { \p s x -> (T_ERROR, x) }
 
 
 
@@ -37,7 +37,7 @@ data Token
   | T_R
   | T_NewLine
   | T_EOF
-  | T_WARN String
+  | T_ERROR
   deriving (Eq, Show)
 
 
@@ -49,13 +49,15 @@ lexer :: (Token -> P a) -> P a
 lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) ->
   case alexScan inp 0 of
     AlexEOF -> runParser (cont T_EOF) inp
---    AlexError _ -> error (lexError "lexical error" str pos)
-    AlexError (x',y',(z:zs)) -> let (x,v) = runParser (lexer cont) (x',y',zs) in (x,"My lex Error":v)
+    AlexError _ -> error (lexError "lexical error" str pos)
     AlexSkip inp' len -> runParser (lexer cont) inp'
     AlexToken inp' len act ->
-      let (tok, new_sc) = act pos (take len str) 0
-      in
-        runParser (cont tok) inp'
+      case act pos (take len str) 0 of
+        (T_ERROR, new_sc) ->
+            let (t1,t2) = runParser (lexer cont) inp'
+            in
+            (t1,(lexWarning ("Unknown char " ++ (take 1 str)) pos):t2)
+        (tok, new_sc) -> runParser (cont tok) inp'
 
 -- An error encountered
 lexError :: String -> String -> AlexPosn -> String
@@ -65,14 +67,10 @@ lexError msg input p =
           then " before " ++ show (head input)
           else " at end of file"))
 
-{-
--- A warning encountered
-lexWarning :: String -> AlexInput -> Int -> Alex Token
-lexWarning msg (p,_,s) len = do
-  let str = take len s
-      warn = (showPosn p ++ ":  " ++ msg ++ " in " ++ str)
-  return (T_WARN warn)
--}
+
+-- An Unknown Token encountered
+lexWarning :: String -> AlexPosn -> String
+lexWarning msg pos = (showPosn pos ++ ":  " ++ msg)
 
 -- Return line and column
 showPosn :: AlexPosn -> String
