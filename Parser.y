@@ -1,13 +1,13 @@
 {
 module Parser where
 import Lexer
-import Control.Monad.Writer(mempty, mappend)
 }
 
 %name parser Prog
 %tokentype { Token }
 %error { parseError }
-%monad { Writer } { thenW } { returnW }
+%monad { P } { thenP } { returnP }
+%lexer { lexer } { T_EOF }
 
 %left '+' '-'
 %left '*' '/'
@@ -31,9 +31,9 @@ Prog
 
 Exp :
     '(' Exp ')'     { $2 }
-  | '(' Exp error Anys   {% Writer (0, ["Unclosed Brasset"]) }
+  | '(' Exp error Anys   {% \inp -> (0, ["Unclosed Brasset"]) }
   | Exp '*' Exp     { $1 * $3 }
-  | Exp '*' error   {% Writer (0, ["Unclosed Mult"]) }
+  | Exp '*' error   {% \inp -> (0, ["Unclosed Mult"]) }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
@@ -55,14 +55,7 @@ Any
 
 {
 
-newtype Writer a = Writer { runWriter :: (a, [String]) }
-
-(Writer (x,v)) `thenW` f = let (Writer (y, v')) = f x in Writer (y, v `mappend` v')
-
-returnW x = Writer (x, mempty)
-
-
-parseError _ = error "my parse Error"
-
+--parseError :: P a
+parseError = \tk -> error ("Error in token: " ++ (show tk))
 
 }

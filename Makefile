@@ -4,13 +4,13 @@ HFLAGS = -funbox-strict-fields -fglasgow-exts
 YACC = happy
 YFLAGS = -i -a -g -c
 
-SRC = Lexer Main Parser
+SRC = Lexer Main Parser MonadP
 GEN = $(addsuffix .hs, Lexer Parser)
 
 
 all: main
 
-main: $(GEN) Main.hs
+main: $(GEN) Main.hs MonadP.hs
 	ghc $(HFLAGS) --make Main.hs -o $@
 
 %.hs: %.x

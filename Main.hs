@@ -5,11 +5,11 @@ import Lexer
 import Parser
 
 main = do
-    s <- getContents
-    let tokens = extractLex $ lexer ( s ++ "\n" )
+    str <- getContents
+    print $ parser (alexStartPos,'\n',str)
+--    let tokens = extractLex $ lexer ( s ++ "\n" )
 --    p <- parser tokens
-    print  (runWriter $ parser tokens)
-    main
+--    print  (runWriter $ parser tokens)
 
 printLex :: Either String ([Token], [String]) -> IO ()
 printLex (Left msg) = print msg
