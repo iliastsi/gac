@@ -1,10 +1,11 @@
 LEX = alex
 #LFLAGS = --ghc
-HFLAGS = -funbox-strict-fields -fglasgow-exts
+#HFLAGS = -funbox-strict-fields -fglasgow-exts
+HFLAGS = -funbox-strict-fields
 YACC = happy
 YFLAGS = -i -a -g -c
 
-SRC = Lexer Main Parser MonadP
+SRC = Lexer Main Parser
 GEN = $(addsuffix .hs, Lexer Parser)
 
 

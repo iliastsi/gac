@@ -31,9 +31,9 @@ Prog
 
 Exp :
     '(' Exp ')'     { $2 }
-  | '(' Exp error Anys   {% P $ \inp -> (0, ["Unclosed Brasset"]) }
+  | '(' Exp error Anys   {% P $ \inp sc -> (0, ["Unclosed Brasset"]) }
   | Exp '*' Exp     { $1 * $3 }
-  | Exp '*' error   {% P $ \inp -> (0, ["Unclosed Mult"]) }
+  | Exp '*' error   {% P $ \inp sc -> (0, ["Unclosed Mult"]) }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
