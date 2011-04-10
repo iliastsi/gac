@@ -1,12 +1,13 @@
 {
 module Parser where
 import Lexer
+import Control.Monad.Writer(mempty, mappend)
 }
 
 %name parser Prog
 %tokentype { Token }
 %error { parseError }
-%monad { P } { thenP } { returnP }
+%monad { Writer } { thenW } { returnW }
 
 %left '+' '-'
 %left '*' '/'
@@ -14,50 +15,54 @@ import Lexer
 
 %token
   int   { T_Int $$ }
-  line  { T_NewLine }
   '+'   { T_Plus }
   '-'   { T_Minus }
   '*'   { T_Mul }
   '/'   { T_Div }
   '('   { T_L }
   ')'   { T_R }
+  line  { T_NewLine }
 
 
 %%
 
 Prog
-  : Exp line          { $1 }
+  : Exp line        { $1 }
 
-Exp ::              { Float }
-  : '(' Exp ')'     { $2 }
+Exp :
+    '(' Exp ')'     { $2 }
+  | '(' Exp error Anys   {% Writer (0, ["Unclosed Brasset"]) }
   | Exp '*' Exp     { $1 * $3 }
+  | Exp '*' error   {% Writer (0, ["Unclosed Mult"]) }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
   | int             { $1 }
 
+Anys
+  : {- nothing -}   { () }
+  | Anys Any        { () }
+
+Any
+  : int   { () }
+  | '+'   { () }
+  | '-'   { () }
+  | '*'   { () }
+  | '/'   { () }
+  | '('   { () }
+  | ')'   { () }
+
 
 {
 
-type P a = ParseResult a
+newtype Writer a = Writer { runWriter :: (a, [String]) }
 
-data ParseResult a
-  = Ok a
-  | Failed String
-  deriving (Show)
+(Writer (x,v)) `thenW` f = let (Writer (y, v')) = f x in Writer (y, v `mappend` v')
 
-thenP :: P a -> (a -> P b) -> P b
-m `thenP` k =
-  case m of 
-    Ok a -> (k a)
-    Failed e -> Failed e
+returnW x = Writer (x, mempty)
 
-returnP :: a -> P a
-returnP a = Ok a
 
-failP :: String -> P a
-failP err = Failed err
+parseError _ = error "my parse Error"
 
-parseError (t:tok) = Failed ( "grave error " ++ (show t) )
 
 }
