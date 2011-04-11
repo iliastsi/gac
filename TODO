@@ -1,5 +1,1 @@
-* Change Lexer to return ([Token], String) for every rule
-
-* Add Position to all tokens from Lexer
-
-* Convert Parser to IO monadic lexer or use Writer monad
+* Change T_ERROR String with T_ERROR Token String

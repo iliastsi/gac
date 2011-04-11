@@ -17,23 +17,24 @@ import Lexer
   int   { T_Int $$ }
   '+'   { T_Plus }
   '-'   { T_Minus }
-  '*'   { T_Mul }
+  '*'   { T_Times }
   '/'   { T_Div }
-  '('   { T_L }
-  ')'   { T_R }
+  '('   { T_Op }
+  ')'   { T_Cp }
   line  { T_NewLine }
 
 
 %%
 
 Prog
-  : Exp line        { $1 }
+  : Exp             { $1 }
 
 Exp :
     '(' Exp ')'     { $2 }
-  | '(' Exp error Anys   {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Bracket" p]) }
+  | '(' Exp error Anys   
+                    {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Bracket" p]) }
   | Exp '*' Exp     { $1 * $3 }
-  | Exp '*' error   {% P $ \inp sc -> (0, ["Unclosed Mult"]) }
+  | Exp '*' error   {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Mult" p]) }
   | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }

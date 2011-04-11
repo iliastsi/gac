@@ -1,7 +1,7 @@
 LEX = alex
 #LFLAGS = --ghc
-#HFLAGS = -funbox-strict-fields -fglasgow-exts
 HFLAGS = -funbox-strict-fields
+#HFLAGS += -fglasgow-exts
 YACC = happy
 YFLAGS = -i -a -g -c
 
@@ -11,7 +11,7 @@ GEN = $(addsuffix .hs, Lexer Parser)
 
 all: main
 
-main: $(GEN) Main.hs MonadP.hs
+main: $(GEN) Main.hs
 	ghc $(HFLAGS) --make Main.hs -o $@
 
 %.hs: %.x
