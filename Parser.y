@@ -5,7 +5,7 @@ import Lexer
 
 %name parser Prog
 %tokentype { Token }
-%error { parseError }
+%error { happyError }
 %monad { P }
 %lexer { lexer } { T_EOF }
 
@@ -18,7 +18,6 @@ import Lexer
   '+'   { T_Plus }
   '-'   { T_Minus }
   '*'   { T_Times }
-  '/'   { T_Div }
   '('   { T_Op }
   ')'   { T_Cp }
 
@@ -31,10 +30,8 @@ Prog
 Exp :
     '(' Exp ')'     { $2 }
   | '(' Exp error Anys   
-                    {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Bracket" p]) }
+                    {% P $ \(p,_,_) sc -> (0, ([parseError "Unclosed Bracket" p],[])) }
   | Exp '*' Exp     { $1 * $3 }
-  | Exp '*' error   {% P $ \(p,_,_) sc -> (0, [parseWarning "Unclosed Mult" p]) }
-  | Exp '/' Exp     { $1 / $3 }
   | Exp '+' Exp     { $1 + $3 }
   | Exp '-' Exp     { $1 - $3 }
   | int             { $1 }
@@ -48,17 +45,13 @@ Any
   | '+'   { () }
   | '-'   { () }
   | '*'   { () }
-  | '/'   { () }
   | '('   { () }
   | ')'   { () }
 
 
 {
 
-parseError :: Token -> P a
-parseError _ = P $ \inp sc -> error ("We have to put something in here")
-
-parseWarning :: String ->AlexPosn -> String
-parseWarning msg pos = (showPosn pos ++ ":  " ++ msg)
+happyError :: Token -> P a
+happyError _ = P $ \inp sc -> error ("We have to put something in here")
 
 }

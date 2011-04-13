@@ -1,5 +1,11 @@
 {
-module Lexer where
+module Lexer(lexer
+            ,lexDummy
+            ,parseError
+            ,parseWarning
+            ,P(..)
+            ,Token(..)
+            ,alexStartPos) where
 }
 
 %wrapper "posn"
@@ -124,8 +130,8 @@ lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc,nc) ->
     AlexEOF ->
         let (t, (e,w)) = runP (cont T_EOF) inp state
         in
-        if sc==comments then (t, ((lexError "Unclosed comments" pos):e,w)) else (t,(e,w))
-    AlexError _ -> error (lexError "Internal error" pos)
+        if sc==comments then (t, ((parseError "Unclosed comments" pos):e,w)) else (t,(e,w))
+    AlexError _ -> error (parseError "Internal error" pos)
     AlexSkip inp' len -> runP (lexer cont) inp' state
     AlexToken inp' len act ->
         case act pos (take len str) state of
@@ -134,22 +140,22 @@ lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc,nc) ->
           (T_WARN tok msg, new_state) ->
               let (t, (e,w)) = runP (cont tok) inp' new_state
               in
-              (t, (e,(lexWarning msg pos):w))
+              (t, (e,(parseWarning msg pos):w))
           (T_ERROR msg, new_state)    ->
               let (t,(e,w)) = runP (lexer cont) inp' new_state
               in
-              (t, ((lexError msg pos):e,w))
+              (t, ((parseError msg pos):e,w))
           (tok, new_state)            -> runP (cont tok) inp' new_state
 
 -- An error encountered
-lexError :: String -> AlexPosn -> String
-lexError msg pos =
+parseError :: String -> AlexPosn -> String
+parseError msg pos =
   (showPosn pos ++ ":  " ++ "Parse error: " ++ msg)
 
 
 -- A Warning encountered
-lexWarning :: String -> AlexPosn -> String
-lexWarning msg pos =
+parseWarning :: String -> AlexPosn -> String
+parseWarning msg pos =
   (showPosn pos ++ ":  " ++ "Warning: " ++ msg)
 
 -- Return line and column
@@ -165,9 +171,9 @@ lexDummy = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc, nc) ->
   case alexScan inp sc of
     AlexEOF ->
         if sc==comments
-           then ([], ([lexError "Unclosed comments" pos],[]))
+           then ([], ([parseError "Unclosed comments" pos],[]))
            else ([], ([],[]))
-    AlexError _ -> error (lexError "Internal error" pos)
+    AlexError _ -> error (parseError "Internal error" pos)
     AlexSkip inp' len -> runP lexDummy inp' state
     AlexToken inp' len act ->
         case act pos (take len str) state of
@@ -176,11 +182,11 @@ lexDummy = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc, nc) ->
           (T_WARN tok msg, new_state) ->
               let (t, (e,w)) = runP lexDummy inp' new_state
               in
-              (tok:t, (e,(lexWarning msg pos):w))
+              (tok:t, (e,(parseWarning msg pos):w))
           (T_ERROR msg, new_state)    ->
               let (t, (e,w)) = runP lexDummy inp' new_state
               in
-              (t, ((lexError msg pos):e,w))
+              (t, ((parseError msg pos):e,w))
           (tok, new_state)            ->
               let (t, (e,w)) = runP lexDummy inp' new_state
               in
