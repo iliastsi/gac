@@ -21,7 +21,6 @@ import Lexer
   '/'   { T_Div }
   '('   { T_Op }
   ')'   { T_Cp }
-  line  { T_NewLine }
 
 
 %%
