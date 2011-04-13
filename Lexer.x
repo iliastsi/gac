@@ -1,11 +1,5 @@
 {
-module Lexer(lexer
-            ,lexDummy
-            ,parseError
-            ,parseWarning
-            ,P(..)
-            ,Token(..)
-            ,alexStartPos) where
+module Lexer where
 }
 
 %wrapper "posn"
@@ -13,8 +7,9 @@ module Lexer(lexer
 $digit = 0-9
 $alpha = [a-z A-Z]
 $id = [$alpha \_ $digit]
-$char = [^\'\"\\]
+$char = $printable # [\'\"\\]
 $hexit = [$digit a-f A-F]
+$my_white = $white # \n
 
 @special = \\n | \\t | \\r | \\0 | \\\\ | \\\' | \\\" | \\x $hexit $hexit
 
@@ -23,7 +18,8 @@ $hexit = [$digit a-f A-F]
 -- \p s x -> p for position, s for input string, x for current state
 tokens :-
 
-    $white+           ;
+    $my_white+        ;
+    <0> \n+           { \p s x -> (T_NewLine, x) }
     <0> byte          { \p s x -> (T_kwByte, x) }
     <0> return        { \p s x -> (T_Return, x) }
     <0> else          { \p s x -> (T_Else, x) }
@@ -64,9 +60,9 @@ tokens :-
     <0> ","           { \p s x -> (T_Comma, x) }
     <0> ":"           { \p s x -> (T_Colon, x) }
     <0> ";"           { \p s x -> (T_SemiColon, x) }
-    "--" [^\n]*       ;
+    "--" .*           ;
     "(*"              { embedComment }
-    <comments> .      ;
+    <comments> .|\n   ;
     <comments> "*)"   { unembedComment }
     .                 { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
 
@@ -113,6 +109,7 @@ data Token
   | T_Comma
   | T_Colon
   | T_SemiColon
+  | T_NewLine
   | T_EOF
   | T_SKIP
   | T_WARN Token String
