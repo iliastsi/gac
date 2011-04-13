@@ -1,5 +1,12 @@
 {
-module Lexer where
+module Lexer(lexer
+            ,lexDummy
+            ,parseError
+            ,parseWarning
+            ,P(..)
+            ,Token(..)
+            ,alexStartPos
+            ,lexStartState) where
 }
 
 %wrapper "posn"
@@ -62,7 +69,7 @@ tokens :-
     <0> ";"           { \p s x -> (T_SemiColon, x) }
     "--" .*           ;
     "(*"              { embedComment }
-    <comments> .|\n   ;
+    <comments> [.\n]  ;
     <comments> "*)"   { unembedComment }
     .                 { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
 
@@ -215,10 +222,11 @@ mkInteger p s x =
 
 -- ------------------------------------------------------------------
 -- Define P monad used by our monadic lexer-parser
--- This is the same monad as Writer
 
 -- StateCode = (StartCode, Number_of_Embedded_comments)
 type StateCode = (Int, Int)
+lexStartState = (0,0)
+
 type Errors = [String]
 type Warnings = [String]
 
