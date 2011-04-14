@@ -78,50 +78,50 @@ tokens :-
 {
 
 data Token
-  = T_kwByte
-  | T_Return
-  | T_Else
-  | T_While
-  | T_False
-  | T_True
-  | T_If
-  | T_kwInt
-  | T_Proc
-  | T_Reference
-  | T_Id String
-  | T_Int Int
-  | T_Char String
-  | T_String String
-  | T_Assign
-  | T_Plus
-  | T_Minus
-  | T_Times
-  | T_Div
-  | T_Mod
-  | T_Not
-  | T_And
-  | T_Or
-  | T_Eq
-  | T_Ne
-  | T_Lt
-  | T_Gt
-  | T_Le
-  | T_Ge
-  | T_Op
-  | T_Cp
-  | T_Os
-  | T_Cs
-  | T_Oc
-  | T_Cc
-  | T_Comma
-  | T_Colon
-  | T_SemiColon
-  | T_NewLine
-  | T_EOF
-  | T_SKIP
-  | T_WARN Token String
-  | T_ERROR String
-  deriving (Eq, Show)
+    = T_kwByte
+    | T_Return
+    | T_Else
+    | T_While
+    | T_False
+    | T_True
+    | T_If
+    | T_kwInt
+    | T_Proc
+    | T_Reference
+    | T_Id String
+    | T_Int Int
+    | T_Char String
+    | T_String String
+    | T_Assign
+    | T_Plus
+    | T_Minus
+    | T_Times
+    | T_Div
+    | T_Mod
+    | T_Not
+    | T_And
+    | T_Or
+    | T_Eq
+    | T_Ne
+    | T_Lt
+    | T_Gt
+    | T_Le
+    | T_Ge
+    | T_Op
+    | T_Cp
+    | T_Os
+    | T_Cs
+    | T_Oc
+    | T_Cc
+    | T_Comma
+    | T_Colon
+    | T_SemiColon
+    | T_NewLine
+    | T_EOF
+    | T_SKIP
+    | T_WARN Token String
+    | T_ERROR String
+    deriving (Eq, Show)
 
 
 -- ------------------------------------------------------------------
@@ -130,37 +130,37 @@ data Token
 -- This is the main Lexer function
 lexer :: (Token -> P a) -> P a
 lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc,nc) ->
-  case alexScan inp sc of
-    AlexEOF ->
-        let (t, (e,w)) = runP (cont T_EOF) inp state
-        in
-        if sc==comments then (t, ((parseError "Unclosed comments" pos):e,w)) else (t,(e,w))
-    AlexError _ -> error (parseError "Internal error" pos)
-    AlexSkip inp' len -> runP (lexer cont) inp' state
-    AlexToken inp' len act ->
-        case act pos (take len str) state of
-          (T_SKIP, new_state)         ->
-              runP (lexer cont) inp' new_state
-          (T_WARN tok msg, new_state) ->
-              let (t, (e,w)) = runP (cont tok) inp' new_state
-              in
-              (t, (e,(parseWarning msg pos):w))
-          (T_ERROR msg, new_state)    ->
-              let (t,(e,w)) = runP (lexer cont) inp' new_state
-              in
-              (t, ((parseError msg pos):e,w))
-          (tok, new_state)            -> runP (cont tok) inp' new_state
+    case alexScan inp sc of
+        AlexEOF ->
+            let (t, (e,w)) = runP (cont T_EOF) inp state
+            in
+            if sc==comments then (t, ((parseError "Unclosed comments" pos):e,w)) else (t,(e,w))
+        AlexError _ -> error (parseError "Internal error" pos)
+        AlexSkip inp' len -> runP (lexer cont) inp' state
+        AlexToken inp' len act ->
+            case act pos (take len str) state of
+                 (T_SKIP, new_state)         ->
+                    runP (lexer cont) inp' new_state
+                 (T_WARN tok msg, new_state) ->
+                    let (t, (e,w)) = runP (cont tok) inp' new_state
+                    in
+                    (t, (e,(parseWarning msg pos):w))
+                 (T_ERROR msg, new_state)    ->
+                    let (t,(e,w)) = runP (lexer cont) inp' new_state
+                    in
+                    (t, ((parseError msg pos):e,w))
+                 (tok, new_state)            -> runP (cont tok) inp' new_state
 
 -- An error encountered
 parseError :: String -> AlexPosn -> String
 parseError msg pos =
-  (showPosn pos ++ ":  " ++ "Parse error: " ++ msg)
+    (showPosn pos ++ ":  " ++ "Parse error: " ++ msg)
 
 
 -- A Warning encountered
 parseWarning :: String -> AlexPosn -> String
 parseWarning msg pos =
-  (showPosn pos ++ ":  " ++ "Warning: " ++ msg)
+    (showPosn pos ++ ":  " ++ "Warning: " ++ msg)
 
 -- Return line and column
 showPosn :: AlexPosn -> String
@@ -172,29 +172,29 @@ showPosn (AlexPn _ line col) = show line ++ ':' : show col
 -- used by our parser
 lexDummy :: P [Token]
 lexDummy = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc, nc) ->
-  case alexScan inp sc of
-    AlexEOF ->
-        if sc==comments
-           then ([], ([parseError "Unclosed comments" pos],[]))
-           else ([], ([],[]))
-    AlexError _ -> error (parseError "Internal error" pos)
-    AlexSkip inp' len -> runP lexDummy inp' state
-    AlexToken inp' len act ->
-        case act pos (take len str) state of
-          (T_SKIP, new_state)         ->
-              runP lexDummy inp' new_state
-          (T_WARN tok msg, new_state) ->
-              let (t, (e,w)) = runP lexDummy inp' new_state
-              in
-              (tok:t, (e,(parseWarning msg pos):w))
-          (T_ERROR msg, new_state)    ->
-              let (t, (e,w)) = runP lexDummy inp' new_state
-              in
-              (t, ((parseError msg pos):e,w))
-          (tok, new_state)            ->
-              let (t, (e,w)) = runP lexDummy inp' new_state
-              in
-              (tok:t, (e,w))
+    case alexScan inp sc of
+        AlexEOF ->
+            if sc==comments
+               then ([], ([parseError "Unclosed comments" pos],[]))
+               else ([], ([],[]))
+        AlexError _ -> error (parseError "Internal error" pos)
+        AlexSkip inp' len -> runP lexDummy inp' state
+        AlexToken inp' len act ->
+            case act pos (take len str) state of
+                 (T_SKIP, new_state)         ->
+                    runP lexDummy inp' new_state
+                 (T_WARN tok msg, new_state) ->
+                    let (t, (e,w)) = runP lexDummy inp' new_state
+                    in
+                    (tok:t, (e,(parseWarning msg pos):w))
+                 (T_ERROR msg, new_state)    ->
+                    let (t, (e,w)) = runP lexDummy inp' new_state
+                    in
+                    (t, ((parseError msg pos):e,w))
+                 (tok, new_state)            ->
+                    let (t, (e,w)) = runP lexDummy inp' new_state
+                    in
+                    (tok:t, (e,w))
 
 
 -- ------------------------------------------------------------------
@@ -205,9 +205,9 @@ embedComment _ _ (_, nc) = (T_SKIP, (comments, nc+1))
 
 unembedComment :: AlexPosn -> String -> StateCode -> (Token, StateCode)
 unembedComment _ _ (_, nc)
-  | nc >  1   = (T_SKIP, (comments,nc-1))
-  | nc == 1   = (T_SKIP, (0,0))
-  | otherwise = (T_ERROR "Unmatched *)", (0,0))
+    | nc >  1   = (T_SKIP, (comments,nc-1))
+    | nc == 1   = (T_SKIP, (0,0))
+    | otherwise = (T_ERROR "Unmatched *)", (0,0))
 
 
 -- ------------------------------------------------------------------
@@ -215,16 +215,18 @@ unembedComment _ _ (_, nc)
 
 mkInteger :: AlexPosn -> String -> StateCode -> (Token, StateCode)
 mkInteger p s x =
-  if num <= 32768
-     then (T_Int num, x)
-     else (T_WARN (T_Int num) ("Number " ++ s ++ " is bigger than 16 bits"), x)
-  where num = read s
+    if num <= 32768
+       then (T_Int num, x)
+       else (T_WARN (T_Int num) ("Number " ++ s ++ " is bigger than 16 bits"), x)
+    where num = read s
 
 -- ------------------------------------------------------------------
 -- Define P monad used by our monadic lexer-parser
 
 -- StateCode = (StartCode, Number_of_Embedded_comments)
 type StateCode = (Int, Int)
+
+lexStartState :: (Int, Int)
 lexStartState = (0,0)
 
 type Errors = [String]
@@ -233,11 +235,11 @@ type Warnings = [String]
 newtype P a = P { runP :: AlexInput -> StateCode -> (a, (Errors,Warnings)) }
 
 instance Monad P where
-  m >>= k = P $ \inp state ->
-    let (x, (e,w))  = runP m inp state
-        (y, (e',w')) = runP (k x) inp state
-    in
-    (y, (e++e',w++w'))
-  return a = P $ \inp state -> (a, ([],[]))
+    m >>= k = P $ \inp state ->
+        let (x, (e,w))  = runP m inp state
+            (y, (e',w')) = runP (k x) inp state
+        in
+        (y, (e++e',w++w'))
+    return a = P $ \inp state -> (a, ([],[]))
 
 }
