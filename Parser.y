@@ -3,7 +3,7 @@ module Parser where
 import Lexer
 }
 
-%name parser Prog
+%partial parser Prog
 %tokentype { Token }
 %error { happyError }
 %monad { P }
@@ -20,12 +20,14 @@ import Lexer
   '*'   { T_Times }
   '('   { T_Op }
   ')'   { T_Cp }
+  line  { T_NewLine }
 
 
 %%
 
 Prog
   : Exp             { $1 }
+  | Exp error       { 0 }
 
 Exp :
     '(' Exp ')'     { $2 }

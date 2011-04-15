@@ -25,53 +25,53 @@ $my_white = $white # \n
 -- \p s x -> p for position, s for input string, x for current state
 tokens :-
 
-    $my_white+        ;
-    <0> \n+           { \p s x -> (T_NewLine, x) }
-    <0> byte          { \p s x -> (T_kwByte, x) }
-    <0> return        { \p s x -> (T_Return, x) }
-    <0> else          { \p s x -> (T_Else, x) }
-    <0> while         { \p s x -> (T_While, x) }
-    <0> false         { \p s x -> (T_False, x) }
-    <0> true          { \p s x -> (T_True, x) }
-    <0> if            { \p s x -> (T_If, x) }
-    <0> int           { \p s x -> (T_kwInt, x) }
-    <0> proc          { \p s x -> (T_Proc, x) }
-    <0> reference     { \p s x -> (T_Reference, x) }
-    <0> $alpha $id*   { \p s x -> (T_Id s, x) }
-    <0> $digit+       { mkInteger }
+    $my_white+          ;
+    <0> \n+             { \p s x -> (T_NewLine, x) }
+    <0> byte            { \p s x -> (T_kwByte, x) }
+    <0> return          { \p s x -> (T_Return, x) }
+    <0> else            { \p s x -> (T_Else, x) }
+    <0> while           { \p s x -> (T_While, x) }
+    <0> false           { \p s x -> (T_False, x) }
+    <0> true            { \p s x -> (T_True, x) }
+    <0> if              { \p s x -> (T_If, x) }
+    <0> int             { \p s x -> (T_kwInt, x) }
+    <0> proc            { \p s x -> (T_Proc, x) }
+    <0> reference       { \p s x -> (T_Reference, x) }
+    <0> $alpha $id*     { \p s x -> (T_Id s, x) }
+    <0> $digit+         { mkInteger }
     <0> \' ($char|@special) \'
-                      { \p s x -> (T_Char s, x) }
+                        { \p s x -> (T_Char s, x) }
     <0> \" ($char|@special)* \"
-                      { \p s x -> (T_String s, x) }
-    <0> "="           { \p s x -> (T_Assign, x) }
-    <0> "+"           { \p s x -> (T_Plus, x) }
-    <0> "-"           { \p s x -> (T_Minus, x) }
-    <0> "*"           { \p s x -> (T_Times, x) }
-    <0> "/"           { \p s x -> (T_Div, x) }
-    <0> "%"           { \p s x -> (T_Mod, x) }
-    <0> "!"           { \p s x -> (T_Not, x) }
-    <0> "&"           { \p s x -> (T_And, x) }
-    <0> "|"           { \p s x -> (T_Or, x) }
-    <0> "=="          { \p s x -> (T_Eq, x) }
-    <0> "!="          { \p s x -> (T_Ne, x) }
-    <0> "<"           { \p s x -> (T_Lt, x) }
-    <0> ">"           { \p s x -> (T_Gt, x) }
-    <0> "<="          { \p s x -> (T_Le, x) }
-    <0> ">="          { \p s x -> (T_Ge, x) }
-    <0> "("           { \p s x -> (T_Op, x) }
-    <0> ")"           { \p s x -> (T_Cp, x) }
-    <0> "["           { \p s x -> (T_Os, x) }
-    <0> "]"           { \p s x -> (T_Cs, x) }
-    <0> "{"           { \p s x -> (T_Oc, x) }
-    <0> "}"           { \p s x -> (T_Cc, x) }
-    <0> ","           { \p s x -> (T_Comma, x) }
-    <0> ":"           { \p s x -> (T_Colon, x) }
-    <0> ";"           { \p s x -> (T_SemiColon, x) }
-    "--" .*           ;
-    "(*"              { embedComment }
-    <comments> [.\n]  ;
-    <comments> "*)"   { unembedComment }
-    .                 { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
+                        { \p s x -> (T_String s, x) }
+    <0> "="             { \p s x -> (T_Assign, x) }
+    <0> "+"             { \p s x -> (T_Plus, x) }
+    <0> "-"             { \p s x -> (T_Minus, x) }
+    <0> "*"             { \p s x -> (T_Times, x) }
+    <0> "/"             { \p s x -> (T_Div, x) }
+    <0> "%"             { \p s x -> (T_Mod, x) }
+    <0> "!"             { \p s x -> (T_Not, x) }
+    <0> "&"             { \p s x -> (T_And, x) }
+    <0> "|"             { \p s x -> (T_Or, x) }
+    <0> "=="            { \p s x -> (T_Eq, x) }
+    <0> "!="            { \p s x -> (T_Ne, x) }
+    <0> "<"             { \p s x -> (T_Lt, x) }
+    <0> ">"             { \p s x -> (T_Gt, x) }
+    <0> "<="            { \p s x -> (T_Le, x) }
+    <0> ">="            { \p s x -> (T_Ge, x) }
+    <0> "("             { \p s x -> (T_Op, x) }
+    <0> ")"             { \p s x -> (T_Cp, x) }
+    <0> "["             { \p s x -> (T_Os, x) }
+    <0> "]"             { \p s x -> (T_Cs, x) }
+    <0> "{"             { \p s x -> (T_Oc, x) }
+    <0> "}"             { \p s x -> (T_Cc, x) }
+    <0> ","             { \p s x -> (T_Comma, x) }
+    <0> ":"             { \p s x -> (T_Colon, x) }
+    <0> ";"             { \p s x -> (T_SemiColon, x) }
+    "--" .*             ;
+    "(*"                { embedComment }
+    <comments> [.\n]    ;
+    <comments> "*)"     { unembedComment }
+    .                   { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
 
 
 
