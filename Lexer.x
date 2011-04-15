@@ -25,8 +25,7 @@ $my_white = $white # \n
 -- \p s x -> p for position, s for input string, x for current state
 tokens :-
 
-    $my_white+          ;
-    <0> \n+             { \p s x -> (T_NewLine, x) }
+    $white+             ;
     <0> byte            { \p s x -> (T_kwByte, x) }
     <0> return          { \p s x -> (T_Return, x) }
     <0> else            { \p s x -> (T_Else, x) }
@@ -69,7 +68,7 @@ tokens :-
     <0> ";"             { \p s x -> (T_SemiColon, x) }
     "--" .*             ;
     "(*"                { embedComment }
-    <comments> [.\n]    ;
+    <comments> .        ;
     <comments> "*)"     { unembedComment }
     .                   { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
 
@@ -116,7 +115,6 @@ data Token
     | T_Comma
     | T_Colon
     | T_SemiColon
-    | T_NewLine
     | T_EOF
     | T_SKIP
     | T_WARN Token String
