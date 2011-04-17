@@ -3,7 +3,7 @@ module Parser where
 import Lexer
 }
 
-%partial parser Prog
+%name parser Program
 %tokentype { Token }
 %error { happyError }
 %monad { P }
@@ -14,6 +14,7 @@ import Lexer
 %nonassoc '==' '!=' '>' '<' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'
+%nonassoc '!'
 %nonassoc '(' ')'
 
 %token
@@ -53,21 +54,110 @@ import Lexer
     '{'         { T_Oc          }
     '}'         { T_Cc          }
     ','         { T_Comma       }
+    ':'         { T_Colon       }
     ';'         { T_SemiColon   }
 
 
 
 %%
 
-Prog
-  : Exp             { $1 }
+Program
+    : FuncDef                       { () }
 
-Exp :
-    '(' Exp ')'     { $2 }
-  | Exp '*' Exp     { $1 * $3 }
-  | Exp '+' Exp     { $1 + $3 }
-  | Exp '-' Exp     { $1 - $3 }
-  | int             { $1 }
+FuncDef
+    : id '(' FparList ')' ':' RType LocalDefs '{' CompoundStmt '}'
+                                    { () }
+
+FparList
+    : {- nothing -}                 { () }
+    | FparDef                       { () }
+    | FparList ',' FparDef          { () }
+
+FparDef
+    : id ':' Type                   { () }
+    | id ':' reference Type         { () }
+
+DataType
+    : kwInt                         { () }
+    | kwByte                        { () }
+
+Type
+    : DataType                      { () }
+    | DataType '[' ']'              { () }
+
+RType
+    : DataType                      { () }
+    | proc                          { () }
+
+LocalDefs
+    : {- nothing -}                 { () }
+    | LocalDefs LocalDef            { () }
+
+LocalDef
+    : FuncDef                       { () }
+    | VarDef                        { () }
+
+VarDef
+    : id ':' DataType ';'           { () }
+    | id ':' DataType '[' int ']' ';'
+                                    { () }
+
+Stmt
+    : ';'                           { () }
+    | LValue '=' Expr ';'           { () }
+    | '{' CompoundStmt '}'          { () }
+    | FuncCall ';'                  { () }
+    | if '(' Cond ')' Stmt          { () }
+    | if '(' Cond ')' Stmt else Stmt
+                                    { () }
+    | while '(' Cond ')' Stmt       { () }
+    | return ';'                    { () }
+    | return Expr ';'               { () }
+
+CompoundStmt
+    : {- nothing -}                 { () }
+    | CompoundStmt Stmt              { () }
+
+FuncCall
+    : id '(' ')'                    { () }
+    | id '(' ExprList ')'           { () }
+
+ExprList
+    : Expr                          { () }
+    | ExprList ',' Expr             { () }
+
+Expr
+    : int                           { () }
+    | char                          { () }
+    | LValue                        { () }
+    | '(' Expr ')'                  { () }
+    | FuncCall                      { () }
+    | '+' Expr                      { () }
+    | '-' Expr                      { () }
+    | Expr '+' Expr                 { () }
+    | Expr '-' Expr                 { () }
+    | Expr '*' Expr                 { () }
+    | Expr '/' Expr                 { () }
+    | Expr '%' Expr                 { () }
+
+LValue
+    : id                            { () }
+    | id '[' Expr ']'               { () }
+    | string                        { () }
+
+Cond
+    : true                          { () }
+    | false                         { () }
+    | '(' Cond ')'                  { () }
+    | '!' Cond                      { () }
+    | Expr '==' Expr                { () }
+    | Expr '!=' Expr                { () }
+    | Expr '<'  Expr                { () }
+    | Expr '>'  Expr                { () }
+    | Expr '<=' Expr                { () }
+    | Expr '>=' Expr                { () }
+    | Cond '&'  Cond                { () }
+    | Cond '|'  Cond                { () }
 
 
 {

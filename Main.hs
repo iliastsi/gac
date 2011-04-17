@@ -6,4 +6,4 @@ import Parser
 
 main = do
     str <- getContents
-    print $ runP parser (alexStartPos,'\n',str) (0,0)
+    print $ runP parser (alexStartPos,'\n',str) lexStartState
