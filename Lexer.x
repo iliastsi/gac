@@ -133,7 +133,7 @@ lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc,nc) ->
             let (t, (e,w)) = runP (cont T_EOF) inp state
             in
             if sc==comments then (t, ((parseError "Unclosed comments" pos):e,w)) else (t,(e,w))
-        AlexError _ -> error (parseError "Internal error" pos)
+        AlexError _ -> error (parseError "Alex internal error" pos)
         AlexSkip inp' len -> runP (lexer cont) inp' state
         AlexToken inp' len act ->
             case act pos (take len str) state of
@@ -175,7 +175,7 @@ lexDummy = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc, nc) ->
             if sc==comments
                then ([], ([parseError "Unclosed comments" pos],[]))
                else ([], ([],[]))
-        AlexError _ -> error (parseError "Internal error" pos)
+        AlexError _ -> error (parseError "Alex internal error" pos)
         AlexSkip inp' len -> runP lexDummy inp' state
         AlexToken inp' len act ->
             case act pos (take len str) state of

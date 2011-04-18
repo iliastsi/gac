@@ -1,5 +1,6 @@
 {
-module Parser where
+module Parser(parser) where
+
 import Lexer
 }
 
@@ -14,7 +15,7 @@ import Lexer
 %nonassoc '==' '!=' '>' '<' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'
-%nonassoc '!'
+%left '!' SIGN
 %nonassoc '(' ')'
 
 %token
@@ -116,7 +117,7 @@ Stmt
 
 CompoundStmt
     : {- nothing -}                 { () }
-    | CompoundStmt Stmt              { () }
+    | CompoundStmt Stmt             { () }
 
 FuncCall
     : id '(' ')'                    { () }
@@ -132,8 +133,8 @@ Expr
     | LValue                        { () }
     | '(' Expr ')'                  { () }
     | FuncCall                      { () }
-    | '+' Expr                      { () }
-    | '-' Expr                      { () }
+    | '+' Expr %prec SIGN           { () }
+    | '-' Expr %prec SIGN           { () }
     | Expr '+' Expr                 { () }
     | Expr '-' Expr                 { () }
     | Expr '*' Expr                 { () }
@@ -163,6 +164,11 @@ Cond
 {
 
 happyError :: Token -> P a
-happyError _ = P $ \inp sc -> error ("We have to put something in here")
+happyError T_EOF =
+    P $ \(pos,_,str) sc -> error $
+        parseError "Happy internal error at end of file" pos
+happyError _  =
+    P $ \(pos,_,str) sc -> error $
+        parseError ("Happy internal error befor " ++ (take 10 str)) pos
 
 }
