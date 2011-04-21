@@ -1,7 +1,6 @@
 LEX = alex
 LFLAGS = --ghc
-HFLAGS = -funbox-strict-fields -XBangPatterns -fglasgow-exts
-HFLAGS += -Wall -fno-warn-name-shadowing -fno-warn-unused-matches
+HFLAGS = -Wall
 YACC = happy
 YFLAGS = -i -a -g
 #YFLAGS += -c
