@@ -12,14 +12,10 @@
 
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
-module Lexer(lexer
-            ,lexDummy
-            ,parseError
-            ,parseWarning
-            ,P(..)
-            ,Token(..)
-            ,alexStartPos
-            ,lexStartState) where
+module Lexer (
+    lexer, lexDummy, parseError, parseWarning,
+    P(..), Token(..), alexStartPos, lexStartState
+   ) where
 }
 
 %wrapper "posn"

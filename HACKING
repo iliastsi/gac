@@ -1,0 +1,63 @@
+Getting started with hacking on GHC
+-----------------------------------
+
+So you've decided to hack on GAC, congratulations!  We hope you have a
+rewarding experience.  This file will point you in the direction of
+information to help you get started right away.
+
+
+The GHC Developer's Wiki
+------------------------
+
+  Quick Start for developers
+
+     http://courses.softlab.ntua.gr/compilers/
+   
+     This page will get you up and running with compilers
+     course and Alan language in no time:
+  
+
+  Coding conventions
+
+     http://hackage.haskell.org/trac/ghc/wiki/WorkingConventions
+
+     This wiki page explains the ground rules for code that is intended
+     to go into the mainline compiler source.
+  
+  
+Mailing lists
+-------------
+
+   Ask on iliastsi@hotmail.com if you have difficulties.
+
+
+Layout of important files and directories
+-----------------------------------------
+
+This section summarises the overall file and directory structure
+of GAC. Everything starts with the main GAC repository. The build
+system calls that directory $(TOP).
+All the paths below are relative to $(TOP).
+
+  Files in $(TOP)
+    Documentation files
+        README, INSTALL, HACKING, LICENSE
+    Cabal autoconfig machinery
+        gac.cabal, Setup.hs
+    Makefile
+        The top-level Makefile. GAC requires GNU make.
+
+  libraries/
+    The libraries/ directory contains all the packages that a program
+    written in Alan needs in order to build.
+
+  src/, docs/
+    These directories contain the main GAC compiler and documentation.
+    The src/ directory contains the gac package, which is linked into
+    an executable in the dist/ directory.
+
+  testsuite/
+    The testsuite/ directory contain apparatus for testing GAC.
+
+
+Happy Hacking!  --The GAC Team

@@ -1,30 +1,42 @@
-LEX = alex
+# -----------------------------------------------------------------------------
+#
+# (c) 2009 The University of Glasgow
+#
+# This file is part of the GHC build system.
+#
+# To understand how the build system works and how to modify it, see
+#      http://hackage.haskell.org/trac/ghc/wiki/Building/Architecture
+#      http://hackage.haskell.org/trac/ghc/wiki/Building/Modifying
+#
+# -----------------------------------------------------------------------------
+
+# if you use a haskell compiler other than ghc change the above
+# (eg for Hugs change it to runhugs)
+RUNHS = runhaskell
+BUILDDIR = ./dist
+PREFIX = $(HOME)/.cabal
 LFLAGS = --ghc
-HFLAGS = -Wall
-YACC = happy
-YFLAGS = -i -a -g
-#YFLAGS += -c
+YFLAGS = -i -a -g #-c
 
-SRC = Lexer Main Parser
-GEN = $(addsuffix .hs, Lexer Parser)
-OUT = gac
+.PHONY: all dist clean install test config
 
+all: config
+	$(RUNHS) Setup build --builddir=$(BUILDDIR)
 
-all: $(OUT)
+config: $(BUILDDIR)/setup-config
 
-$(OUT): $(GEN) Main.hs
-	ghc $(HFLAGS) --make Main.hs -o $@
+$(BUILDDIR)/setup-config:
+	$(RUNHS) Setup configure --builddir=$(BUILDDIR) --prefix=$(PREFIX) \
+		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
 
-%.hs: %.x
-	$(LEX) $(LFLAGS) $<
-
-%.hs: %.y
-	$(YACC) $(YFLAGS) $<
+dist: config
+	$(RUNHS) Setup sdist --builddir=$(BUILDDIR)
 
 clean:
-	$(RM) $(foreach sfx, .hi .o, $(addsuffix $(sfx), $(SRC)))
+	$(RUNHS) Setup clean --builddir=$(BUILDDIR)
 
-distclean: clean
-	$(RM) $(GEN) Parser.info $(OUT)
+install: config
+	$(RUNHS) Setup install --builddir=$(BUILDDIR)
 
-.PHONY: all clean distclean
+test:
+	$(RUNHS) Setup test --builddir=$(BUILDDIR)

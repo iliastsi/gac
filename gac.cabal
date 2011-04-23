@@ -1,0 +1,50 @@
+Name: gac
+Version: 0.0.1
+License: MIT
+License-File: LICENSE
+Author:  Ilias Tsitsimpis
+Maintainer: iliastsi@hotmail.com
+Synopsis: Alan Compiler written in Jaskell
+Description:
+    Alan Compiler written in Haskell
+    using Alex as a lexer
+    and Happy as a parser
+Category: Development
+Build-Type: Simple
+Cabal-Version: >= 1.6
+Tested-With: GHC
+
+Extra-Source-Files:
+    Makefile
+    INSTALL
+    README
+    HACKING
+    TODO
+    docs/alan2011.pdf
+    testsuite/hanoi.alan
+
+Extra-Tmp-Files: src/parser/Parser.info
+
+source-repository head
+    type:     mercurial
+    location: http://foss.ntua.gr/hg/private/gac
+
+
+Executable gac
+  Main-is: Main.hs
+
+  Build-Depends: base
+  Build-Depends: array
+  if os(windows)
+     Build-Depends: Win32
+  else
+     Build-Depends: unix
+
+  GHC-Options: -Wall
+
+  Hs-Source-Dirs:
+        src
+        src/parser
+  Other-Modules:
+        Parser
+        Lexer
