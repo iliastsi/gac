@@ -1,4 +1,4 @@
-This is the INSTALL instructions for a binary distribution of . For
+This is the INSTALL instructions for a binary distribution of GAC. For
 more details on what on earth this package is up to, please consult
 the README.
 
@@ -9,7 +9,8 @@ eg. to set up the package for installing in directory <my-dir>, use
 
 	make PREFIX=<my-dir> config
 
-The default installation directory is $(HOME)/.cabal/bin.
+The default installation directory is $(HOME)/.cabal/bin
+(ie PREFIX is set to $(HOME)/.cabal).
 
 The configure script is using cabal configuration which will figure out
 what platform you're running on, and a couple of other interesting pieces
