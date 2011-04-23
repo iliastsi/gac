@@ -1,12 +1,10 @@
 # -----------------------------------------------------------------------------
 #
-# (c) 2009 The University of Glasgow
+# (c) 2011 Tsitsimpis Ilias
 #
-# This file is part of the GHC build system.
+# This file is part of the GAC build system.
 #
-# To understand how the build system works and how to modify it, see
-#      http://hackage.haskell.org/trac/ghc/wiki/Building/Architecture
-#      http://hackage.haskell.org/trac/ghc/wiki/Building/Modifying
+# To understand how the build system works and how to modify it, see HACKING
 #
 # -----------------------------------------------------------------------------
 
@@ -18,9 +16,13 @@ PREFIX = $(HOME)/.cabal
 LFLAGS = --ghc
 YFLAGS = -i -a -g #-c
 
-.PHONY: all dist clean install test config
+.PHONY: all dist clean install test config build
 
-all: config
+all: build
+
+build: config $(BUILDDIR)/build/gac/gac
+
+$(BUILDDIR)/build/gac/gac:
 	$(RUNHS) Setup build --builddir=$(BUILDDIR)
 
 config: $(BUILDDIR)/setup-config
@@ -35,7 +37,7 @@ dist: config
 clean:
 	$(RUNHS) Setup clean --builddir=$(BUILDDIR)
 
-install: config
+install: build
 	$(RUNHS) Setup install --builddir=$(BUILDDIR)
 
 test:

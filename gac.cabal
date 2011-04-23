@@ -4,7 +4,7 @@ License: MIT
 License-File: LICENSE
 Author:  Ilias Tsitsimpis
 Maintainer: iliastsi@hotmail.com
-Synopsis: Alan Compiler written in Jaskell
+Synopsis: Alan Compiler written in Haskell
 Description:
     Alan Compiler written in Haskell
     using Alex as a lexer
