@@ -20,9 +20,7 @@ YFLAGS = -i -a -g #-c
 
 all: build
 
-build: config $(BUILDDIR)/build/gac/gac
-
-$(BUILDDIR)/build/gac/gac:
+build: config
 	$(RUNHS) Setup build --builddir=$(BUILDDIR)
 
 config: $(BUILDDIR)/setup-config
@@ -31,7 +29,11 @@ $(BUILDDIR)/setup-config:
 	$(RUNHS) Setup configure --builddir=$(BUILDDIR) --prefix=$(PREFIX) \
 		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
 
-dist: config
+# Normally dist rule has to depend to config rule
+# otherwise cabal throughs as out a warning
+# But doing so cabal calls preprocessors and generates
+# source files which then includes in our tarbal
+dist:
 	$(RUNHS) Setup sdist --builddir=$(BUILDDIR)
 
 clean:
