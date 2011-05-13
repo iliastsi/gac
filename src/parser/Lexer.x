@@ -1,3 +1,16 @@
+-----------------------------------------------------------------------------
+-- (c) Tsitsimpis Ilias, 2011
+--
+-- GAC's lexer.
+--
+-- This is a combination of an Alex-generated lexer from a regex
+-- definition, with some hand-coded bits.
+--
+-- Completely accurate information about token-spans within the source
+-- file is maintained.  Every token has a start and end SrcLoc attached to it.
+--
+-----------------------------------------------------------------------------
+
 {
 -- XXX The above flags turn off warnings in the generated code:
 {-# LANGUAGE BangPatterns #-}
@@ -12,241 +25,363 @@
 
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
-module Lexer (
-    lexer, lexDummy, parseError, parseWarning,
-    P(..), Token(..), alexStartPos, lexStartState
-   ) where
+module Lexer where
+
+import SrcLoc
+import ErrUtils
+
+import Data.Char
+
 }
 
-%wrapper "posn"
 
 $digit = 0-9
 $alpha = [a-z A-Z]
 $id = [$alpha \_ $digit]
 $char = $printable # [\'\"\\]
 $hexit = [$digit a-f A-F]
-$my_white = $white # \n
 
 @special = \\n | \\t | \\r | \\0 | \\\\ | \\\' | \\\" | \\x $hexit $hexit
 
 
--- ---------------------------------------------------------------------
--- \p s x -> p for position, s for input string, x for current state
 tokens :-
 
-    $white+             ;
-    <0> byte            { \p s x -> (T_kwByte, x) }
-    <0> return          { \p s x -> (T_Return, x) }
-    <0> else            { \p s x -> (T_Else, x) }
-    <0> while           { \p s x -> (T_While, x) }
-    <0> false           { \p s x -> (T_False, x) }
-    <0> true            { \p s x -> (T_True, x) }
-    <0> if              { \p s x -> (T_If, x) }
-    <0> int             { \p s x -> (T_kwInt, x) }
-    <0> proc            { \p s x -> (T_Proc, x) }
-    <0> reference       { \p s x -> (T_Reference, x) }
-    <0> $alpha $id*     { \p s x -> (T_Id s, x) }
-    <0> $digit+         { mkInteger }
-    <0> \' ($char|@special) \'
-                        { \p s x -> (T_Char s, x) }
-    <0> \" ($char|@special)* \"
-                        { \p s x -> (T_String s, x) }
-    <0> "="             { \p s x -> (T_Assign, x) }
-    <0> "+"             { \p s x -> (T_Plus, x) }
-    <0> "-"             { \p s x -> (T_Minus, x) }
-    <0> "*"             { \p s x -> (T_Times, x) }
-    <0> "/"             { \p s x -> (T_Div, x) }
-    <0> "%"             { \p s x -> (T_Mod, x) }
-    <0> "!"             { \p s x -> (T_Not, x) }
-    <0> "&"             { \p s x -> (T_And, x) }
-    <0> "|"             { \p s x -> (T_Or, x) }
-    <0> "=="            { \p s x -> (T_Eq, x) }
-    <0> "!="            { \p s x -> (T_Ne, x) }
-    <0> "<"             { \p s x -> (T_Lt, x) }
-    <0> ">"             { \p s x -> (T_Gt, x) }
-    <0> "<="            { \p s x -> (T_Le, x) }
-    <0> ">="            { \p s x -> (T_Ge, x) }
-    <0> "("             { \p s x -> (T_Op, x) }
-    <0> ")"             { \p s x -> (T_Cp, x) }
-    <0> "["             { \p s x -> (T_Os, x) }
-    <0> "]"             { \p s x -> (T_Cs, x) }
-    <0> "{"             { \p s x -> (T_Oc, x) }
-    <0> "}"             { \p s x -> (T_Cc, x) }
-    <0> ","             { \p s x -> (T_Comma, x) }
-    <0> ":"             { \p s x -> (T_Colon, x) }
-    <0> ";"             { \p s x -> (T_SemiColon, x) }
-    "--" .*             ;
-    "(*"                { embedComment }
-    <comments> .        ;
-    <comments> "*)"     { unembedComment }
-    .                   { \p s x -> (T_ERROR ("Unknown char " ++ s), x) }
+$white+             ;
 
+<0> {
+  byte              { token ITbyte }
+  return            { token ITreturn }
+  else              { token ITelse }
+  while             { token ITwhile }
+  false             { token ITfalse }
+  true              { token ITtrue }
+  if                { token ITif }
+  int               { token ITint }
+  proc              { token ITint }
+  reference         { token ITreference }
+
+  $alpha $id*       { lex_id_tok }
+  $digit+           { lex_int_tok }
+  \' ($char|@special) \'
+                    { lex_char_tok }
+  \" ($char|@special)* \"
+                    { lex_string_tok }
+
+  "="               { token ITassign }
+  "+"               { token ITplus }
+  "-"               { token ITminus }
+  "*"               { token ITtimes }
+  "/"               { token ITdiv }
+  "%"               { token ITmod }
+  "!"               { token ITnot }
+  "&"               { token ITand }
+  "|"               { token ITor }
+  "=="              { token ITequal }
+  "!="              { token ITnotequal }
+  "<"               { token ITlt }
+  ">"               { token ITgt }
+  "<="              { token ITle }
+  ">="              { token ITge }
+  "("               { token IToparen }
+  ")"               { token ITcparen }
+  "["               { token ITobrack }
+  "]"               { token ITcbrack }
+  "{"               { token ITocurly }
+  "}"               { token ITccurly }
+  ","               { token ITcomma }
+  ":"               { token ITcolon }
+  ";"               { token ITsemi }
+}
+
+"--" .*             ;
+"(*"                { embedComment }
+<comments> {
+  "*)"              { unembedComment }
+  .                 ;
+}
+
+.                   ;
 
 
 {
 
 data Token
-    = T_kwByte
-    | T_Return
-    | T_Else
-    | T_While
-    | T_False
-    | T_True
-    | T_If
-    | T_kwInt
-    | T_Proc
-    | T_Reference
-    | T_Id String
-    | T_Int Int
-    | T_Char String
-    | T_String String
-    | T_Assign
-    | T_Plus
-    | T_Minus
-    | T_Times
-    | T_Div
-    | T_Mod
-    | T_Not
-    | T_And
-    | T_Or
-    | T_Eq
-    | T_Ne
-    | T_Lt
-    | T_Gt
-    | T_Le
-    | T_Ge
-    | T_Op
-    | T_Cp
-    | T_Os
-    | T_Cs
-    | T_Oc
-    | T_Cc
-    | T_Comma
-    | T_Colon
-    | T_SemiColon
-    | T_EOF
-    | T_SKIP
-    | T_WARN Token String
-    | T_ERROR String
-    deriving (Eq, Show)
+    = ITbyte
+    | ITreturn
+    | ITelse
+    | ITwhile
+    | ITfalse
+    | ITtrue
+    | ITif
+    | ITint
+    | ITproc
+    | ITreference
 
+    | ITid String
+    | ITdigit Int
+    | ITchar Char
+    | ITstring String
 
--- ------------------------------------------------------------------
--- Functions
+    | ITassign      -- =
+    | ITplus        -- +
+    | ITminus       -- -
+    | ITtimes       -- *
+    | ITdiv         -- /
+    | ITmod         -- %
+    | ITnot         -- !
+    | ITand         -- &
+    | ITor          -- |
+    | ITequal       -- ==
+    | ITnotequal    -- !=
+    | ITlt          -- <
+    | ITgt          -- >
+    | ITle          -- <=
+    | ITge          -- >=
+    | IToparen      -- (
+    | ITcparen      -- )
+    | ITocurly      -- {
+    | ITccurly      -- }
+    | ITobrack      -- [
+    | ITcbrack      -- ]
+    | ITcomma       -- ,
+    | ITcolon       -- :
+    | ITsemi        -- ;
 
--- This is the main Lexer function
-lexer :: (Token -> P a) -> P a
-lexer cont = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc,nc) ->
-    case alexScan inp sc of
-        AlexEOF ->
-            let (t, (e,w)) = runP (cont T_EOF) inp state
-            in
-            if sc==comments then (t, ((parseError "Unclosed comments" pos):e,w)) else (t,(e,w))
-        AlexError _ -> error (parseError "Alex internal error" pos)
-        AlexSkip inp' len -> runP (lexer cont) inp' state
-        AlexToken inp' len act ->
-            case act pos (take len str) state of
-                 (T_SKIP, new_state)         ->
-                    runP (lexer cont) inp' new_state
-                 (T_WARN tok msg, new_state) ->
-                    let (t, (e,w)) = runP (cont tok) inp' new_state
-                    in
-                    (t, (e,(parseWarning msg pos):w))
-                 (T_ERROR msg, new_state)    ->
-                    let (t,(e,w)) = runP (lexer cont) inp' new_state
-                    in
-                    (t, ((parseError msg pos):e,w))
-                 (tok, new_state)            -> runP (cont tok) inp' new_state
-
--- An error encountered
-parseError :: String -> AlexPosn -> String
-parseError msg pos =
-    (showPosn pos ++ ":  " ++ "Parse error: " ++ msg)
-
-
--- A Warning encountered
-parseWarning :: String -> AlexPosn -> String
-parseWarning msg pos =
-    (showPosn pos ++ ":  " ++ "Warning: " ++ msg)
-
--- Return line and column
-showPosn :: AlexPosn -> String
-showPosn (AlexPn _ line col) = show line ++ ':' : show col
-
-
--- Dummy Lexer function to be used by our independent lexer
--- The main lexer function needs a continuation and will be
--- used by our parser
-lexDummy :: P [Token]
-lexDummy = P $ \inp@(pos@(AlexPn a l c),_,str) state@(sc, nc) ->
-    case alexScan inp sc of
-        AlexEOF ->
-            if sc==comments
-               then ([], ([parseError "Unclosed comments" pos],[]))
-               else ([], ([],[]))
-        AlexError _ -> error (parseError "Alex internal error" pos)
-        AlexSkip inp' len -> runP lexDummy inp' state
-        AlexToken inp' len act ->
-            case act pos (take len str) state of
-                 (T_SKIP, new_state)         ->
-                    runP lexDummy inp' new_state
-                 (T_WARN tok msg, new_state) ->
-                    let (t, (e,w)) = runP lexDummy inp' new_state
-                    in
-                    (tok:t, (e,(parseWarning msg pos):w))
-                 (T_ERROR msg, new_state)    ->
-                    let (t, (e,w)) = runP lexDummy inp' new_state
-                    in
-                    (t, ((parseError msg pos):e,w))
-                 (tok, new_state)            ->
-                    let (t, (e,w)) = runP lexDummy inp' new_state
-                    in
-                    (tok:t, (e,w))
-
+    | ITunknown String  -- Used when the lexer can't make sense of it
+    | ITeof             -- end of file token
+    deriving Show
 
 -- ------------------------------------------------------------------
--- Functions to handle embended comments
+-- Lexer actions
 
-embedComment :: AlexPosn -> String -> StateCode -> (Token, StateCode)
-embedComment _ _ (_, nc) = (T_SKIP, (comments, nc+1))
+-- Position -> Buffer -> Length -> P Token
+type Action = SrcLoc -> String -> Int -> P (Located Token)
 
-unembedComment :: AlexPosn -> String -> StateCode -> (Token, StateCode)
-unembedComment _ _ (_, nc)
-    | nc >  1   = (T_SKIP, (comments,nc-1))
-    | nc == 1   = (T_SKIP, (0,0))
-    | otherwise = (T_ERROR "Unmatched *)", (0,0))
+token :: Token -> Action
+token t pos _buf _len = return (L pos t)
 
+skip :: Action
+skip _pos _buf _len = lexToken
+
+andBegin :: Action -> Int -> Action
+andBegin act code pos buf len = do setLexState code; act pos buf len
+
+begin :: Int -> Action
+begin code = skip `andBegin` code
+
+lex_id_tok :: Action
+lex_id_tok pos buf len = return (L pos (ITid (take len buf)))
+
+lex_int_tok :: Action
+lex_int_tok pos buf len = return (L pos (ITdigit (read (take len buf))))
+
+lex_string_tok :: Action
+lex_string_tok pos buf len = return (L pos (ITstring (take len buf)))
+
+lex_char_tok :: Action
+lex_char_tok pos buf len = return (L pos (ITchar c))
+    where c = case take len buf of
+                    "\n"    -> '\n'
+                    "\t"    -> '\t'
+                    "\r"    -> '\r'
+                    "\0"    -> '\0'
+                    "\\"    -> '\\'
+                    "\'"    -> '\''
+                    "\""    -> '\"'
+                    ('\\':'x':x)    -> chr $ read ("0x" ++ x)
+                    ('\\':x:[])        -> x
+
+embedComment :: Action
+embedComment _pos _buf _len = do
+    incCommState
+    begin comments _pos _buf _len
+    lexToken
+
+unembedComment :: Action
+unembedComment _pos _buf _len = do
+    decCommState
+    status <- getCommState
+    if status == 0
+        then do
+            begin 0 _pos _buf _len
+            lexToken
+        else lexToken
 
 -- ------------------------------------------------------------------
--- Check if our Integer is smaller than 32768 (16 bits)
+-- Warnings
 
-mkInteger :: AlexPosn -> String -> StateCode -> (Token, StateCode)
-mkInteger p s x =
-    if num <= 32768
-       then (T_Int num, x)
-       else (T_WARN (T_Int num) ("Number " ++ s ++ " is bigger than 16 bits"), x)
-    where num = read s
+warn :: String -> Action
+warn warning pos _buf _len = do
+    addWarning pos warning
+    lexToken
+
+warnThen :: String -> Action -> Action
+warnThen warning action pos buf len = do
+    addWarning pos warning
+    action pos buf len
 
 -- ------------------------------------------------------------------
--- Define P monad used by our monadic lexer-parser
+-- The Parse Monad
 
--- StateCode = (StartCode, Number_of_Embedded_comments)
-type StateCode = (Int, Int)
+data ParseResult a
+    = POk PState a
+    | PFailed 
+      SrcLoc        -- The end of the text span related to the error
+      Message       -- The error message
+  deriving Show
 
-lexStartState :: (Int, Int)
-lexStartState = (0,0)
+data PState = PState { 
+    buffer	        :: String,
+    messages        :: Messages,
+    loc             :: SrcLoc,  -- current loc (end of token + 1)
+    prev            :: Char,    -- previous char
+	lex_state       :: Int,
+    comment_state   :: Int
+  } deriving Show
 
-type Errors = [String]
-type Warnings = [String]
-
-newtype P a = P { runP :: AlexInput -> StateCode -> (a, (Errors,Warnings)) }
+newtype P a = P { unP :: PState -> ParseResult a }
 
 instance Monad P where
-    m >>= k = P $ \inp state ->
-        let (x, (e,w))  = runP m inp state
-            (y, (e',w')) = runP (k x) inp state
+    return = returnP
+    (>>=) = thenP
+    fail = failP
+
+returnP :: a -> P a
+returnP a = a `seq` (P $ \s -> POk s a)
+
+thenP :: P a -> (a -> P b) -> P b
+(P m) `thenP` k = P $ \ s ->
+    case m s of
+        POk s1 a         -> (unP (k a)) s1
+        PFailed span err -> PFailed span err
+
+failP :: String -> P a
+failP msg = P $ \s@(PState{loc=loc}) -> PFailed loc msg
+
+failMsgP :: String -> P a
+failMsgP msg = P $ \s@(PState{loc=loc}) -> PFailed loc msg
+
+failLocMsgP :: SrcLoc -> String -> P a
+failLocMsgP loc msg = P $ \_ -> PFailed loc msg
+
+getPState :: P PState
+getPState = P $ \s -> POk s s
+
+getInput :: P AlexInput
+getInput = P $ \s@(PState{loc=loc, buffer=buffer, prev=prev}) ->
+                    POk s (AI loc buffer prev)
+
+setInput :: AlexInput -> P ()
+setInput (AI loc buf prev) = P $ \s ->
+                    POk s{loc=loc, buffer=buf, prev=prev} ()
+
+getLexState :: P Int
+getLexState = P $ \s@(PState{lex_state=lex_state}) ->
+                    POk s lex_state
+
+setLexState :: Int ->P ()
+setLexState new_state = P $ \s ->
+                    POk s{lex_state=new_state} ()
+
+setSrcLoc :: SrcLoc -> P ()
+setSrcLoc new_loc = P $ \s -> POk s{loc=new_loc} ()
+
+getSrcLoc :: P SrcLoc
+getSrcLoc = P $ \s@(PState{loc=loc}) -> POk s loc
+
+incCommState :: P ()
+incCommState = P $ \s@(PState{comment_state=prev}) ->
+                    POk s{comment_state=prev+1} ()
+
+decCommState :: P ()
+decCommState = P $ \s@(PState{comment_state=prev}) ->
+                    POk s{comment_state=prev-1} ()
+
+getCommState :: P Int
+getCommState = P $ \s@(PState{comment_state=comment_state}) ->
+                    POk s comment_state
+
+data AlexInput = AI SrcLoc String Char
+
+alexInputPrevChar :: AlexInput -> Char
+alexInputPrevChar (AI _ _ c) = c
+
+alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
+alexGetChar (AI loc ('\n':xs) _) = Just ('\n', AI newline xs '\n')
+    where newline = (SrcLoc (off+1) (line+1) 1)
+          SrcLoc off line _ = loc
+alexGetChar (AI loc (x:xs) _) = Just (x, AI nextchar xs x)
+    where nextchar = (SrcLoc (off+1) line (col+1))
+          SrcLoc off line col = loc
+alexGetChar (AI _ [] _) = Nothing
+
+
+-- create a parse state
+--
+mkPState :: String -> SrcLoc -> PState
+mkPState buf loc =
+  PState {
+    buffer          = buf,
+    messages        = emptyMessages,
+    loc             = loc,
+    prev            = '\n',
+    lex_state       = 0,
+    comment_state   = 0
+  }
+
+addWarning :: SrcLoc -> String -> P ()
+addWarning srcspan warning
+    = P $ \s@(PState{messages=(ws,es)}) ->
+        let warning' = mkWarnMsg warning
+            ws'     = ws `snocBag` warning'
+        in POk s{messages=(ws',es)} ()
+
+getMessages :: PState -> Messages
+getMessages PState{messages=ms} = ms
+
+-- -------------------------------------------------------------------
+-- Construct a parse error
+
+-- A lexical error is reported at a particular position in the source file,
+-- not over a token range.
+lexError :: String -> P a
+lexError str = do
+    (AI loc buf _) <- getInput
+    reportLexError loc buf str
+
+-- -----------------------------------------------------------------------------
+-- This is the top-level function: called from the parser each time a
+-- new token is to be read from the input.
+
+lexer :: (Located Token -> P a) -> P a
+lexer cont = do
+  tok@(L _span _tok__) <- lexToken
+  cont tok
+
+lexToken :: P (Located Token)
+lexToken = do
+    inp@(AI loc buf _) <- getInput
+    sc <- getLexState
+    case alexScan inp sc of
+        AlexEOF -> do
+            if sc > 0
+               then lexError "Unclosed bracket"
+               else return (L loc ITeof)
+        AlexError (AI loc2 buf2 _) ->
+            reportLexError loc2 buf2 "lexical error"
+        AlexSkip inp2 _ -> do
+            setInput inp2
+            lexToken
+        AlexToken inp2@(AI loc2 buf2 _) len t -> do
+            setInput inp2
+            t loc2 buf2 len
+
+reportLexError :: SrcLoc -> String -> String -> P a
+reportLexError loc buf str
+    | null buf  = failLocMsgP loc (str ++ " at end of input")
+    | otherwise =
+        let c = head buf
         in
-        (y, (e++e',w++w'))
-    return a = P $ \inp state -> (a, ([],[]))
+        failLocMsgP loc (str ++ " at character " ++ show c)
 
 }

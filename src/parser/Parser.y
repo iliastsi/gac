@@ -11,13 +11,15 @@ throw away inlinings as it would normally do in -O0 mode.
 module Parser(parser) where
 
 import Lexer
+import ErrUtils
+import SrcLoc
 }
 
-%name parser Program
-%tokentype { Token }
+%name parser program
+%tokentype { (Located Token) }
 %error { happyError }
-%monad { P }
-%lexer { lexer } { T_EOF }
+%monad { P } { >>= } { return }
+%lexer { lexer } { L _ ITeof }
 
 %left '|'
 %left '&'
@@ -28,156 +30,152 @@ import Lexer
 %nonassoc '(' ')'
 
 %token
-    kwByte      { T_kwByte      }
-    return      { T_Return      }
-    else        { T_Else        }
-    while       { T_While       }
-    false       { T_False       }
-    true        { T_True        }
-    if          { T_If          }
-    kwInt       { T_kwInt       }
-    proc        { T_Proc        }
-    reference   { T_Reference   }
-    id          { T_Id      $$  }
-    int         { T_Int     $$  }
-    char        { T_Char    $$  }
-    string      { T_String  $$  }
-    '='         { T_Assign      }
-    '+'         { T_Plus        }
-    '-'         { T_Minus       }
-    '*'         { T_Times       }
-    '/'         { T_Div         }
-    '%'         { T_Mod         }
-    '!'         { T_Not         }
-    '&'         { T_And         }
-    '|'         { T_Or          }
-    '=='        { T_Eq          }
-    '!='        { T_Ne          }
-    '<'         { T_Lt          }
-    '>'         { T_Gt          }
-    '<='        { T_Le          }
-    '>='        { T_Ge          }
-    '('         { T_Op          }
-    ')'         { T_Cp          }
-    '['         { T_Os          }
-    ']'         { T_Cs          }
-    '{'         { T_Oc          }
-    '}'         { T_Cc          }
-    ','         { T_Comma       }
-    ':'         { T_Colon       }
-    ';'         { T_SemiColon   }
+    BYTE        { L _ ITbyte        }
+    RETURN      { L _ ITreturn      }
+    ELSE        { L _ ITelse        }
+    WHILE       { L _ ITwhile       }
+    FALSE       { L _ ITfalse       }
+    TRUE        { L _ ITtrue        }
+    IF          { L _ ITif          }
+    INT         { L _ ITint         }
+    PROC        { L _ ITproc        }
+    REFERENCE   { L _ ITreference   }
+    ID          { L _ (ITid _)      }
+    DIGIT       { L _ (ITdigit _)   }
+    CHAR        { L _ (ITchar _)    }
+    STRING      { L _ (ITstring _)  }
+    '='         { L _ ITassign      }
+    '+'         { L _ ITplus        }
+    '-'         { L _ ITminus       }
+    '*'         { L _ ITtimes       }
+    '/'         { L _ ITdiv         }
+    '%'         { L _ ITmod         }
+    '!'         { L _ ITnot         }
+    '&'         { L _ ITand         }
+    '|'         { L _ ITor          }
+    '=='        { L _ ITequal       }
+    '!='        { L _ ITnotequal    }
+    '<'         { L _ ITlt          }
+    '>'         { L _ ITgt          }
+    '<='        { L _ ITle          }
+    '>='        { L _ ITge          }
+    '('         { L _ IToparen      }
+    ')'         { L _ ITcparen      }
+    '{'         { L _ ITocurly      }
+    '}'         { L _ ITccurly      }
+    '['         { L _ ITobrack      }
+    ']'         { L _ ITcbrack      }
+    ','         { L _ ITcomma       }
+    ':'         { L _ ITcolon       }
+    ';'         { L _ ITsemi        }
 
 
 
 %%
 
-Program
-    : FuncDef                       { () }
+program
+    : funcDef                       { () }
 
-FuncDef
-    : id '(' FparList ')' ':' RType LocalDefs '{' CompoundStmt '}'
+funcDef
+    : ID '(' fparList ')' ':' rType localDefs '{' compoundStmt '}'
                                     { () }
 
-FparList
+fparList
     : {- nothing -}                 { () }
-    | FparDef                       { () }
-    | FparList ',' FparDef          { () }
+    | fparDef                       { () }
+    | fparList ',' fparDef          { () }
 
-FparDef
-    : id ':' Type                   { () }
-    | id ':' reference Type         { () }
+fparDef
+    : ID ':' type                   { () }
+    | ID ':' REFERENCE type         { () }
 
-DataType
-    : kwInt                         { () }
-    | kwByte                        { () }
+dataType
+    : INT                           { () }
+    | BYTE                          { () }
 
-Type
-    : DataType                      { () }
-    | DataType '[' ']'              { () }
+type
+    : dataType                      { () }
+    | dataType '[' ']'              { () }
 
-RType
-    : DataType                      { () }
-    | proc                          { () }
+rType
+    : dataType                      { () }
+    | PROC                          { () }
 
-LocalDefs
+localDefs
     : {- nothing -}                 { () }
-    | LocalDefs LocalDef            { () }
+    | localDefs localDef            { () }
 
-LocalDef
-    : FuncDef                       { () }
-    | VarDef                        { () }
+localDef
+    : funcDef                       { () }
+    | varDef                        { () }
 
-VarDef
-    : id ':' DataType ';'           { () }
-    | id ':' DataType '[' int ']' ';'
+varDef
+    : ID ':' dataType ';'           { () }
+    | ID ':' dataType '[' DIGIT ']' ';'
                                     { () }
 
-Stmt
+stmt
     : ';'                           { () }
-    | LValue '=' Expr ';'           { () }
-    | '{' CompoundStmt '}'          { () }
-    | FuncCall ';'                  { () }
-    | if '(' Cond ')' Stmt          { () }
-    | if '(' Cond ')' Stmt else Stmt
+    | lValue '=' expr ';'           { () }
+    | '{' compoundStmt '}'          { () }
+    | funcCall ';'                  { () }
+    | IF '(' cond ')' stmt          { () }
+    | IF '(' cond ')' stmt ELSE stmt
                                     { () }
-    | while '(' Cond ')' Stmt       { () }
-    | return ';'                    { () }
-    | return Expr ';'               { () }
+    | WHILE '(' cond ')' stmt       { () }
+    | RETURN ';'                    { () }
+    | RETURN expr ';'               { () }
 
-CompoundStmt
+compoundStmt
     : {- nothing -}                 { () }
-    | CompoundStmt Stmt             { () }
+    | compoundStmt stmt             { () }
 
-FuncCall
-    : id '(' ')'                    { () }
-    | id '(' ExprList ')'           { () }
+funcCall
+    : ID '(' ')'                    { () }
+    | ID '(' exprList ')'           { () }
 
-ExprList
-    : Expr                          { () }
-    | ExprList ',' Expr             { () }
+exprList
+    : expr                          { () }
+    | exprList ',' expr             { () }
 
-Expr
-    : int                           { () }
-    | char                          { () }
-    | LValue                        { () }
-    | '(' Expr ')'                  { () }
-    | FuncCall                      { () }
-    | '+' Expr %prec SIGN           { () }
-    | '-' Expr %prec SIGN           { () }
-    | Expr '+' Expr                 { () }
-    | Expr '-' Expr                 { () }
-    | Expr '*' Expr                 { () }
-    | Expr '/' Expr                 { () }
-    | Expr '%' Expr                 { () }
+expr
+    : DIGIT                         { () }
+    | CHAR                          { () }
+    | lValue                        { () }
+    | '(' expr ')'                  { () }
+    | funcCall                      { () }
+    | '+' expr %prec SIGN           { () }
+    | '-' expr %prec SIGN           { () }
+    | expr '+' expr                 { () }
+    | expr '-' expr                 { () }
+    | expr '*' expr                 { () }
+    | expr '/' expr                 { () }
+    | expr '%' expr                 { () }
 
-LValue
-    : id                            { () }
-    | id '[' Expr ']'               { () }
-    | string                        { () }
+lValue
+    : ID                            { () }
+    | ID '[' expr ']'               { () }
+    | STRING                        { () }
 
-Cond
-    : true                          { () }
-    | false                         { () }
-    | '(' Cond ')'                  { () }
-    | '!' Cond                      { () }
-    | Expr '==' Expr                { () }
-    | Expr '!=' Expr                { () }
-    | Expr '<'  Expr                { () }
-    | Expr '>'  Expr                { () }
-    | Expr '<=' Expr                { () }
-    | Expr '>=' Expr                { () }
-    | Cond '&'  Cond                { () }
-    | Cond '|'  Cond                { () }
+cond
+    : TRUE                          { () }
+    | FALSE                         { () }
+    | '(' cond ')'                  { () }
+    | '!' cond                      { () }
+    | expr '==' expr                { () }
+    | expr '!=' expr                { () }
+    | expr '<'  expr                { () }
+    | expr '>'  expr                { () }
+    | expr '<=' expr                { () }
+    | expr '>=' expr                { () }
+    | cond '&'  cond                { () }
+    | cond '|'  cond                { () }
 
 
 {
 
-happyError :: Token -> P a
-happyError T_EOF =
-    P $ \(pos,_,str) sc -> error $
-        parseError "Happy internal error at end of file" pos
-happyError _  =
-    P $ \(pos,_,str) sc -> error $
-        parseError ("Happy internal error befor " ++ (take 10 str)) pos
+happyError :: (Located Token) -> P a
+happyError (L _ ITeof) = lexError "Happy internal error at end of file"
+happyError (L _ _)     = lexError "Happy my error"
 
 }

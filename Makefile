@@ -33,7 +33,7 @@ $(BUILDDIR)/setup-config:
 # otherwise cabal throughs out a warning
 # But doing so, cabal calls preprocessors and generates
 # source files which then includes in our tarbal
-dist:
+dist: clean
 	$(RUNHS) Setup sdist --builddir=$(BUILDDIR)
 
 clean:

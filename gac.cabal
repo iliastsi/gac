@@ -48,3 +48,5 @@ Executable gac
   Other-Modules:
         Parser
         Lexer
+        SrcLoc
+        ErrUtils

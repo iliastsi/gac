@@ -1,4 +1,4 @@
-Getting started with hacking on GHC
+Getting started with hacking on GAC
 -----------------------------------
 
 So you've decided to hack on GAC, congratulations!  We hope you have a
@@ -6,7 +6,7 @@ rewarding experience.  This file will point you in the direction of
 information to help you get started right away.
 
 
-The GHC Developer's Wiki
+The GAC Developer's Wiki
 ------------------------
 
   Quick Start for developers
