@@ -12,6 +12,9 @@ solve () : proc
 	}
 
     { -- hanoi
+(* test embeded (* comments 
+	*)
+to many lines*)
 	if (rings >=  55555) {
 	    hanoi(rings-1, source, auxiliary, target);
 	    move(source, target);

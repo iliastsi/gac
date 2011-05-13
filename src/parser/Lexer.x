@@ -57,7 +57,7 @@ $white+             ;
   true              { token ITtrue }
   if                { token ITif }
   int               { token ITint }
-  proc              { token ITint }
+  proc              { token ITproc }
   reference         { token ITreference }
 
   $alpha $id*       { lex_id_tok }
@@ -100,7 +100,7 @@ $white+             ;
   .                 ;
 }
 
-.                   ;
+.                   { \_p _b _l -> lexError "Unknown char" }
 
 
 {
@@ -149,7 +149,7 @@ data Token
 
     | ITunknown String  -- Used when the lexer can't make sense of it
     | ITeof             -- end of file token
-    deriving Show
+    deriving Eq
 
 -- ------------------------------------------------------------------
 -- Lexer actions
@@ -195,16 +195,13 @@ embedComment :: Action
 embedComment _pos _buf _len = do
     incCommState
     begin comments _pos _buf _len
-    lexToken
 
 unembedComment :: Action
 unembedComment _pos _buf _len = do
     decCommState
     status <- getCommState
     if status == 0
-        then do
-            begin 0 _pos _buf _len
-            lexToken
+        then begin 0 _pos _buf _len
         else lexToken
 
 -- ------------------------------------------------------------------
@@ -353,11 +350,6 @@ lexError str = do
 -- This is the top-level function: called from the parser each time a
 -- new token is to be read from the input.
 
-lexer :: (Located Token -> P a) -> P a
-lexer cont = do
-  tok@(L _span _tok__) <- lexToken
-  cont tok
-
 lexToken :: P (Located Token)
 lexToken = do
     inp@(AI loc buf _) <- getInput
@@ -372,9 +364,9 @@ lexToken = do
         AlexSkip inp2 _ -> do
             setInput inp2
             lexToken
-        AlexToken inp2@(AI loc2 buf2 _) len t -> do
+        AlexToken inp2 len t -> do
             setInput inp2
-            t loc2 buf2 len
+            t loc buf len
 
 reportLexError :: SrcLoc -> String -> String -> P a
 reportLexError loc buf str
@@ -383,5 +375,21 @@ reportLexError loc buf str
         let c = head buf
         in
         failLocMsgP loc (str ++ " at character " ++ show c)
+
+-- used for debugging as it not contains continuation function
+--
+lexDummy :: P [(Located Token)]
+lexDummy = do
+    tok@(L _pos t) <- lexToken
+    if t==ITeof
+        then do let toks = []
+                P $ \s -> POk s (tok : toks)
+        else do toks <- lexDummy
+                P $ \s -> POk s (tok : toks)
+
+lexer :: (Located Token -> P a) -> P a
+lexer cont = do
+  tok@(L _span _tok__) <- lexToken
+  cont tok
 
 }
