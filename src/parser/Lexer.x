@@ -310,12 +310,10 @@ alexInputPrevChar :: AlexInput -> Char
 alexInputPrevChar (AI _ _ c) = c
 
 alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
-alexGetChar (AI loc ('\n':xs) _) = Just ('\n', AI newline xs '\n')
-    where newline = (SrcLoc (off+1) (line+1) 1)
-          SrcLoc off line _ = loc
-alexGetChar (AI loc (x:xs) _) = Just (x, AI nextchar xs x)
-    where nextchar = (SrcLoc (off+1) line (col+1))
-          SrcLoc off line col = loc
+alexGetChar (AI loc ('\n':xs) _) = Just ('\n', AI (incSrcLine loc) xs '\n')
+alexGetChar (AI loc ('\t':xs) _) = Just ('\t', AI (incSrcTab loc) xs '\t')
+alexGetChar (AI loc ('\r':xs) _) = Just ('\r', AI (srcCarRet loc) xs '\r')
+alexGetChar (AI loc (x:xs) _)    = Just (x, AI (incSrcColumn loc) xs x)
 alexGetChar (AI _ [] _) = Nothing
 
 

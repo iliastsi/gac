@@ -1,6 +1,7 @@
 hello () : proc
 	c : byte;
 {
+	   	c = 'a';
     c = '\n';
     writeString("Hello world!\n");
 }

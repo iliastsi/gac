@@ -1,0 +1,4 @@
+** Fix in Lexer:
+	UnknownChar error
+	ITunknonw
+	comments errors
