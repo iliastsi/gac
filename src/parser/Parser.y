@@ -1,3 +1,10 @@
+-- -----------------------------------------------------------------------------
+-- (c) Tsitsimpis Ilias, 2011
+---
+-- The GAC grammar.
+--
+-- -----------------------------------------------------------------------------
+
 {
 {-# LANGUAGE BangPatterns #-} -- required for versions of Happy before 1.18.6
 {-# OPTIONS_GHC -O0 -fno-ignore-interface-pragmas #-}

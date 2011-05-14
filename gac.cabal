@@ -45,6 +45,7 @@ Executable gac
   Hs-Source-Dirs:
         src
         src/parser
+        src/main
   Other-Modules:
         Parser
         Lexer
