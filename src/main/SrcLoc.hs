@@ -3,7 +3,10 @@
 --
 --------------------------------------------------------------------------------
 
-module SrcLoc where
+module SrcLoc (
+    Located(..), SrcLoc(..),
+    getSrcOffset, getSrcLine, getSrcColumn
+  ) where
 
 data Located e = L SrcLoc e
     deriving Show

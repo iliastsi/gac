@@ -3,7 +3,10 @@
 --
 --------------------------------------------------------------------------------
 
-module ErrUtils where
+module ErrUtils (
+    Message, Messages, emptyMessages,
+    mkWarnMsg, mkErrMsg, snocBag
+  ) where
 
 type Bag a = [a]
 

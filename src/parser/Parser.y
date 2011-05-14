@@ -182,7 +182,7 @@ cond
 {
 
 happyError :: (Located Token) -> P a
-happyError (L _ ITeof) = lexError "Happy internal error at end of file"
-happyError (L _ _)     = lexError "Happy my error"
+happyError (L _ ITeof) = error "Happy internal error at end of file"
+happyError (L _ _)     = error "Happy my error"
 
 }

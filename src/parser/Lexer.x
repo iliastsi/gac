@@ -25,7 +25,11 @@
 
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
-module Lexer where
+module Lexer (
+    ParseResult(..), PState(..), P(..), mkPState,
+    failMsgP, failLocMsgP, getMessages,
+    Token(..), lexer, lexDummy
+  ) where
 
 import SrcLoc
 import ErrUtils
@@ -175,12 +179,12 @@ lex_id_tok pos buf len = return (L pos (ITid (take len buf)))
 lex_int_tok :: Action
 lex_int_tok pos buf len = return (L pos (ITdigit (read (take len buf))))
 
-lex_string_tok :: Action
-lex_string_tok pos buf len = return (L pos (ITstring (take len buf)))
+lex_string_tok :: Action    -- strip out \" from beginng and ending
+lex_string_tok pos buf len = return (L pos (ITstring (take (len-2) (tail buf))))
 
 lex_char_tok :: Action
 lex_char_tok pos buf len = return (L pos (ITchar c))
-    where c = case take (len-2) (tail buf) of -- stip \' from begining and ending
+    where c = case take (len-2) (tail buf) of -- stip \' from beginning and ending
                     "\\n"    -> '\n'
                     "\\t"    -> '\t'
                     "\\r"    -> '\r'
@@ -190,7 +194,7 @@ lex_char_tok pos buf len = return (L pos (ITchar c))
                     "\\\""    -> '\"'
                     ('\\':'x':x)    -> chr $ read ("0x" ++ x)
                     ('\\':x:[])     -> x
-                    (x:_)           -> x
+                    (x:[])          -> x
                     _               -> error "in lex_char_tok"
 
 embedComment :: Action
