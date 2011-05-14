@@ -2,6 +2,7 @@ hello () : proc
 	c : byte;
 {
 	   	c = 'a';
+(* test haha *)
     c = '\n';
     writeString("Hello world!\n");
 }

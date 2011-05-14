@@ -95,6 +95,8 @@ $white+             ;
   ","               { token ITcomma }
   ":"               { token ITcolon }
   ";"               { token ITsemi }
+
+  "*)"              { \_p _b _l -> lexError "Unmatched comment close symbol" }
 }
 
 "--" .*             ;
@@ -198,16 +200,16 @@ lex_char_tok pos buf len = return (L pos (ITchar c))
                     _               -> error "in lex_char_tok"
 
 embedComment :: Action
-embedComment _pos _buf _len = do
+embedComment pos buf len = do
     incCommState
-    begin comments _pos _buf _len
+    begin comments pos buf len
 
 unembedComment :: Action
-unembedComment _pos _buf _len = do
+unembedComment pos buf len = do
     decCommState
     status <- getCommState
     if status == 0
-        then begin 0 _pos _buf _len
+        then begin 0 pos buf len
         else lexToken
 
 -- ------------------------------------------------------------------
@@ -361,7 +363,7 @@ lexToken = do
     case alexScan inp sc of
         AlexEOF -> do
             if sc > 0
-               then lexError "Unclosed bracket"
+               then lexError "Probably unmatched open comment symbol"
                else return (L loc ITeof)
         AlexError (AI loc2 buf2 _) ->
             reportLexError loc2 buf2 "lexical error"
