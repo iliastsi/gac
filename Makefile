@@ -22,6 +22,7 @@ all: build
 
 build: config
 	$(RUNHS) Setup build --builddir=$(BUILDDIR)
+	cp ./dist/build/gac/gac .
 
 config: $(BUILDDIR)/setup-config
 
@@ -38,6 +39,7 @@ dist: clean
 
 clean:
 	$(RUNHS) Setup clean --builddir=$(BUILDDIR)
+	$(RM) ./gac
 
 install: build
 	$(RUNHS) Setup install --builddir=$(BUILDDIR)

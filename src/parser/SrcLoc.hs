@@ -1,6 +1,7 @@
 module SrcLoc where
 
 data Located e = L SrcLoc e
+    deriving Show
 
 data SrcLoc = SrcLoc {
     offset  :: Int,     -- absolute character offset

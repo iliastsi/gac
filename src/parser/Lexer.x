@@ -149,7 +149,7 @@ data Token
 
     | ITunknown String  -- Used when the lexer can't make sense of it
     | ITeof             -- end of file token
-    deriving Eq
+    deriving (Eq, Show)
 
 -- ------------------------------------------------------------------
 -- Lexer actions
@@ -180,16 +180,18 @@ lex_string_tok pos buf len = return (L pos (ITstring (take len buf)))
 
 lex_char_tok :: Action
 lex_char_tok pos buf len = return (L pos (ITchar c))
-    where c = case take len buf of
-                    "\n"    -> '\n'
-                    "\t"    -> '\t'
-                    "\r"    -> '\r'
-                    "\0"    -> '\0'
-                    "\\"    -> '\\'
-                    "\'"    -> '\''
-                    "\""    -> '\"'
+    where c = case take (len-2) (tail buf) of -- stip \' from begining and ending
+                    "\\n"    -> '\n'
+                    "\\t"    -> '\t'
+                    "\\r"    -> '\r'
+                    "\\0"    -> '\0'
+                    "\\\\"    -> '\\'
+                    "\\\'"    -> '\''
+                    "\\\""    -> '\"'
                     ('\\':'x':x)    -> chr $ read ("0x" ++ x)
-                    ('\\':x:[])        -> x
+                    ('\\':x:[])     -> x
+                    (x:_)           -> x
+                    _               -> error "in lex_char_tok"
 
 embedComment :: Action
 embedComment _pos _buf _len = do
