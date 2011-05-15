@@ -239,9 +239,9 @@ data PState = PState {
     buffer	        :: String,
     messages        :: Messages,
     loc             :: SrcLoc,  -- current loc (end of token + 1)
-    prev            :: Char,    -- previous char
-	lex_state       :: Int,
-    comment_state   :: Int
+    prev            :: !Char,   -- previous char
+	lex_state       :: !Int,
+    comment_state   :: !Int
   } deriving Show
 
 newtype P a = P { unP :: PState -> ParseResult a }

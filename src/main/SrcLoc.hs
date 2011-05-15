@@ -14,9 +14,9 @@ data Located e = L SrcLoc e
     deriving Show
 
 data SrcLoc = SrcLoc {
-    offset  :: Int,     -- absolute character offset
-    line    :: Int,     -- line number
-    column  :: Int      -- column number
+    offset  :: !Int,    -- absolute character offset
+    line    :: !Int,    -- line number
+    column  :: !Int     -- column number
   } deriving (Eq, Show)
 
 startSrcLoc :: SrcLoc
