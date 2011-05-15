@@ -179,7 +179,13 @@ lex_id_tok :: Action
 lex_id_tok pos buf len = return (L pos (ITid (take len buf)))
 
 lex_int_tok :: Action
-lex_int_tok pos buf len = return (L pos (ITdigit (read (take len buf))))
+lex_int_tok pos buf len = do
+    let num_str = take len buf
+        num     = read num_str
+    if num <= 32768
+       then return (L pos (ITdigit num))
+       else warnThen ("Number " ++ num_str ++ " is bigger than 16 bits")
+                (\_ _ _ -> return (L pos (ITdigit num))) pos buf len
 
 lex_string_tok :: Action    -- strip out \" from beginng and ending
 lex_string_tok pos buf len = return (L pos (ITstring (take (len-2) (tail buf))))
@@ -333,7 +339,7 @@ mkPState buf loc =
   }
 
 addWarning :: SrcLoc -> String -> P ()
-addWarning srcspan warning
+addWarning loc warning
     = P $ \s@(PState{messages=(ws,es)}) ->
         let warning' = mkWarnMsg warning
             ws'     = ws `snocBag` warning'
