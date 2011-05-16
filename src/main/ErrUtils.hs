@@ -5,8 +5,11 @@
 
 module ErrUtils (
     Message, Messages, emptyMessages,
-    mkWarnMsg, mkErrMsg, snocBag
+    mkWarnMsg, mkErrMsg, snocBag,
+    mkLocWarnMsg, mkLocErrMsg
   ) where
+
+import SrcLoc
 
 type Bag a = [a]
 
@@ -23,10 +26,27 @@ emptyBag :: Bag a
 emptyBag = []
 
 mkWarnMsg :: String -> WarnMsg
-mkWarnMsg = mkErrMsg
+mkWarnMsg msg = mkMsg ("Warning: " ++ msg)
 
 mkErrMsg :: String -> ErrMsg
-mkErrMsg msg = msg
+mkErrMsg msg = mkMsg ("Error: " ++ msg)
+
+mkMsg :: String -> Message
+mkMsg msg = msg
 
 snocBag :: Bag Message -> Message -> Bag Message
 snocBag bag msg = bag ++ [msg]
+
+mkLocWarnMsg :: SrcLoc -> String -> WarnMsg
+mkLocWarnMsg pos msg = mkLocMsg pos ("Warning: " ++ msg)
+
+mkLocErrMsg :: SrcLoc -> String -> ErrMsg
+mkLocErrMsg pos msg = mkLocMsg pos ("Error: " ++ msg)
+
+mkLocMsg :: SrcLoc -> String -> Message
+mkLocMsg loc msg =
+    let lin     = getSrcLine loc
+        col     = getSrcColumn loc
+        loc_msg = show lin ++ ':' : show col
+    in
+    loc_msg ++ ": " ++ msg

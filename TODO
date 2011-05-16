@@ -1,6 +1,2 @@
 ** Fix in Lexer:
-	UnknownChar error
-	ITunknown
-	comments errors (without "at char")
 	Add error messages when include more than one char in \'
-	Add location to warning/error messages

@@ -40,9 +40,10 @@ incSrcColumn loc@SrcLoc{offset=offset', column=column'} =
             loc{offset=offset'+1, column=column'+1}
 
 incSrcTab :: SrcLoc -> SrcLoc
-incSrcTab loc@SrcLoc{offset=offset', column=column'} =
-            loc{offset=offset'+1, column=column''}
-            where column'' = column' + 5 - (column' `mod` 4)
+incSrcTab = incSrcColumn
+--incSrcTab loc@SrcLoc{offset=offset', column=column'} =
+--            loc{offset=offset'+1, column=column''}
+--            where column'' = column' + 5 - (column' `mod` 4)
 
 srcCarRet :: SrcLoc -> SrcLoc
 srcCarRet loc@SrcLoc{offset=offset', column=column'} =

@@ -96,7 +96,7 @@ $white+             ;
   ":"               { token ITcolon }
   ";"               { token ITsemi }
 
-  "*)"              { \_p _b _l -> lexError "Unmatched comment close symbol" }
+  "*)"              { errorMsg "Unmatched comment close symbol" }
 }
 
 "--" .*             ;
@@ -106,7 +106,7 @@ $white+             ;
   .                 ;
 }
 
-.                   { \_p _b _l -> lexError "Unknown char" }
+.                   { unknownChar }
 
 
 {
@@ -153,7 +153,6 @@ data Token
     | ITcolon       -- :
     | ITsemi        -- ;
 
-    | ITunknown String  -- Used when the lexer can't make sense of it
     | ITeof             -- end of file token
     deriving (Eq, Show)
 
@@ -218,17 +217,36 @@ unembedComment pos buf len = do
         then begin 0 pos buf len
         else lexToken
 
--- ------------------------------------------------------------------
--- Warnings
+unknownChar :: Action
+unknownChar pos buf len = do
+    let (c:_) = buf
+        msg = "Unknown char " ++
+            (if isPrint c
+                then show c
+                else "with ascii code " ++ (show $ ord c))
+    errorMsg msg pos buf len
 
-warn :: String -> Action
-warn warning pos _buf _len = do
-    addWarning pos warning
+-- ------------------------------------------------------------------
+-- Warnings and Errors
+
+warnMsg :: String -> Action
+warnMsg msg pos _buf _len = do
+    addWarning pos msg
     lexToken
 
 warnThen :: String -> Action -> Action
-warnThen warning action pos buf len = do
-    addWarning pos warning
+warnThen msg action pos buf len = do
+    addWarning pos msg
+    action pos buf len
+
+errorMsg :: String -> Action
+errorMsg msg pos _buf _len = do
+    addError pos msg
+    lexToken
+
+errorThen :: String -> Action -> Action
+errorThen msg action pos buf len = do
+    addError pos msg
     action pos buf len
 
 -- ------------------------------------------------------------------
@@ -339,11 +357,18 @@ mkPState buf loc =
   }
 
 addWarning :: SrcLoc -> String -> P ()
-addWarning loc warning
+addWarning loc msg
     = P $ \s@(PState{messages=(ws,es)}) ->
-        let warning' = mkWarnMsg warning
+        let warning' = mkLocWarnMsg loc msg
             ws'     = ws `snocBag` warning'
         in POk s{messages=(ws',es)} ()
+
+addError :: SrcLoc -> String -> P ()
+addError loc msg
+    = P $ \s@(PState{messages=(ws,es)}) ->
+        let err' = mkLocErrMsg loc msg
+            es'  = es `snocBag` err'
+        in POk s{messages=(ws,es')} ()
 
 getMessages :: PState -> Messages
 getMessages PState{messages=ms} = ms
@@ -369,7 +394,8 @@ lexToken = do
     case alexScan inp sc of
         AlexEOF -> do
             if sc > 0
-               then lexError "Probably unmatched open comment symbol"
+               then errorThen "Probably unmatched open comment symbol"
+                        (\_ _ _ -> return (L loc ITeof)) loc buf 0
                else return (L loc ITeof)
         AlexError (AI loc2 buf2 _) ->
             reportLexError loc2 buf2 "lexical error"
@@ -388,6 +414,11 @@ reportLexError loc buf str
         in
         failLocMsgP loc (str ++ " at character " ++ show c)
 
+lexer :: (Located Token -> P a) -> P a
+lexer cont = do
+  tok@(L _span _tok__) <- lexToken
+  cont tok
+
 -- used for debugging as it not contains continuation function
 --
 lexDummy :: P [(Located Token)]
@@ -398,10 +429,5 @@ lexDummy = do
                 P $ \s -> POk s (tok : toks)
         else do toks <- lexDummy
                 P $ \s -> POk s (tok : toks)
-
-lexer :: (Located Token -> P a) -> P a
-lexer cont = do
-  tok@(L _span _tok__) <- lexToken
-  cont tok
 
 }
