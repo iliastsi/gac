@@ -20,7 +20,11 @@ Extra-Source-Files:
     README
     HACKING
     TODO
-    docs/alan2011.pdf
+    docs/*.pdf
+    docs/alex-html/*.html
+    docs/alex-html/*.css
+    docs/happy/*.html
+    docs/happy/*.css
     testsuite/hanoi.alan
 
 Extra-Tmp-Files: src/parser/Parser.info
