@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- (c) Tsitsimpis Ilias, 2011
 --
 -- GAC's lexer.
@@ -7,9 +7,9 @@
 -- definition, with some hand-coded bits.
 --
 -- Completely accurate information about token-spans within the source
--- file is maintained.  Every token has a start and end SrcLoc attached to it.
+-- file is maintained.  Every token has a SrcLoc attached to it.
 --
------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 {
 -- XXX The above flags turn off warnings in the generated code:
@@ -156,7 +156,7 @@ data Token
     | ITeof             -- end of file token
     deriving (Eq, Show)
 
--- ------------------------------------------------------------------
+-- -------------------------------------------------------------------
 -- Lexer actions
 
 -- Position -> Buffer -> Length -> P Token
@@ -226,7 +226,7 @@ unknownChar pos buf len = do
                 else "with ascii code " ++ (show $ ord c))
     errorMsg msg pos buf len
 
--- ------------------------------------------------------------------
+-- -------------------------------------------------------------------
 -- Warnings and Errors
 
 warnMsg :: String -> Action
@@ -249,7 +249,7 @@ errorThen msg action pos buf len = do
     addError pos msg
     action pos buf len
 
--- ------------------------------------------------------------------
+-- -------------------------------------------------------------------
 -- The Parse Monad
 
 data ParseResult a
@@ -376,16 +376,16 @@ getMessages PState{messages=ms} = ms
 -- -------------------------------------------------------------------
 -- Construct a parse error
 
--- A lexical error is reported at a particular position in the source file,
--- not over a token range.
+-- A lexical error is reported at a particular position
+-- in the source file, not over a token range.
 lexError :: String -> P a
 lexError str = do
     (AI loc buf _) <- getInput
     reportLexError loc buf str
 
--- -----------------------------------------------------------------------------
--- This is the top-level function: called from the parser each time a
--- new token is to be read from the input.
+-- -------------------------------------------------------------------
+-- This is the top-level functions: lexer is called from the parser
+-- each time a new token is to be read from the input.
 
 lexToken :: P (Located Token)
 lexToken = do
