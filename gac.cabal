@@ -25,7 +25,7 @@ Extra-Source-Files:
     docs/alex-html/*.css
     docs/happy/*.html
     docs/happy/*.css
-    testsuite/hanoi.alan
+    testsuite/*.alan
 
 Extra-Tmp-Files: src/parser/Parser.info
 
@@ -36,6 +36,7 @@ source-repository head
 
 Executable gac
   Main-is: Main.hs
+  Build-Tools: happy, alex
 
   Build-Depends: base
   Build-Depends: array

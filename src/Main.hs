@@ -16,4 +16,4 @@ import SrcLoc
 main :: IO ()
 main = do
     str <- getContents
-    print $ unP parser (mkPState str startSrcLoc)
+    print $ unP parser (mkPState str (mkSrcLoc "Stdin" 1 1))
