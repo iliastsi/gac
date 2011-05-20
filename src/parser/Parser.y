@@ -80,52 +80,53 @@ import SrcLoc
 
 %% --Like yacc, we include %% here, for no real reason.
 
-program
-    : funcDef                       { () }
+program :: { () }
+    : funcdef                       { () }
 
-funcDef
-    : ID '(' fparList ')' ':' rType localDefs '{' compoundStmt '}'
+funcdef :: { () }
+    : ID '(' fparlist ')' ':' rtype localdefs '{' compoundstmt '}'
+                                    { () }
+    | ID '(' ')' ':' rtype localdefs '{' compoundstmt '}'
                                     { () }
 
-fparList
-    : {- nothing -}                 { () }
-    | fparDef                       { () }
-    | fparList ',' fparDef          { () }
+fparlist :: { () }
+    : fpardef                       { () }
+    | fparlist ',' fpardef          { () }
 
-fparDef
+fpardef :: { () }
     : ID ':' type                   { () }
     | ID ':' REFERENCE type         { () }
 
-dataType
+datatype :: { () }
     : INT                           { () }
     | BYTE                          { () }
 
-type
-    : dataType                      { () }
-    | dataType '[' ']'              { () }
+type :: { () }
+    : datatype                      { () }
+    | datatype '[' ']'              { () }
 
-rType
-    : dataType                      { () }
+rtype :: { () }
+    : datatype                      { () }
     | PROC                          { () }
 
-localDefs
+localdefs :: { () }
     : {- nothing -}                 { () }
-    | localDefs localDef            { () }
+    | localdefs localdef            { () }
 
-localDef
-    : funcDef                       { () }
-    | varDef                        { () }
+localdef :: { () }
+    : funcdef                       { () }
+    | vardef                        { () }
 
-varDef
-    : ID ':' dataType ';'           { () }
-    | ID ':' dataType '[' DIGIT ']' ';'
+vardef :: { () }
+    : ID ':' datatype ';'           { () }
+    | ID ':' datatype '[' DIGIT ']' ';'
                                     { () }
 
-stmt
+stmt :: { () }
     : ';'                           { () }
-    | lValue '=' expr ';'           { () }
-    | '{' compoundStmt '}'          { () }
-    | funcCall ';'                  { () }
+    | lvalue '=' expr ';'           { () }
+    | '{' compoundstmt '}'          { () }
+    | funccall ';'                  { () }
     | IF '(' cond ')' stmt          { () }
     | IF '(' cond ')' stmt ELSE stmt
                                     { () }
@@ -133,24 +134,24 @@ stmt
     | RETURN ';'                    { () }
     | RETURN expr ';'               { () }
 
-compoundStmt
+compoundstmt :: { () }
     : {- nothing -}                 { () }
-    | compoundStmt stmt             { () }
+    | compoundstmt stmt             { () }
 
-funcCall
+funccall :: { () }
     : ID '(' ')'                    { () }
-    | ID '(' exprList ')'           { () }
+    | ID '(' exprlist ')'           { () }
 
-exprList
+exprlist :: { () }
     : expr                          { () }
-    | exprList ',' expr             { () }
+    | exprlist ',' expr             { () }
 
-expr
+expr :: { () }
     : DIGIT                         { () }
     | CHAR                          { () }
-    | lValue                        { () }
+    | lvalue                        { () }
     | '(' expr ')'                  { () }
-    | funcCall                      { () }
+    | funccall                      { () }
     | '+' expr %prec SIGN           { () }
     | '-' expr %prec SIGN           { () }
     | expr '+' expr                 { () }
@@ -159,12 +160,12 @@ expr
     | expr '/' expr                 { () }
     | expr '%' expr                 { () }
 
-lValue
+lvalue :: { () }
     : ID                            { () }
     | ID '[' expr ']'               { () }
     | STRING                        { () }
 
-cond
+cond :: { () }
     : TRUE                          { () }
     | FALSE                         { () }
     | '(' cond ')'                  { () }
@@ -182,7 +183,7 @@ cond
 {
 
 happyError :: (Located Token) -> P a
-happyError (L _ ITeof) = error "Happy internal error at end of file"
-happyError (L _ _)     = error "Happy my error"
+happyError (L _ ITeof) = failMsgP "Happy internal error at end of file"
+happyError (L loc _)     = failLocMsgP loc "Happy internal error"
 
 }

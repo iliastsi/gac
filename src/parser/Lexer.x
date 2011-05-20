@@ -28,7 +28,8 @@
 module Lexer (
     ParseResult(..), PState(..), P(..), mkPState,
     failMsgP, failLocMsgP, getMessages,
-    Token(..), lexer, lexDummy
+    Token(..), lexer, lexDummy,
+    addError, addWarning, getSrcLoc
   ) where
 
 import SrcLoc

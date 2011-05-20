@@ -1,2 +1,9 @@
 ** Fix in Lexer:
 	Add error messages when include more than one char in \'
+
+** Fix in ErrUtil:
+	Add file name in error/warning messages
+	Change Located data type to hold start and end of position
+
+** Fix in SrcLoc:
+	Write unLoc function
