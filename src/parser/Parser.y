@@ -84,10 +84,17 @@ program :: { () }
     : funcdef                       { () }
 
 funcdef :: { () }
-    : ID '(' fparlist ')' ':' rtype localdefs '{' compoundstmt '}'
+    : ID fpar ':' rtype localdefs compoundstmt
                                     { () }
-    | ID '(' ')' ':' rtype localdefs '{' compoundstmt '}'
-                                    { () }
+    | ID fpar err_funcdef           { () }
+    | err_funcdef                   { () }
+
+fpar :: { () }
+    : '(' ')'                       { () }
+    | '(' err_fpar                  { () }
+    | '(' fparlist ')'              { () }
+    | '(' fparlist err_fpar         { () }
+    | err_fpar                      { () }
 
 fparlist :: { () }
     : fpardef                       { () }
@@ -125,7 +132,7 @@ vardef :: { () }
 stmt :: { () }
     : ';'                           { () }
     | lvalue '=' expr ';'           { () }
-    | '{' compoundstmt '}'          { () }
+    | compoundstmt                  { () }
     | funccall ';'                  { () }
     | IF '(' cond ')' stmt          { () }
     | IF '(' cond ')' stmt ELSE stmt
@@ -135,8 +142,11 @@ stmt :: { () }
     | RETURN expr ';'               { () }
 
 compoundstmt :: { () }
+    : '{' stmts '}'                 { () }
+
+stmts :: { () }
     : {- nothing -}                 { () }
-    | compoundstmt stmt             { () }
+    | stmts stmt                    { () }
 
 funccall :: { () }
     : ID '(' ')'                    { () }
@@ -180,10 +190,24 @@ cond :: { () }
     | cond '|'  cond                { () }
 
 
+-- -------------------------------------------------------------------
+-- Error Rule
+
+err_funcdef :: { () }
+    : errors localdefs compoundstmt
+                                    {%^ \(L pos tok) -> do
+                                        { addError pos "Parse error in funcdef";
+                                          return () } }
+
+errors :: { () }
+    : error                         {%% \_ -> return () }
+    | errors error                  {%% \_ -> return () }
+
+
 {
 
 happyError :: (Located Token) -> P a
 happyError (L _ ITeof) = failMsgP "Happy internal error at end of file"
-happyError (L loc _)     = failLocMsgP loc "Happy internal error"
+happyError (L loc tok)     = failLocMsgP loc ("Happy internal error in " ++ (show tok))
 
 }

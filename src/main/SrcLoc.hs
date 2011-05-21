@@ -7,7 +7,7 @@ module SrcLoc (
     Located(..), SrcLoc(..), mkSrcLoc,
     getSrcLine, getSrcColumn, getSrcFile,
     incSrcLine, incSrcColumn, incSrcTab,
-    srcCarRet
+    srcCarRet, getLoc, unLoc
   ) where
 
 data Located e = L SrcLoc e
@@ -44,3 +44,9 @@ incSrcTab = incSrcColumn
 
 srcCarRet :: SrcLoc -> SrcLoc   -- carriage return '\r'
 srcCarRet (SrcLoc x l _) = (SrcLoc x l 1)
+
+getLoc :: Located a -> SrcLoc
+getLoc (L loc _) = loc
+
+unLoc :: Located a -> a
+unLoc (L _ x) = x

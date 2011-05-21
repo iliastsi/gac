@@ -4,6 +4,3 @@
 ** Fix in ErrUtil:
 	Add file name in error/warning messages
 	Change Located data type to hold start and end of position
-
-** Fix in SrcLoc:
-	Write unLoc function
