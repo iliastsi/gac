@@ -8,10 +8,12 @@ data AST_type
     | AST_boolean
     | AST_char
     | AST_array    (Int, AST_type)
+  deriving Eq
 
 data AST_mode
     = AST_byval
     | AST_byref
+  deriving Eq
 
 type RetType = Maybe AST_type
 type FuncID = Int

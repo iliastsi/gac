@@ -18,27 +18,21 @@ data Table = Table {
                            Bool),       -- is-reference flags
 
     functions   :: Ide ->               -- local functions
-                    Maybe (Int,         -- total parameters size
-                           [(AST_type,  -- parameters types
-                             Bool)]),   -- is-reference flags
-
-    funReturn   :: Ide ->               -- functions returning non-void
-                    Maybe (Bool,        -- flags
-                           AST_type),   -- and types
-
-    funcId      :: Ide -> Maybe FuncID, -- identifiers for functions
+                    Maybe ((Int,        -- total parameters size
+                            [(AST_type, -- parameters types
+                              Bool)]),  -- is-reference flags
+                           RetType),    -- return type
 
     npo         :: Int,         -- next positive offset
     lno         :: Int,         -- last negative offset
-    name        :: Maybe Ide    -- defined function
+    name        :: Ide          -- defined function
   }
 
 
 -- Table functionality
 
-emptyTable :: Table
-emptyTable = Table 0 Nothing (\i->Nothing) (\i->Nothing)
-                    (\i->Nothing) 8 0 Nothing
+emptyTable :: Ide -> Table
+emptyTable i = Table 0 Nothing (\i->Nothing) (\i->Nothing) 8 0 i
 
 -- search to all nested tables recursively
 nested :: Table -> (Table -> Maybe a) -> Maybe a
@@ -50,23 +44,24 @@ nested t@Table{parent=pt} f =
                   Just p -> nested p f
                   Nothing -> Nothing
 
-getFuncId :: Table -> Ide -> Maybe FuncID
-getFuncId t i = nested t (\Table{funcId=fd} -> fd i)
-
-getName :: Table -> Maybe Ide
+getName :: Table -> Ide
 getName Table{name=n} = n
 
 getFuncParamSize :: Table -> Ide -> Maybe Int
 getFuncParamSize t i =
-    nested t (\Table{functions=f} -> f i >>= \x -> return $ fst x)
+    nested t (\Table{functions=f} -> f i >>= return . fst . fst)
 
 getFuncParams :: Table -> Ide -> Maybe [(AST_type, Bool)]
 getFuncParams t i =
-    nested t (\Table{functions=f} -> f i >>= \x -> return $ snd x)
+    nested t (\Table{functions=f} -> f i >>= return . snd . fst)
+
+getFuncResult :: Table -> Ide -> RetType
+getFuncResult t i =
+    nested t (\Table{functions=f} -> f i >>= snd)
 
 getFuncDepth :: Table -> Ide -> Maybe Int
 getFuncDepth t i =
-    nested t (\Table{depth=d,funcId=f} -> f i >> Just d)
+    nested t (\Table{depth=d,functions=f} -> f i >> Just d)
 
 getVarDepth :: Table -> Ide -> Maybe Int
 getVarDepth t i =
@@ -90,7 +85,7 @@ isVarRef t i =
 isVarLocal :: Table -> Ide -> Bool
 isVarLocal Table{variables=v} i =
     case v i of
-         Just _ -> True
+         Just _  -> True
          Nothing -> False
 
 addVar :: Table -> (Ide, AST_type) -> (Table, Bool)
@@ -105,7 +100,7 @@ addVar t@Table{variables=v,lno=l} (i,dt) =
 addPar :: Table -> (Ide, AST_type, AST_mode) -> (Table, Bool)
 addPar t@Table{variables=v,npo=n} (i,dt,dm) =
     case v i of
-         Just _ -> (t,False)
+         Just _  -> (t, False)
          Nothing -> let (size, flag) = case dm of
                                             AST_byval -> (sizeof dt, False)
                                             AST_byref -> (2, True)
@@ -114,4 +109,28 @@ addPar t@Table{variables=v,npo=n} (i,dt,dm) =
                     in
                     (size, flag) `seq` n' `seq` v' `seq` (t{variables=v',npo=n'}, True)
 
-addFunc :: Table -> FuncId ->
+addFunc :: Table -> (Ide, RetType, [(Ide, AST_type, AST_mode)]) -> (Table, Bool)
+addFunc t@Table{functions=f} (i, rt, pl) =
+    let processPar [] = (0, [])
+        processPar ((i, dt, m) : pl) =
+            let size = case m of
+                            AST_byval -> sizeof dt
+                            AST_byref -> 2
+                (n, l) = processPar pl
+            in  (n + size, (dt, m == AST_byref) : l)
+    in
+    case f i of
+         Just _  -> (t, False)
+         Nothing -> let f' = update (i, Just ((processPar pl),rt)) f
+                    in
+                    f' `seq` (t{functions=f'}, True)
+
+rawOpenScope :: Ide -> Table -> Table
+rawOpenScope i t@Table{depth=d} =
+    Table (d+1) (Just t) (\i->Nothing) (\i-> Nothing) 8 0 i
+
+rawCloseScope :: Table -> Table
+rawCloseScope Table{parent=p} =
+    case p of
+         Just t  -> t
+         Nothing -> error "cannot close outermost scope"
