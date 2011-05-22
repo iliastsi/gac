@@ -4,3 +4,6 @@
 ** Fix in ErrUtil:
 	Add file name in error/warning messages
 	Change Located data type to hold start and end of position
+
+** BasicTypes:
+	Add FastString, StringBuffer

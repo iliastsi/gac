@@ -86,15 +86,10 @@ program :: { () }
 funcdef :: { () }
     : ID fpar ':' rtype localdefs compoundstmt
                                     { () }
-    | ID fpar err_funcdef           { () }
-    | err_funcdef                   { () }
 
 fpar :: { () }
     : '(' ')'                       { () }
-    | '(' err_fpar                  { () }
     | '(' fparlist ')'              { () }
-    | '(' fparlist err_fpar         { () }
-    | err_fpar                      { () }
 
 fparlist :: { () }
     : fpardef                       { () }
@@ -188,20 +183,6 @@ cond :: { () }
     | expr '>=' expr                { () }
     | cond '&'  cond                { () }
     | cond '|'  cond                { () }
-
-
--- -------------------------------------------------------------------
--- Error Rule
-
-err_funcdef :: { () }
-    : errors localdefs compoundstmt
-                                    {%^ \(L pos tok) -> do
-                                        { addError pos "Parse error in funcdef";
-                                          return () } }
-
-errors :: { () }
-    : error                         {%% \_ -> return () }
-    | errors error                  {%% \_ -> return () }
 
 
 {

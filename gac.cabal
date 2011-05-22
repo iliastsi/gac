@@ -51,6 +51,7 @@ Executable gac
         src
         src/parser
         src/main
+        src/basicTypes
   Other-Modules:
         Parser
         Lexer
