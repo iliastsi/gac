@@ -9,7 +9,7 @@
 module Main(main) where
 
 import System.IO()
-import Lexer (mkPState)
+import Lexer (mkPState, unP)
 import Parser
 import SrcLoc
 

@@ -28,11 +28,20 @@ data Table = Table {
     name        :: Ide          -- defined function
   }
 
+instance Show Table where
+    showsPrec d (Table cd pt _ _ np ln df) =
+        ("(depth=" ++) . showsPrec d cd .
+        (", parent " ++) . (case pt of Just _ -> ("yes" ++); Nothing -> ("no" ++)) .
+        (", npo=" ++) . showsPrec d np .
+        (", lno=" ++) . showsPrec d ln .
+        (", name=" ++) . showsPrec d df .
+        (")" ++)
+
 
 -- Table functionality
 
 emptyTable :: Ide -> Table
-emptyTable i = Table 0 Nothing (\i->Nothing) (\i->Nothing) 8 0 i
+emptyTable i = Table 0 Nothing (\_->Nothing) (\_->Nothing) 8 0 i
 
 -- search to all nested tables recursively
 nested :: Table -> (Table -> Maybe a) -> Maybe a
@@ -112,11 +121,11 @@ addPar t@Table{variables=v,npo=n} (i,dt,dm) =
 addFunc :: Table -> (Ide, RetType, [(Ide, AST_type, AST_mode)]) -> (Table, Bool)
 addFunc t@Table{functions=f} (i, rt, pl) =
     let processPar [] = (0, [])
-        processPar ((i, dt, m) : pl) =
+        processPar ((_, dt, m) : ps) =
             let size = case m of
                             AST_byval -> sizeof dt
                             AST_byref -> 2
-                (n, l) = processPar pl
+                (n, l) = processPar ps
             in  (n + size, (dt, m == AST_byref) : l)
     in
     case f i of
@@ -127,7 +136,7 @@ addFunc t@Table{functions=f} (i, rt, pl) =
 
 rawOpenScope :: Ide -> Table -> Table
 rawOpenScope i t@Table{depth=d} =
-    Table (d+1) (Just t) (\i->Nothing) (\i-> Nothing) 8 0 i
+    Table (d+1) (Just t) (\_->Nothing) (\_-> Nothing) 8 0 i
 
 rawCloseScope :: Table -> Table
 rawCloseScope Table{parent=p} =

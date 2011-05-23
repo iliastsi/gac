@@ -20,6 +20,7 @@ module Parser(parser) where
 import Lexer
 import ErrUtils
 import SrcLoc
+import AstTypes
 }
 
 %name parser program
@@ -80,109 +81,110 @@ import SrcLoc
 
 %% --Like yacc, we include %% here, for no real reason.
 
-program :: { () }
-    : funcdef                       { () }
+program :: { AST_def }
+    : funcdef                       { $1 }
 
-funcdef :: { () }
+funcdef :: { AST_def }
     : ID fpar ':' rtype localdefs compoundstmt
-                                    { () }
+                                    { let (ITid i) = (unLoc $1) in DefFun i $2 $4 $5 $6 }
 
-fpar :: { () }
-    : '(' ')'                       { () }
-    | '(' fparlist ')'              { () }
+fpar :: { [AST_def] }
+    : '(' ')'                       { [] }
+    | '(' fparlist ')'              { $2 }
 
-fparlist :: { () }
-    : fpardef                       { () }
-    | fparlist ',' fpardef          { () }
+fparlist :: { [AST_def] }
+    : fpardef                       { [$1] }
+    | fparlist ',' fpardef          { $3 : $1 }
 
-fpardef :: { () }
-    : ID ':' type                   { () }
-    | ID ':' REFERENCE type         { () }
+fpardef :: { AST_def }
+    : ID ':' type                   { let (ITid i) = (unLoc $1) in DefPar i ModeByVal $3 }
+    | ID ':' REFERENCE type         { let (ITid i) = (unLoc $1) in DefPar i ModeByRef $4 }
 
-datatype :: { () }
-    : INT                           { () }
-    | BYTE                          { () }
+type :: { AST_type }
+    : datatype                      { $1 }
+    | datatype '[' ']'              { TypeArray (0, $1) }
 
-type :: { () }
-    : datatype                      { () }
-    | datatype '[' ']'              { () }
+datatype :: { AST_type }
+    : INT                           { TypeInt }
+    | BYTE                          { TypeChar }
 
-rtype :: { () }
-    : datatype                      { () }
-    | PROC                          { () }
+rtype :: { AST_type}
+    : datatype                      { $1 }
+    | PROC                          { TypeProc }
 
-localdefs :: { () }
-    : {- nothing -}                 { () }
-    | localdefs localdef            { () }
+localdefs :: { [AST_def] }
+    : {- nothing -}                 { [] }
+    | localdefs localdef            { $2 : $1 }
 
-localdef :: { () }
-    : funcdef                       { () }
-    | vardef                        { () }
+localdef :: { AST_def }
+    : funcdef                       { $1 }
+    | vardef                        { $1 }
 
-vardef :: { () }
-    : ID ':' datatype ';'           { () }
+vardef :: { AST_def }
+    : ID ':' datatype ';'           { let (ITid i) = (unLoc $1) in DefVar i $3 }
     | ID ':' datatype '[' DIGIT ']' ';'
-                                    { () }
+                                    { let (ITid x) = (unLoc $1); (ITdigit y) = (unLoc $5) in
+                                        DefVar x (TypeArray (y, $3)) }
 
-stmt :: { () }
-    : ';'                           { () }
-    | lvalue '=' expr ';'           { () }
-    | compoundstmt                  { () }
-    | funccall ';'                  { () }
-    | IF '(' cond ')' stmt          { () }
+stmt :: { AST_stmt }
+    : ';'                           { StmtNothing }
+    | lvalue '=' expr ';'           { StmtAssign $1 $3 }
+    | compoundstmt                  { StmtCompound $1 }
+    | funcall ';'                   { StmtFun $1 }
+    | IF '(' cond ')' stmt          { StmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
-                                    { () }
-    | WHILE '(' cond ')' stmt       { () }
-    | RETURN ';'                    { () }
-    | RETURN expr ';'               { () }
+                                    { StmtIf $3 $5 (Just $7) }
+    | WHILE '(' cond ')' stmt       { StmtWhile $3 $5 }
+    | RETURN ';'                    { StmtReturn Nothing }
+    | RETURN expr ';'               { StmtReturn (Just $2) }
 
-compoundstmt :: { () }
-    : '{' stmts '}'                 { () }
+compoundstmt :: { [AST_stmt] }
+    : '{' stmts '}'                 { $2 }
 
-stmts :: { () }
-    : {- nothing -}                 { () }
-    | stmts stmt                    { () }
+stmts :: { [AST_stmt] }
+    : {- nothing -}                 { [] }
+    | stmts stmt                    { $2 : $1 }
 
-funccall :: { () }
-    : ID '(' ')'                    { () }
-    | ID '(' exprlist ')'           { () }
+funcall :: { FunCall }
+    : ID '(' ')'                    { let (ITid i) = (unLoc $1) in FunCall i [] }
+    | ID '(' exprlist ')'           { let (ITid i) = (unLoc $1) in FunCall i $3 }
 
-exprlist :: { () }
-    : expr                          { () }
-    | exprlist ',' expr             { () }
+exprlist :: { [AST_expr] }
+    : expr                          { [$1] }
+    | exprlist ',' expr             { $3 : $1 }
 
-expr :: { () }
-    : DIGIT                         { () }
-    | CHAR                          { () }
-    | lvalue                        { () }
-    | '(' expr ')'                  { () }
-    | funccall                      { () }
-    | '+' expr %prec SIGN           { () }
-    | '-' expr %prec SIGN           { () }
-    | expr '+' expr                 { () }
-    | expr '-' expr                 { () }
-    | expr '*' expr                 { () }
-    | expr '/' expr                 { () }
-    | expr '%' expr                 { () }
+expr :: { AST_expr }
+    : DIGIT                         { let (ITdigit i) = (unLoc $1) in ExprInt i }
+    | CHAR                          { let (ITchar i) = (unLoc $1) in ExprChar i }
+    | STRING                        { let (ITstring i) = (unLoc $1) in ExprString i }
+    | lvalue                        { ExprVal $1 }
+    | '(' expr ')'                  { ExprPar $2 }
+    | funcall                       { ExprFun $1 }
+    | '+' expr %prec SIGN           { ExprSign OpPlus $2 }
+    | '-' expr %prec SIGN           { ExprSign OpMinus $2 }
+    | expr '+' expr                 { ExprOp $1 OpPlus $3 }
+    | expr '-' expr                 { ExprOp $1 OpMinus $3 }
+    | expr '*' expr                 { ExprOp $1 OpTimes $3 }
+    | expr '/' expr                 { ExprOp $1 OpDiv $3 }
+    | expr '%' expr                 { ExprOp $1 OpMod $3 }
 
-lvalue :: { () }
-    : ID                            { () }
-    | ID '[' expr ']'               { () }
-    | STRING                        { () }
+lvalue :: { AST_value }
+    : ID                            { let (ITid i) = (unLoc $1) in Val i }
+    | ID '[' expr ']'               { let (ITid i) = (unLoc $1) in ValArray i $3 }
 
-cond :: { () }
-    : TRUE                          { () }
-    | FALSE                         { () }
-    | '(' cond ')'                  { () }
-    | '!' cond                      { () }
-    | expr '==' expr                { () }
-    | expr '!=' expr                { () }
-    | expr '<'  expr                { () }
-    | expr '>'  expr                { () }
-    | expr '<=' expr                { () }
-    | expr '>=' expr                { () }
-    | cond '&'  cond                { () }
-    | cond '|'  cond                { () }
+cond :: { AST_cond }
+    : TRUE                          { CondTrue }
+    | FALSE                         { CondFalse }
+    | '(' cond ')'                  { CondPar $2 }
+    | '!' cond                      { CondNot $2 }
+    | expr '==' expr                { CondOp $1 OpEqual $3 }
+    | expr '!=' expr                { CondOp $1 OpNotEqual $3 }
+    | expr '<'  expr                { CondOp $1 OpLT $3 }
+    | expr '>'  expr                { CondOp $1 OpGT $3 }
+    | expr '<=' expr                { CondOp $1 OpLE $3 }
+    | expr '>=' expr                { CondOp $1 OpGE $3 }
+    | cond '&'  cond                { CondLog $1 OpAnd $3 }
+    | cond '|'  cond                { CondLog $1 OpOr $3 }
 
 
 {
