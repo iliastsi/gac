@@ -57,3 +57,4 @@ Executable gac
         Lexer
         SrcLoc
         ErrUtils
+        Uast

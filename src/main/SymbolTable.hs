@@ -1,6 +1,48 @@
 module SymbolTable where
 
 import AstTypes
+import ErrUtils
+
+
+-- The Symbol Table State Monad
+data TypeResult a
+    = TOk TState a
+    | TFailed
+      Message       -- The error message
+  deriving Show
+
+data TState = TState {
+    symtable    :: Table,
+    messages    :: Messages,
+    unique      :: Int
+  } deriving Show
+
+newtype T a = T { unT :: TState -> RenameResult a }
+
+instance Monad T where
+    return = returnT
+    (>>=) = thenT
+    fail = failT
+
+returnT :: a -> T a
+returnT a = a `seq` (T $ \s -> TOk s a)
+
+thenT :: T a -> (a -> T b) -> T b
+(T m) `thenT` k = T $ \s ->
+    case m s of
+         TOk s1 a    -> (unT (k a)) s1
+         TFailed err -> TFailed err
+
+failT :: String -> T a
+failT msg = T $ \_ -> TFailed msg
+
+mkTState :: Table -> TState
+mkTState t =
+    TState {
+        symtable = t,
+        messages = emptyMessages,
+        unique   = 0
+    }
 
 
 -- Update function
@@ -53,8 +95,8 @@ nested t@Table{parent=pt} f =
                   Just p -> nested p f
                   Nothing -> Nothing
 
-getName :: Table -> Ide
-getName Table{name=n} = n
+getName :: TState Ide
+getName = T $ \sTState{symtable=Table{name=n}} -> TOk s n
 
 getFuncParamSize :: Table -> Ide -> Maybe Int
 getFuncParamSize t i =
