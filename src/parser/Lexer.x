@@ -258,7 +258,7 @@ errorThen msg action pos buf len = do
 data ParseResult a
     = POk PState a
     | PFailed 
-      SrcLoc        -- The end of the text span related to the error
+      SrcLoc        -- The beginning of the text span related to the error
       Message       -- The error message
   deriving Show
 
@@ -363,7 +363,7 @@ addWarning :: SrcLoc -> String -> P ()
 addWarning loc msg
     = P $ \s@(PState{messages=(ws,es)}) ->
         let warning' = mkLocWarnMsg loc msg
-            ws'     = ws `snocBag` warning'
+            ws'      = ws `snocBag` warning'
         in POk s{messages=(ws',es)} ()
 
 addError :: SrcLoc -> String -> P ()
@@ -373,8 +373,8 @@ addError loc msg
             es'  = es `snocBag` err'
         in POk s{messages=(ws,es')} ()
 
-getMessages :: PState -> Messages
-getMessages PState{messages=ms} = ms
+getMessages :: P Messages
+getMessages = P $ \s@Pstate{messages=msg} -> POk s msg
 
 -- -------------------------------------------------------------------
 -- Construct a parse error
