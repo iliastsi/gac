@@ -67,7 +67,7 @@ getTable :: GacMonad Table
 getTable = GacMonad $ \s@GState{table=t} -> GOk s t
 
 getUnique :: GacMonad Int
-getUnique = GacMonad $ \s@GState{unique=u} -> GOk s u
+getUnique = GacMonad $ \s@GState{unique=u} -> GOk s{unique=u+1} u
 
 getMessages :: GacMonad Messages
 getMessages = GacMonad $ \s@GState{messages=msg} -> GOk s msg
