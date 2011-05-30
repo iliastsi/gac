@@ -12,3 +12,6 @@
 	Express "this should be between spaces"
 
 ** Write Renamer
+
+** TypeCheck:
+	add a TType of variables/functions not presenting to continue
