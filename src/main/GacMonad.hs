@@ -14,9 +14,6 @@ import ErrUtils
 import Uast
 import Tast
 
-import Data.Int
-import Data.Word
-
 
 data GResult a
     = GOk GState a

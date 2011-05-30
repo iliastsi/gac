@@ -11,20 +11,20 @@ module Uast where
 
 type Ide = String
 
-data UDef
-    = UDefFun Ide [UDef] UType [UDef] UStmt
-    | UDefPar Ide Mode UType
-    | UDefVar Ide UType
+data Def
+    = DefFun Ide [Def] UType [Def] Stmt
+    | DefPar Ide Mode UType
+    | DefVar Ide UType
   deriving (Eq, Show)
 
-data UStmt
-    = UStmtNothing
-    | UStmtAssign UValue UExpr
-    | UStmtCompound [UStmt]
-    | UStmtFun UFunCall
-    | UStmtIf Cond UStmt (Maybe UStmt)
-    | UStmtWhile Cond UStmt
-    | UStmtReturn (Maybe UExpr)
+data Stmt
+    = StmtNothing
+    | StmtAssign UValue UExpr
+    | StmtCompound [Stmt]
+    | StmtFun UFunCall
+    | StmtIf Cond Stmt (Maybe Stmt)
+    | StmtWhile Cond Stmt
+    | StmtReturn (Maybe UExpr)
   deriving (Eq, Show)
 
 data UExpr
