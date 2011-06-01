@@ -21,6 +21,7 @@ Extra-Source-Files:
     HACKING
     TODO
     docs/*.pdf
+    docs/*.html
     docs/alex-html/*.html
     docs/alex-html/*.css
     docs/happy/*.html
