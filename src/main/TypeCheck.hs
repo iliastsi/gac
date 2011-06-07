@@ -52,6 +52,6 @@ typeCheckExpr (UExprVal v)  =
                                  return $ TExprValArr ide (TTypeArray t) (TExprInt i) ::: t
 typeCheckExpr (UExprPar p) = typeCheckExpr p
 typeCheckExpr (UExprFun (UFunCall i pars)) = do aexprs <- mapM typeCheckExpr pars
-                                                let ptypes = map (\x -> let (e ::: _) = x in e) aexprs
                                                 (AType rett) <- getFuncRetTypeM i
-                                                return $ TExprFun i rett ptypes ::: rett
+                                                let expr = map extractATExpr (aexprs::[ATExpr])
+                                                return $ TExprFun i rett [] ::: rett

@@ -41,14 +41,15 @@ data TExpr a where
     TExprSign   :: Op      -> TExpr a       -> TExpr a
     TExprOp     :: TExpr a -> Op            -> TExpr a     -> TExpr a
 
-data ATExpr = forall a . TExpr a ::: TType a
+data ATExpr = forall a . (TExpr a) ::: (TType a)
 
 data AFun = forall a . AFun (TFun a) (TType a)
 
 data AType = forall a. AType (TType a)
 
+
 data Equal a b where
-    Eq :: Equal a b
+    Eq :: Equal a a
 
 test :: TType a -> TType b -> Maybe (Equal a b)
 test TTypeInt       TTypeInt       = return Eq
@@ -61,15 +62,21 @@ test _              _              = mzero
 
 class Type a where
     theType :: TType a
-
 instance Type Int32 where
     theType = TTypeInt
-
 instance Type Word8 where
     theType = TTypeChar
-
 instance Type () where
     theType = TTypeProc
-
 instance (Type a) => Type (Ptr a) where
     theType = TTypeArray theType
+
+extractATExpr :: (Type a) => ATExpr -> TExpr a
+extractATExpr aexpr =
+    case extract theType aexpr of
+         Just x  -> x
+         Nothing -> error "in extractATExpr"
+    where extract :: TType a -> ATExpr -> Maybe (TExpr a)
+          extract s (e ::: t) = do
+              Eq <- test s t
+              return e
