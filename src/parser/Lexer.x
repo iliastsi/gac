@@ -374,7 +374,7 @@ addError loc msg
         in POk s{messages=(ws,es')} ()
 
 getMessages :: P Messages
-getMessages = P $ \s@Pstate{messages=msg} -> POk s msg
+getMessages = P $ \s@PState{messages=msg} -> POk s msg
 
 -- -------------------------------------------------------------------
 -- Construct a parse error

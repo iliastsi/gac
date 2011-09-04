@@ -11,11 +11,11 @@ data Table = Table {
     parent      :: Maybe Table, -- parent scope
 
     variables   :: Map.Map Ide          -- for local variables
-                          (AType),      -- types
+                          (ATExpr),     -- types
 
     functions   :: Map.Map Ide          -- local functions
-                          ([AType],     -- parameters types
-                           AType),      -- return type
+                          ([ATExpr],    -- parameters types
+                           ATExpr),     -- return type
 
     name        :: Ide          -- defined function
   }
@@ -38,11 +38,11 @@ nested t@Table{parent=pt} f =
 getName :: Table -> Ide
 getName t@Table{name=n} = n
 
-getFuncParams :: Table -> Ide -> Maybe [AType]
+getFuncParams :: Table -> Ide -> Maybe [ATExpr]
 getFuncParams t i =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . fst)
 
-getFuncRetType :: Table -> Ide -> Maybe AType
+getFuncRetType :: Table -> Ide -> Maybe ATExpr 
 getFuncRetType t i =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return .snd)
 
@@ -57,7 +57,7 @@ getVarDepth t i =
 getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d
 
-getVarType :: Table -> Ide -> Maybe AType
+getVarType :: Table -> Ide -> Maybe ATExpr
 getVarType t i =
     nested t (\Table{variables=v} -> Map.lookup i v)
 
@@ -67,11 +67,11 @@ isVarLocal Table{variables=v} i =
          Just _  -> True
          Nothing -> False
 
-addVar :: Table -> (Ide, AType) -> Table
+addVar :: Table -> (Ide, ATExpr) -> Table
 addVar t@Table{variables=v} (i,dt) =
     t{ variables=Map.insert i dt v }
 
-addFunc :: Table -> (Ide, [AType], AType) -> Table
+addFunc :: Table -> (Ide, [ATExpr], ATExpr) -> Table
 addFunc t@Table{functions=f} (i, pt, rt) =
     t{ functions=Map.insert i (pt, rt) f }
 

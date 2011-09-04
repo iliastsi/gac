@@ -20,7 +20,7 @@ module Parser(parser) where
 import Lexer
 import ErrUtils
 import SrcLoc
-import Uast
+import UnTypedAst
 }
 
 %name parser program
@@ -130,7 +130,8 @@ stmt :: { UStmt }
     : ';'                           { UStmtNothing }
     | lvalue '=' expr ';'           { UStmtAssign $1 $3 }
     | compoundstmt                  { UStmtCompound $1 }
-    | funcall ';'                   { UStmtFun $1 }
+    | ID '(' ')' ';'                { let (ITid i) = (unLoc $1) in UStmtFun i [] }
+    | ID '(' exprlist ')' ';'       { let (ITid i) = (unLoc $1) in UStmtFun i $3 }
     | IF '(' cond ')' stmt          { UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
                                     { UStmtIf $3 $5 (Just $7) }
@@ -145,10 +146,6 @@ stmts :: { [UStmt] }
     : {- nothing -}                 { [] }
     | stmts stmt                    { $2 : $1 }
 
-funcall :: { UFunCall }
-    : ID '(' ')'                    { let (ITid i) = (unLoc $1) in UFunCall i [] }
-    | ID '(' exprlist ')'           { let (ITid i) = (unLoc $1) in UFunCall i $3 }
-
 exprlist :: { [UExpr] }
     : expr                          { [$1] }
     | exprlist ',' expr             { $3 : $1 }
@@ -157,34 +154,35 @@ expr :: { UExpr }
     : DIGIT                         { let (ITdigit i) = (unLoc $1) in UExprInt i }
     | CHAR                          { let (ITchar i) = (unLoc $1) in UExprChar i }
     | STRING                        { let (ITstring i) = (unLoc $1) in UExprString i }
-    | lvalue                        { UExprVal $1 }
-    | '(' expr ')'                  { UExprPar $2 }
-    | funcall                       { UExprFun $1 }
-    | '+' expr %prec SIGN           { UExprSign OpPlus $2 }
-    | '-' expr %prec SIGN           { UExprSign OpMinus $2 }
-    | expr '+' expr                 { UExprOp $1 OpPlus $3 }
+    | lvalue                        { UExprVar $1 }
+    | '(' expr ')'                  { $2 }
+    | ID '(' ')' ';'                { let (ITid i) = (unLoc $1) in UExprFun i [] }
+    | ID '(' exprlist ')' ';'       { let (ITid i) = (unLoc $1) in UExprFun i $3 }
+    | '+' expr %prec SIGN           { $2 }
+    | '-' expr %prec SIGN           { UExprOp (UExprInt 0) OpMinus $2 }
+    | expr '+' expr                 { UExprOp $1 OpPlus  $3 }
     | expr '-' expr                 { UExprOp $1 OpMinus $3 }
     | expr '*' expr                 { UExprOp $1 OpTimes $3 }
-    | expr '/' expr                 { UExprOp $1 OpDiv $3 }
-    | expr '%' expr                 { UExprOp $1 OpMod $3 }
+    | expr '/' expr                 { UExprOp $1 OpDiv   $3 }
+    | expr '%' expr                 { UExprOp $1 OpMod   $3 }
 
-lvalue :: { UValue }
-    : ID                            { let (ITid i) = (unLoc $1) in UVal i }
-    | ID '[' expr ']'               { let (ITid i) = (unLoc $1) in UValArray i $3 }
+lvalue :: { UVariable }
+    : ID                            { let (ITid i) = (unLoc $1) in UVar i }
+    | ID '[' expr ']'               { let (ITid i) = (unLoc $1) in UVarArray i $3 }
 
-cond :: { Cond }
-    : TRUE                          { CondTrue }
-    | FALSE                         { CondFalse }
-    | '(' cond ')'                  { CondPar $2 }
-    | '!' cond                      { CondNot $2 }
-    | expr '==' expr                { CondOp $1 OpEqual $3 }
-    | expr '!=' expr                { CondOp $1 OpNotEqual $3 }
-    | expr '<'  expr                { CondOp $1 OpLT $3 }
-    | expr '>'  expr                { CondOp $1 OpGT $3 }
-    | expr '<=' expr                { CondOp $1 OpLE $3 }
-    | expr '>=' expr                { CondOp $1 OpGE $3 }
-    | cond '&'  cond                { CondLog $1 OpAnd $3 }
-    | cond '|'  cond                { CondLog $1 OpOr $3 }
+cond :: { UCond }
+    : TRUE                          { UCondTrue }
+    | FALSE                         { UCondFalse }
+    | '(' cond ')'                  { $2 }
+    | '!' cond                      { UCondNot $2 }
+    | expr '==' expr                { UCondOp  $1 OpEqual    $3 }
+    | expr '!=' expr                { UCondOp  $1 OpNotEqual $3 }
+    | expr '<'  expr                { UCondOp  $1 OpLT       $3 }
+    | expr '>'  expr                { UCondOp  $1 OpGT       $3 }
+    | expr '<=' expr                { UCondOp  $1 OpLE       $3 }
+    | expr '>=' expr                { UCondOp  $1 OpGE       $3 }
+    | cond '&'  cond                { UCondLog $1 OpAnd      $3 }
+    | cond '|'  cond                { UCondLog $1 OpOr       $3 }
 
 
 {

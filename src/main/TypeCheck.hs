@@ -37,6 +37,7 @@ import GacMonad
 import Data.Int
 import Data.Word
 import Foreign.Ptr
+import Control.Monad
 
 
 typeCheckExpr :: UExpr -> GacMonad (ATExpr)
@@ -45,13 +46,38 @@ typeCheckExpr (UExprChar c) = return $ TExprChar (toEnum $ fromEnum c) ::: TType
 typeCheckExpr (UExprString s) = return $ TExprString s ::: (TTypeArray TTypeChar)
 typeCheckExpr (UExprVal v)  =
     case v of
-         UVal ide          -> do (AType t) <- getVarTypeM ide
+         UVal ide          -> do (_ ::: t) <- getVarTypeM ide
                                  return $ TExprVal ide t ::: t
          UValArray ide off -> do (TExprInt i) ::: toff' <- typeCheckExpr off -- sure Int32
-                                 (AType (TTypeArray t)) <- getVarTypeM ide  -- check for errors
+                                 (_ ::: (TTypeArray t)) <- getVarTypeM ide  -- check for errors
                                  return $ TExprValArr ide (TTypeArray t) (TExprInt i) ::: t
 typeCheckExpr (UExprPar p) = typeCheckExpr p
-typeCheckExpr (UExprFun (UFunCall i pars)) = do aexprs <- mapM typeCheckExpr pars
-                                                (AType rett) <- getFuncRetTypeM i
-                                                let expr = map extractATExpr (aexprs::[ATExpr])
-                                                return $ TExprFun i rett [] ::: rett
+typeCheckExpr (UExprFun (UFunCall i pars)) =
+    do uapars <- mapM typeCheckExpr pars
+       tapars <- getFuncParamsM i
+       when (checkPars uapars tapars) (addErrorM "in parameters")
+       (_ ::: rett) <- getFuncRetTypeM i
+       return $ TExprFun i rett uapars ::: rett
+    where checkPars :: [ATExpr] -> [ATExpr] -> Bool
+          checkPars ((e1:::t1):l1) ((e2:::t2):l2) =
+              case test t1 t2 of
+                   Just Eq -> checkPars l1 l2
+                   Nothing -> False
+typeCheckExpr (UExprSign op e) =
+    do (te ::: t) <- typeCheckExpr e
+       case test t TTypeInt of
+            Just Eq -> return $ TExprSign op te ::: t
+            Nothing -> do addErrorM "in ExprSign"
+                          return $ TExprSign op (TExprInt 42) ::: TTypeInt
+typeCheckExpr (UExprOp e1 op e2) =
+    do (te1 ::: t1) <- typeCheckExpr e1
+       (te2 ::: t2) <- typeCheckExpr e2
+       case test t1 TTypeInt of
+            Nothing -> do addErrorM "in ExprOp"
+                          return $ TExprOp (TExprInt 42) op (TExprInt 42) ::: TTypeInt
+            Just Eq -> case test t2 TTypeInt of
+                            Nothing -> do addErrorM "in ExprOp"
+                                          return $ TExprOp (TExprInt 42) op (TExprInt 42) ::: TTypeInt
+                            Just Eq -> return $ TExprOp te1 op te2 ::: TTypeInt
+
+

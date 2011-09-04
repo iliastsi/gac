@@ -6,35 +6,33 @@
 --
 --------------------------------------------------------------------------------
 
-module Uast where
+module UnTypedAst where
 
 
 type Ide = String
 
-data Def
-    = DefFun Ide [Def] UType [Def] Stmt
-    | DefPar Ide Mode UType
-    | DefVar Ide UType
+data UDef
+    = UDefFun Ide [UDef] UType [UDef] UStmt
+    | UDefPar Ide Mode UType
+    | UDefVar Ide UType
   deriving (Eq, Show)
 
-data Stmt
-    = StmtNothing
-    | StmtAssign UValue UExpr
-    | StmtCompound [Stmt]
-    | StmtFun UFunCall
-    | StmtIf Cond Stmt (Maybe Stmt)
-    | StmtWhile Cond Stmt
-    | StmtReturn (Maybe UExpr)
+data UStmt
+    = UStmtNothing
+    | UStmtAssign UVariable UExpr
+    | UStmtCompound [UStmt]
+    | UStmtFun Ide [UExpr]
+    | UStmtIf UCond UStmt (Maybe UStmt)
+    | UStmtWhile UCond UStmt
+    | UStmtReturn (Maybe UExpr)
   deriving (Eq, Show)
 
 data UExpr
     = UExprInt Int
     | UExprChar Char
     | UExprString String
-    | UExprVal UValue
-    | UExprPar UExpr
-    | UExprFun UFunCall
-    | UExprSign Op UExpr
+    | UExprVar UVariable
+    | UExprFun Ide [UExpr]
     | UExprOp UExpr Op UExpr
   deriving (Eq, Show)
 
@@ -54,18 +52,17 @@ data Op
     | OpGE
   deriving (Eq, Show)
 
-data Cond
-    = CondTrue
-    | CondFalse
-    | CondPar Cond
-    | CondNot Cond
-    | CondOp UExpr Op UExpr
-    | CondLog Cond Op Cond
+data UCond
+    = UCondTrue
+    | UCondFalse
+    | UCondNot UCond
+    | UCondOp UExpr Op UExpr
+    | UCondLog UCond Op UCond
   deriving (Eq, Show)
 
-data UValue
-    = UVal Ide
-    | UValArray Ide UExpr
+data UVariable
+    = UVar Ide
+    | UVarArray Ide UExpr
   deriving (Eq, Show)
 
 data UType
@@ -79,6 +76,3 @@ data Mode
     = ModeByVal
     | ModeByRef
   deriving (Eq, Show)
-
-data UFunCall = UFunCall Ide [UExpr]
-    deriving (Eq, Show)

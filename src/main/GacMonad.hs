@@ -100,17 +100,17 @@ addErrorM msg = GacMonad $ \s@GState{messages=pm} ->
 getNameM :: GacMonad Ide
 getNameM = GacMonad $ \s@GState{table=t} -> GOk s (getName t)
 
-getFuncParamsM :: Ide -> GacMonad [AType]
+getFuncParamsM :: Ide -> GacMonad [ATExpr]
 getFuncParamsM ide = GacMonad $ \s@GState{table=t,messages=pm} ->
                     case getFuncParams t ide of
                          Just x  -> GOk s x
                          Nothing -> GOk s{messages=(addError pm "Function not found")} []
 
-getFuncRetTypeM :: Ide -> GacMonad AType
+getFuncRetTypeM :: Ide -> GacMonad ATExpr 
 getFuncRetTypeM ide = GacMonad $ \s@GState{table=t,messages=pm} ->
                     case getFuncRetType t ide of
                          Just x  -> GOk s x
-                         Nothing -> GOk s{messages=(addError pm "Function not found")} (AType (TTypeInt))
+                         Nothing -> GOk s{messages=(addError pm "Function not found")} (TExprInt 42 ::: TTypeInt)
 
 getFuncDepthM :: Ide -> GacMonad Int
 getFuncDepthM ide = GacMonad $ \s@GState{table=t,messages=pm} ->
@@ -127,20 +127,20 @@ getVarDepthM ide = GacMonad $ \s@GState{table=t,messages=pm} ->
 getCurrDepthM :: GacMonad Int
 getCurrDepthM = GacMonad $ \s@GState{table=t} -> GOk s (getCurrDepth t)
 
-getVarTypeM :: Ide -> GacMonad AType
+getVarTypeM :: Ide -> GacMonad ATExpr 
 getVarTypeM ide = GacMonad $ \s@GState{table=t,messages=pm} ->
                     case getVarType t ide of
                          Just x  -> GOk s x
-                         Nothing -> GOk s{messages=(addError pm "Variable not found")} (AType (TTypeInt))
+                         Nothing -> GOk s{messages=(addError pm "Variable not found")} (TExprInt 42 ::: (TTypeInt))
 
 isVarLocalM :: Ide -> GacMonad Bool
 isVarLocalM ide = GacMonad $ \s@GState{table=t} -> GOk s (isVarLocal t ide)
 
-addVarM :: (Ide, AType) -> GacMonad ()
+addVarM :: (Ide, ATExpr) -> GacMonad ()
 addVarM var = GacMonad $ \s@GState{table=t} ->
                     GOk s{table=(addVar t var)} ()
 
-addFuncM :: (Ide, [AType], AType) -> GacMonad ()
+addFuncM :: (Ide, [ATExpr], ATExpr) -> GacMonad ()
 addFuncM fun = GacMonad $ \s@GState{table=t} ->
                     GOk s{table=(addFunc t fun)} ()
 
