@@ -115,6 +115,7 @@ srcLocCol (UnhelpfulLoc s) = error "srcLocCol"
 -- character in any other case
 advanceSrcLoc :: SrcLoc -> Char -> SrcLoc
 advanceSrcLoc (SrcLoc f l _) '\n' = SrcLoc f  (l + 1) 1
+advanceSrcLoc (SrcLoc f l _) '\r' = SrcLoc f  l 1
 advanceSrcLoc (SrcLoc f l c) '\t' = SrcLoc f  l (((((c - 1) `shiftR` 3) + 1)
                                                   `shiftL` 3) + 1)
 advanceSrcLoc (SrcLoc f l c) _    = SrcLoc f  l (c + 1)
