@@ -46,7 +46,7 @@ Executable gac
   else
      Build-Depends: unix
 
-  GHC-Options: -Wall
+  GHC-Options: -Wall -Wwarn -w
 
   Hs-Source-Dirs:
         src
@@ -59,3 +59,4 @@ Executable gac
         SrcLoc
         ErrUtils
         UnTypedAst
+        Util
