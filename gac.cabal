@@ -53,6 +53,7 @@ Executable gac
         src/parser
         src/main
         src/basicTypes
+        src/utils
   Other-Modules:
         Parser
         Lexer
@@ -60,3 +61,5 @@ Executable gac
         ErrUtils
         UnTypedAst
         Util
+        Outputable
+        Bag
