@@ -15,6 +15,8 @@ module ErrUtils (
     ErrorMessages, WarningMessages,
     Messages, errorsFound, emptyMessages,
     mkErrMsg, mkWarnMsg,
+
+    addError, addWarning
   ) where
 
 import Bag
@@ -62,3 +64,17 @@ emptyMessages = (emptyBag, emptyBag)
 
 errorsFound :: Messages -> Bool
 errorsFound (warns, errs) = not (isEmptyBag errs)
+
+-- -------------------------------------------------------------------
+-- Add new messages to the bag
+addError :: ErrMsg -> Messages -> Messages
+addError err (warns, errs) =
+    let errs' = errs `snocBag` err
+    in
+    errs' `seq` (warns, errs')
+
+addWarning :: WarnMsg -> Messages -> Messages
+addWarning warn (warns, errs) =
+    let warns' = warns `snocBag` warn
+    in
+    warns' `seq` (warns', errs)
