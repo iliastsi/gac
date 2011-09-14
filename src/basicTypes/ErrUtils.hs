@@ -7,9 +7,10 @@
 
 module ErrUtils (
     Message, mkLocMessage,
-    msgSpan, msgContext, msgExtraInfo,
+    msgSpan, msgContext, msgSeverity, msgExtraInfo,
 
-    MsgCode,
+    MsgCode(..),
+    Severity(..),
 
     ErrMsg, WarnMsg,
     ErrorMessages, WarningMessages,
@@ -29,30 +30,37 @@ import SrcLoc
 data MsgCode
   = UnknownErr
 
+data Severity
+  = SevInfo
+  | SevWarning
+  | SevError
+  | SevFatal
+
 -- -------------------------------------------------------------------
 -- Collecting up messages for later ordering and printing
 
 data Message = Msg {
+    msgSeverity     :: Severity,
     msgSpan         :: SrcSpan,
     msgContext      :: MsgCode,
     msgExtraInfo    :: String
     }
 
-mkLocMessage :: SrcSpan -> MsgCode -> String -> Message
-mkLocMessage msgSpan msgContext msgExtraInfo =
-    Msg msgSpan msgContext msgExtraInfo
+mkLocMessage :: Severity -> SrcSpan -> MsgCode -> String -> Message
+mkLocMessage msgSev msgSpan msgContext msgExtraInfo =
+    Msg msgSev msgSpan msgContext msgExtraInfo
 
 -- An error message
 type ErrMsg  = Message
 
 mkErrMsg :: SrcSpan -> MsgCode -> String -> ErrMsg
-mkErrMsg = mkLocMessage
+mkErrMsg = mkLocMessage SevError
 
 -- A warning message
 type WarnMsg = Message
 
 mkWarnMsg :: SrcSpan -> MsgCode -> String -> WarnMsg
-mkWarnMsg = mkLocMessage
+mkWarnMsg = mkLocMessage SevWarning
 
 type Messages = (Bag WarnMsg, Bag ErrMsg)
 
