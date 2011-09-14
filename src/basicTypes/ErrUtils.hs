@@ -17,11 +17,14 @@ module ErrUtils (
     Messages, errorsFound, emptyMessages,
     mkErrMsg, mkWarnMsg,
 
+    sortMessages,
+
     addError, addWarning
   ) where
 
 import Bag
 import SrcLoc
+import Util
 
 
 -- -------------------------------------------------------------------
@@ -73,6 +76,14 @@ emptyMessages = (emptyBag, emptyBag)
 
 errorsFound :: Messages -> Bool
 errorsFound (warns, errs) = not (isEmptyBag errs)
+
+
+-- -------------------------------------------------------------------
+-- Sort a list of messages by descending SrcSpan order
+
+sortMessages :: [Message] -> [Message]
+sortMessages = sortLe (\Msg{msgSpan=s1} Msg{msgSpan=s2} -> s1<=s2)
+
 
 -- -------------------------------------------------------------------
 -- Add new messages to the bag
