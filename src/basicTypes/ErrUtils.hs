@@ -26,6 +26,7 @@ import SrcLoc
 
 -- -------------------------------------------------------------------
 -- Basic error codes
+-- Don't forget to add the error message into Show instance
 
 data MsgCode
   = UnknownErr
@@ -75,6 +76,7 @@ errorsFound (warns, errs) = not (isEmptyBag errs)
 
 -- -------------------------------------------------------------------
 -- Add new messages to the bag
+
 addError :: ErrMsg -> Messages -> Messages
 addError err (warns, errs) =
     let errs' = errs `snocBag` err
@@ -86,3 +88,26 @@ addWarning warn (warns, errs) =
     let warns' = warns `snocBag` warn
     in
     warns' `seq` (warns', errs)
+
+-- -------------------------------------------------------------------
+-- Instance declartions
+
+instance Show Severity where
+    show SevInfo    = "info"
+    show SevWarning = "warning"
+    show SevError   = "error"
+    show SevFatal   = "fatal error"
+
+instance Show MsgCode where
+    show UnknownErr = "Unknown Error :@"
+
+instance Show Message where
+    show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
+        let file = srcSpanFile      mspan
+            line = show $ srcSpanStartLine mspan
+            col  = show $ srcSpanStartCol  mspan
+            extra' = if null extra then "" else "\n\t" ++ extra
+        in
+        file ++ ":" ++ line ++ ":"  ++ col ++ ": "
+             ++ show sev    ++ ": " ++ show code
+             ++ extra'
