@@ -32,11 +32,7 @@ import Util
 -- Don't forget to add the error message into Show instance
 
 data MsgCode
-  = UnknownChar Char
-  | BigNumber Int   -- Bigger than 16 bits
-  | OpenComm    -- Unmatched comment open symbol
-  | CloseComm   -- Unmatched comment close symbol
-  | ParseError
+  = ParseError
   | UnknownErr
 
 data Severity
@@ -115,10 +111,6 @@ instance Show Severity where
     show SevFatal   = "fatal error"
 
 instance Show MsgCode where
-    show (UnknownChar c)    = "Cannot parse char " ++ show c
-    show (BigNumber c)      = "Number " ++ show c ++ " is bigger than 16 bits"
-    show OpenComm           = "unterminated `(*'"
-    show CloseComm          = "unmatched `*)'"
     show ParseError         = "parse error"
     show UnknownErr         = "Unknown Error :@"
 

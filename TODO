@@ -1,17 +1,7 @@
 ** Fix in Lexer:
 	Add error messages when include more than one char in \'
-
-** Fix in ErrUtil:
-	Add file name in error/warning messages
-	Change Located data type to hold start and end of position
-
-** BasicTypes:
-	Add FastString, StringBuffer
+        I thing there is a bug with "\n" (it converts to "\\n")
 
 ** Fix Parser:
 	Express "this should be between spaces"
-
-** Write Renamer
-
-** TypeCheck:
-	add a TType of variables/functions not presenting to continue
+        Add more error messages (and enable parsing to continue)

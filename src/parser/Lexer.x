@@ -100,7 +100,7 @@ $white+             ;
   ":"               { token ITcolon }
   ";"               { token ITsemi }
 
-  "*)"              { errorMsg CloseComm }
+  "*)"              { errorMsg ("unmatched `*)'") }
 }
 
 "--" .*             ;
@@ -187,7 +187,7 @@ lex_int_tok span buf len = do
         num     = read num_str
     if (num <= 32768) && (num >= -32769)
        then return (L span (ITdigit num))
-       else warnThen (BigNumber num)
+       else warnThen ("number `" ++ show num ++ "' is bigger than 16 bits")
                 (\_ _ _ -> return (L span (ITdigit num))) span buf len
 
 lex_string_tok :: Action    -- strip out \" from beginng and ending
@@ -223,27 +223,27 @@ unembedComment span buf len = do
 
 unknownChar :: Action
 unknownChar span buf len =
-    errorMsg (UnknownChar (head buf)) span buf len
+    errorMsg ("Cannot parse char `" ++ take 1 buf ++ "'") span buf len
 
 -- -------------------------------------------------------------------
 -- Warnings and Errors
 
-warnMsg :: MsgCode -> Action
+warnMsg :: String -> Action
 warnMsg msg span _buf _len = do
     addPWarning span msg
     lexToken
 
-warnThen :: MsgCode -> Action -> Action
+warnThen :: String -> Action -> Action
 warnThen msg action span buf len = do
     addPWarning span msg
     action span buf len
 
-errorMsg :: MsgCode -> Action
+errorMsg :: String -> Action
 errorMsg msg span _buf _len = do
     addPError span msg
     lexToken
 
-errorThen :: MsgCode -> Action -> Action
+errorThen :: String -> Action -> Action
 errorThen msg action span buf len = do
     addPError span msg
     action span buf len
@@ -366,15 +366,15 @@ mkPState buf loc =
     comment_state   = 0
   }
 
-addPWarning :: SrcSpan -> MsgCode -> P ()
+addPWarning :: SrcSpan -> String -> P ()
 addPWarning loc msg
     = P $ \s@(PState{messages=msgs}) ->
-        POk s{ messages=(addWarning (mkWarnMsg loc msg "") msgs) } ()
+        POk s{ messages=(addWarning (mkWarnMsg loc ParseError msg) msgs) } ()
 
-addPError :: SrcSpan -> MsgCode -> P ()
+addPError :: SrcSpan -> String -> P ()
 addPError loc msg
     = P $ \s@(PState{messages=msgs}) ->
-        POk s{ messages=(addError (mkErrMsg loc msg "") msgs) } ()
+        POk s{ messages=(addError (mkErrMsg loc ParseError msg) msgs) } ()
 
 getMessages :: PState -> Messages
 getMessages PState{messages=ms} = ms
@@ -387,7 +387,9 @@ getMessages PState{messages=ms} = ms
 -- detected during parsing.
 srcParseFail :: P a
 srcParseFail = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
-    let extra = "failed to parse `" ++ tok ++ "'"
+    let extra = if null tok
+                    then "at end of file"
+                    else "failed to parse `" ++ tok ++ "'"
     in
     PFailed (addError (mkErrMsg span ParseError extra) ms)
 
@@ -412,7 +414,7 @@ lexToken = do
             let span = mkSrcSpan loc1 loc1
             setLastToken span ""
             if sc > 0
-               then errorThen OpenComm
+               then errorThen ("unterminated `(*'")
                         (\_ _ _ -> return (L span ITeof)) span buf 0
                else return (L span ITeof)
         AlexError (AI loc2 buf2 _) ->
