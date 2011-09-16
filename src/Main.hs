@@ -9,11 +9,14 @@
 module Main(main) where
 
 import System.IO()
-import Lexer (mkPState, unP)
-import Parser
-import SrcLoc
+import Lexer (ParseResult(..), mkPState, unP)
+import Parser (parser)
+import SrcLoc (mkSrcLoc)
+import Outputable
 
 main :: IO ()
 main = do
     str <- getContents
-    print $ unP parser (mkPState str (mkSrcLoc "Stdin" 1 1))
+    case unP parser (mkPState str (mkSrcLoc "Stdin" 1 1)) of
+         POk _state ast    -> print ast
+         PFailed mspan msg -> printPlain mspan msg

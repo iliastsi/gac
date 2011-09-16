@@ -7,7 +7,7 @@
 -- definition, with some hand-coded bits.
 --
 -- Completely accurate information about token-spans within the source
--- file is maintained.  Every token has a SrcLoc attached to it.
+-- file is maintained.  Every token has a start and end SrcLoc attached to it.
 --
 --------------------------------------------------------------------------------
 
@@ -26,12 +26,13 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
 module Lexer (
-    ParseResult(..), PState(..), P(..), mkPState,
-    failMsgP, failLocMsgP, Token(..),
+    ParseResult(..), PState(..), P(..), mkPState, Token(..),
+    failMsgP, failLocMsgP, failSpanMsgP,
     lexer, lexDummy, getPState,
     getInput, setInput, AlexInput(..),
     getSrcLoc, setSrcLoc,
-    addError, addWarning, getMessages
+    getMessages,
+    addPWarning, addPError
   ) where
 
 import SrcLoc
@@ -99,7 +100,7 @@ $white+             ;
   ":"               { token ITcolon }
   ";"               { token ITsemi }
 
-  "*)"              { errorMsg "Unmatched comment close symbol" }
+  "*)"              { errorMsg CloseComm }
 }
 
 "--" .*             ;
@@ -157,43 +158,43 @@ data Token
     | ITsemi        -- ;
 
     | ITeof             -- end of file token
-    deriving (Eq, Show)
+    deriving Eq
 
 -- -------------------------------------------------------------------
 -- Lexer actions
 
 -- Position -> Buffer -> Length -> P Token
-type Action = SrcLoc -> String -> Int -> P (Located Token)
+type Action = SrcSpan -> String -> Int -> P (Located Token)
 
 token :: Token -> Action
-token t pos _buf _len = return (L pos t)
+token t span _buf _len = return (L span t)
 
 skip :: Action
-skip _pos _buf _len = lexToken
+skip _span _buf _len = lexToken
 
 andBegin :: Action -> Int -> Action
-andBegin act code pos buf len = do setLexState code; act pos buf len
+andBegin act code span buf len = do setLexState code; act span buf len
 
 begin :: Int -> Action
 begin code = skip `andBegin` code
 
 lex_id_tok :: Action
-lex_id_tok pos buf len = return (L pos (ITid (take len buf)))
+lex_id_tok span buf len = return (L span (ITid (take len buf)))
 
 lex_int_tok :: Action
-lex_int_tok pos buf len = do
+lex_int_tok span buf len = do
     let num_str = take len buf
         num     = read num_str
-    if num <= 32768
-       then return (L pos (ITdigit num))
-       else warnThen ("Number " ++ num_str ++ " is bigger than 16 bits")
-                (\_ _ _ -> return (L pos (ITdigit num))) pos buf len
+    if (num <= 32768) && (num >= -32769)
+       then return (L span (ITdigit num))
+       else warnThen (BigNumber num)
+                (\_ _ _ -> return (L span (ITdigit num))) span buf len
 
 lex_string_tok :: Action    -- strip out \" from beginng and ending
-lex_string_tok pos buf len = return (L pos (ITstring (take (len-2) (tail buf))))
+lex_string_tok span buf len = return (L span (ITstring (take (len-2) (tail buf))))
 
 lex_char_tok :: Action
-lex_char_tok pos buf len = return (L pos (ITchar c))
+lex_char_tok span buf len = return (L span (ITchar c))
     where c = case take (len-2) (tail buf) of -- stip \' from beginning and ending
                     "\\n"    -> '\n'
                     "\\t"    -> '\t'
@@ -208,49 +209,44 @@ lex_char_tok pos buf len = return (L pos (ITchar c))
                     _               -> error "in lex_char_tok"
 
 embedComment :: Action
-embedComment pos buf len = do
+embedComment span buf len = do
     incCommState
-    begin comments pos buf len
+    begin comments span buf len
 
 unembedComment :: Action
-unembedComment pos buf len = do
+unembedComment span buf len = do
     decCommState
     status <- getCommState
     if status == 0
-        then begin 0 pos buf len
+        then begin 0 span buf len
         else lexToken
 
 unknownChar :: Action
-unknownChar pos buf len = do
-    let (c:_) = buf
-        msg = "Unknown char " ++
-            (if isPrint c
-                then show c
-                else "with ascii code " ++ (show $ ord c))
-    errorMsg msg pos buf len
+unknownChar span buf len =
+    errorMsg (UnknownChar (head buf)) span buf len
 
 -- -------------------------------------------------------------------
 -- Warnings and Errors
 
-warnMsg :: String -> Action
-warnMsg msg pos _buf _len = do
-    addWarning pos msg
+warnMsg :: MsgCode -> Action
+warnMsg msg span _buf _len = do
+    addPWarning span msg
     lexToken
 
-warnThen :: String -> Action -> Action
-warnThen msg action pos buf len = do
-    addWarning pos msg
-    action pos buf len
+warnThen :: MsgCode -> Action -> Action
+warnThen msg action span buf len = do
+    addPWarning span msg
+    action span buf len
 
-errorMsg :: String -> Action
-errorMsg msg pos _buf _len = do
-    addError pos msg
+errorMsg :: MsgCode -> Action
+errorMsg msg span _buf _len = do
+    addPError span msg
     lexToken
 
-errorThen :: String -> Action -> Action
-errorThen msg action pos buf len = do
-    addError pos msg
-    action pos buf len
+errorThen :: MsgCode -> Action -> Action
+errorThen msg action span buf len = do
+    addPError span msg
+    action span buf len
 
 -- -------------------------------------------------------------------
 -- The Parse Monad
@@ -258,18 +254,21 @@ errorThen msg action pos buf len = do
 data ParseResult a
     = POk PState a
     | PFailed 
-      SrcLoc        -- The beginning of the text span related to the error
-      Message       -- The error message
-  deriving Show
+      SrcSpan       -- The start and end of the text span related to
+                    -- the error. Might be used in environments which can
+                    -- show this span, e.g. by highlighting it.
+      String        -- The error message
 
 data PState = PState { 
     buffer	        :: String,
     messages        :: Messages,
+    last_loc        :: SrcSpan, -- pos of previous token
+    last_len        :: !Int,    -- len of previous token
     loc             :: SrcLoc,  -- current loc (end of token + 1)
     prev            :: !Char,   -- previous char
 	lex_state       :: !Int,
     comment_state   :: !Int
-  } deriving Show
+  }
 
 newtype P a = P { unP :: PState -> ParseResult a }
 
@@ -288,13 +287,16 @@ thenP :: P a -> (a -> P b) -> P b
         PFailed span err -> PFailed span err
 
 failP :: String -> P a
-failP msg = P $ \s@(PState{loc=loc}) -> PFailed loc msg
+failP msg = P $ \s@(PState{last_loc=span}) -> PFailed span msg
 
 failMsgP :: String -> P a
-failMsgP msg = P $ \s@(PState{loc=loc}) -> PFailed loc msg
+failMsgP msg = P $ \s@(PState{last_loc=span}) -> PFailed span msg
 
-failLocMsgP :: SrcLoc -> String -> P a
-failLocMsgP loc msg = P $ \_ -> PFailed loc msg
+failLocMsgP :: SrcLoc -> SrcLoc -> String -> P a
+failLocMsgP loc1 loc2 msg = P $ \_ -> PFailed (mkSrcSpan loc1 loc2) msg
+
+failSpanMsgP :: SrcSpan -> String -> P a
+failSpanMsgP span msg = P $ \_ -> PFailed span msg
 
 getPState :: P PState
 getPState = P $ \s -> POk s s
@@ -321,6 +323,12 @@ setSrcLoc new_loc = P $ \s -> POk s{loc=new_loc} ()
 getSrcLoc :: P SrcLoc
 getSrcLoc = P $ \s@(PState{loc=loc}) -> POk s loc
 
+setLastToken :: SrcSpan -> Int -> P ()
+setLastToken loc len = P $ \s -> POk s {
+    last_loc=loc,
+    last_len=len
+    } ()
+
 incCommState :: P ()
 incCommState = P $ \s@(PState{comment_state=prev}) ->
                     POk s{comment_state=prev+1} ()
@@ -339,11 +347,8 @@ alexInputPrevChar :: AlexInput -> Char
 alexInputPrevChar (AI _ _ c) = c
 
 alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
-alexGetChar (AI loc ('\n':xs) _) = Just ('\n', AI (incSrcLine loc) xs '\n')
-alexGetChar (AI loc ('\t':xs) _) = Just ('\t', AI (incSrcTab loc) xs '\t')
-alexGetChar (AI loc ('\r':xs) _) = Just ('\r', AI (srcCarRet loc) xs '\r')
-alexGetChar (AI loc (x:xs) _)    = Just (x, AI (incSrcColumn loc) xs x)
-alexGetChar (AI _ [] _) = Nothing
+alexGetChar (AI _   []     _) = Nothing
+alexGetChar (AI loc (x:xs) _) = Just (x, AI (advanceSrcLoc loc x) xs x)
 
 
 -- create a parse state
@@ -353,25 +358,23 @@ mkPState buf loc =
   PState {
     buffer          = buf,
     messages        = emptyMessages,
+    last_loc        = mkSrcSpan loc loc,
+    last_len        = 0,
     loc             = loc,
     prev            = '\n',
     lex_state       = 0,
     comment_state   = 0
   }
 
-addWarning :: SrcLoc -> String -> P ()
-addWarning loc msg
-    = P $ \s@(PState{messages=(ws,es)}) ->
-        let warning' = mkLocWarnMsg loc msg
-            ws'      = ws `snocBag` warning'
-        in POk s{messages=(ws',es)} ()
+addPWarning :: SrcSpan -> MsgCode -> P ()
+addPWarning loc msg
+    = P $ \s@(PState{messages=msgs}) ->
+        POk s{ messages=(addWarning (mkWarnMsg loc msg "") msgs) } ()
 
-addError :: SrcLoc -> String -> P ()
-addError loc msg
-    = P $ \s@(PState{messages=(ws,es)}) ->
-        let err' = mkLocErrMsg loc msg
-            es'  = es `snocBag` err'
-        in POk s{messages=(ws,es')} ()
+addPError :: SrcSpan -> MsgCode -> P ()
+addPError loc msg
+    = P $ \s@(PState{messages=msgs}) ->
+        POk s{ messages=(addError (mkErrMsg loc msg "") msgs) } ()
 
 getMessages :: P Messages
 getMessages = P $ \s@PState{messages=msg} -> POk s msg
@@ -383,8 +386,9 @@ getMessages = P $ \s@PState{messages=msg} -> POk s msg
 -- in the source file, not over a token range.
 lexError :: String -> P a
 lexError str = do
-    (AI loc buf _) <- getInput
-    reportLexError loc buf str
+    loc <- getSrcLoc
+    (AI end buf _) <- getInput
+    reportLexError loc end buf str
 
 -- -------------------------------------------------------------------
 -- This is the top-level functions: lexer is called from the parser
@@ -392,30 +396,34 @@ lexError str = do
 
 lexToken :: P (Located Token)
 lexToken = do
-    inp@(AI loc buf _) <- getInput
+    inp@(AI loc1 buf _) <- getInput
     sc <- getLexState
     case alexScan inp sc of
         AlexEOF -> do
+            let span = mkSrcSpan loc1 loc1
+            setLastToken span 0
             if sc > 0
-               then errorThen "Probably unmatched open comment symbol"
-                        (\_ _ _ -> return (L loc ITeof)) loc buf 0
-               else return (L loc ITeof)
+               then errorThen OpenComm
+                        (\_ _ _ -> return (L span ITeof)) span buf 0
+               else return (L span ITeof)
         AlexError (AI loc2 buf2 _) ->
-            reportLexError loc2 buf2 "lexical error"
+            reportLexError loc1 loc2 buf2 "Unknown lexical error"
         AlexSkip inp2 _ -> do
             setInput inp2
             lexToken
-        AlexToken inp2 len t -> do
+        AlexToken inp2@(AI end _ _) len t -> do
             setInput inp2
-            t loc buf len
+            let span = mkSrcSpan loc1 end
+            span `seq` setLastToken span len
+            t (mkSrcSpan loc1 end) buf len
 
-reportLexError :: SrcLoc -> String -> String -> P a
-reportLexError loc buf str
-    | null buf  = failLocMsgP loc (str ++ " at end of input")
+reportLexError :: SrcLoc -> SrcLoc -> String -> String -> P a
+reportLexError loc1 loc2 buf str
+    | null buf  = failLocMsgP loc1 loc2 (str ++ " at end of input")
     | otherwise =
         let c = head buf
         in
-        failLocMsgP loc (str ++ " at character " ++ show c)
+        failLocMsgP loc1 loc2 (str ++ " at character " ++ show c)
 
 lexer :: (Located Token -> P a) -> P a
 lexer cont = do
@@ -426,7 +434,7 @@ lexer cont = do
 --
 lexDummy :: P [(Located Token)]
 lexDummy = do
-    tok@(L _pos t) <- lexToken
+    tok@(L _span t) <- lexToken
     if t==ITeof
         then do let toks = []
                 P $ \s -> POk s (tok : toks)

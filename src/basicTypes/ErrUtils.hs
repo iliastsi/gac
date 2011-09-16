@@ -32,7 +32,11 @@ import Util
 -- Don't forget to add the error message into Show instance
 
 data MsgCode
-  = UnknownErr
+  = UnknownChar Char
+  | BigNumber Int   -- Bigger than 16 bits
+  | OpenComm    -- Unmatched comment open symbol
+  | CloseComm   -- Unmatched comment close symbol
+  | UnknownErr
 
 data Severity
   = SevInfo
@@ -110,11 +114,13 @@ instance Show Severity where
     show SevFatal   = "fatal error"
 
 instance Show MsgCode where
-    show UnknownErr = "Unknown Error :@"
+    show (UnknownChar c) = "Cannot parse char " ++ show c
+    show (BigNumber c)   = "Number " ++ show c ++ " is bigger than 16 bits"
+    show UnknownErr      = "Unknown Error :@"
 
 instance Show Message where
     show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
-        let file = srcSpanFile      mspan
+        let file = srcSpanFile mspan
             line = show $ srcSpanStartLine mspan
             col  = show $ srcSpanStartCol  mspan
             extra' = if null extra then "" else "\n\t" ++ extra
