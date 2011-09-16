@@ -253,17 +253,13 @@ errorThen msg action span buf len = do
 
 data ParseResult a
     = POk PState a
-    | PFailed 
-      SrcSpan       -- The start and end of the text span related to
-                    -- the error. Might be used in environments which can
-                    -- show this span, e.g. by highlighting it.
-      String        -- The error message
+    | PFailed Messages
 
 data PState = PState { 
     buffer	        :: String,
     messages        :: Messages,
     last_loc        :: SrcSpan, -- pos of previous token
-    last_len        :: !Int,    -- len of previous token
+    last_tok        :: !String, -- string of the previous token
     loc             :: SrcLoc,  -- current loc (end of token + 1)
     prev            :: !Char,   -- previous char
 	lex_state       :: !Int,
@@ -283,20 +279,32 @@ returnP a = a `seq` (P $ \s -> POk s a)
 thenP :: P a -> (a -> P b) -> P b
 (P m) `thenP` k = P $ \ s ->
     case m s of
-        POk s1 a         -> (unP (k a)) s1
-        PFailed span err -> PFailed span err
+        POk s1 a     -> (unP (k a)) s1
+        PFailed msgs -> PFailed msgs
 
 failP :: String -> P a
-failP msg = P $ \s@(PState{last_loc=span}) -> PFailed span msg
+failP msg = P $ \s@(PState{last_loc=span}) ->
+    let ms  = getMessages s
+        ms' = addError (mkErrMsg span ParseError msg) ms
+    in PFailed ms'
 
 failMsgP :: String -> P a
-failMsgP msg = P $ \s@(PState{last_loc=span}) -> PFailed span msg
+failMsgP msg = P $ \s@(PState{last_loc=span}) ->
+    let ms  = getMessages s
+        ms' = addError (mkErrMsg span ParseError msg) ms
+    in PFailed ms'
 
 failLocMsgP :: SrcLoc -> SrcLoc -> String -> P a
-failLocMsgP loc1 loc2 msg = P $ \_ -> PFailed (mkSrcSpan loc1 loc2) msg
+failLocMsgP loc1 loc2 msg = P $ \s ->
+    let ms  = getMessages s
+        ms' = addError (mkErrMsg (mkSrcSpan loc1 loc2) ParseError msg) ms
+    in PFailed ms'
 
 failSpanMsgP :: SrcSpan -> String -> P a
-failSpanMsgP span msg = P $ \_ -> PFailed span msg
+failSpanMsgP span msg = P $ \s ->
+    let ms  = getMessages s
+        ms' = addError (mkErrMsg span ParseError msg) ms
+    in PFailed ms'
 
 getPState :: P PState
 getPState = P $ \s -> POk s s
@@ -323,10 +331,10 @@ setSrcLoc new_loc = P $ \s -> POk s{loc=new_loc} ()
 getSrcLoc :: P SrcLoc
 getSrcLoc = P $ \s@(PState{loc=loc}) -> POk s loc
 
-setLastToken :: SrcSpan -> Int -> P ()
-setLastToken loc len = P $ \s -> POk s {
+setLastToken :: SrcSpan -> String -> P ()
+setLastToken loc str = P $ \s -> POk s {
     last_loc=loc,
-    last_len=len
+    last_tok=str
     } ()
 
 incCommState :: P ()
@@ -359,7 +367,7 @@ mkPState buf loc =
     buffer          = buf,
     messages        = emptyMessages,
     last_loc        = mkSrcSpan loc loc,
-    last_len        = 0,
+    last_tok        = "",
     loc             = loc,
     prev            = '\n',
     lex_state       = 0,
@@ -376,8 +384,8 @@ addPError loc msg
     = P $ \s@(PState{messages=msgs}) ->
         POk s{ messages=(addError (mkErrMsg loc msg "") msgs) } ()
 
-getMessages :: P Messages
-getMessages = P $ \s@PState{messages=msg} -> POk s msg
+getMessages :: PState -> Messages
+getMessages PState{messages=ms} = ms
 
 -- -------------------------------------------------------------------
 -- Construct a parse error
@@ -401,7 +409,7 @@ lexToken = do
     case alexScan inp sc of
         AlexEOF -> do
             let span = mkSrcSpan loc1 loc1
-            setLastToken span 0
+            setLastToken span ""
             if sc > 0
                then errorThen OpenComm
                         (\_ _ _ -> return (L span ITeof)) span buf 0
@@ -414,7 +422,7 @@ lexToken = do
         AlexToken inp2@(AI end _ _) len t -> do
             setInput inp2
             let span = mkSrcSpan loc1 end
-            span `seq` setLastToken span len
+            span `seq` setLastToken span (take len buf)
             t (mkSrcSpan loc1 end) buf len
 
 reportLexError :: SrcLoc -> SrcLoc -> String -> String -> P a

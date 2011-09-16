@@ -18,5 +18,5 @@ main :: IO ()
 main = do
     str <- getContents
     case unP parser (mkPState str (mkSrcLoc "Stdin" 1 1)) of
-         POk _state ast    -> print ast
-         PFailed mspan msg -> printPlain mspan msg
+         POk _state ast -> print ast
+         PFailed ms     -> printOutput ms

@@ -8,7 +8,6 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
-    printPlain
   ) where
 
 import SrcLoc
@@ -32,14 +31,3 @@ printWarns = printMsgBag . fst
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =
     mapM_ (\msg -> putStrLn $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
-
-
--- -------------------------------------------------------------------
--- Print SrcSpan'ed string
-
-printPlain :: SrcSpan -> String -> IO ()
-printPlain mspan msg = do
-    let file = srcSpanFile mspan
-        line = show $ srcSpanStartLine mspan
-        col  = show $ srcSpanStartCol  mspan
-    putStrLn (file ++ ":" ++ line ++ ":" ++ col ++ ": " ++ msg)
