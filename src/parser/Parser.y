@@ -188,7 +188,6 @@ cond :: { UCond }
 {
 
 happyError :: (Located Token) -> P a
-happyError (L _ ITeof)  = failMsgP "Parse error at end of file"
-happyError (L span _) = failSpanMsgP span "Parse error"
+happyError _  = srcParseFail
 
 }

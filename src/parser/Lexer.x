@@ -27,7 +27,7 @@
 
 module Lexer (
     ParseResult(..), PState(..), P(..), mkPState, Token(..),
-    failMsgP, failLocMsgP, failSpanMsgP,
+    failMsgP, failLocMsgP, failSpanMsgP, srcParseFail,
     lexer, lexDummy, getPState,
     getInput, setInput, AlexInput(..),
     getSrcLoc, setSrcLoc,
@@ -283,28 +283,20 @@ thenP :: P a -> (a -> P b) -> P b
         PFailed msgs -> PFailed msgs
 
 failP :: String -> P a
-failP msg = P $ \s@(PState{last_loc=span}) ->
-    let ms  = getMessages s
-        ms' = addError (mkErrMsg span ParseError msg) ms
-    in PFailed ms'
+failP msg = P $ \s@(PState{messages=ms, last_loc=span}) ->
+    PFailed (addError (mkErrMsg span ParseError msg) ms)
 
 failMsgP :: String -> P a
-failMsgP msg = P $ \s@(PState{last_loc=span}) ->
-    let ms  = getMessages s
-        ms' = addError (mkErrMsg span ParseError msg) ms
-    in PFailed ms'
+failMsgP msg = P $ \s@(PState{messages=ms, last_loc=span}) ->
+    PFailed (addError (mkErrMsg span ParseError msg) ms)
 
 failLocMsgP :: SrcLoc -> SrcLoc -> String -> P a
-failLocMsgP loc1 loc2 msg = P $ \s ->
-    let ms  = getMessages s
-        ms' = addError (mkErrMsg (mkSrcSpan loc1 loc2) ParseError msg) ms
-    in PFailed ms'
+failLocMsgP loc1 loc2 msg = P $ \s@(PState{messages=ms}) ->
+    PFailed (addError (mkErrMsg (mkSrcSpan loc1 loc2) ParseError msg) ms)
 
 failSpanMsgP :: SrcSpan -> String -> P a
-failSpanMsgP span msg = P $ \s ->
-    let ms  = getMessages s
-        ms' = addError (mkErrMsg span ParseError msg) ms
-    in PFailed ms'
+failSpanMsgP span msg = P $ \s@(PState{messages=ms}) ->
+    PFailed (addError (mkErrMsg span ParseError msg) ms)
 
 getPState :: P PState
 getPState = P $ \s -> POk s s
@@ -389,6 +381,15 @@ getMessages PState{messages=ms} = ms
 
 -- -------------------------------------------------------------------
 -- Construct a parse error
+
+-- Report a parse failure, giving the span of the previous token as
+-- the location of the error. This is the entry point for errors
+-- detected during parsing.
+srcParseFail :: P a
+srcParseFail = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
+    let extra = "failed to parse `" ++ tok ++ "'"
+    in
+    PFailed (addError (mkErrMsg span ParseError extra) ms)
 
 -- A lexical error is reported at a particular position
 -- in the source file, not over a token range.
