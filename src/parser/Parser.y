@@ -87,10 +87,14 @@ program :: { UDef }
 funcdef :: { UDef }
     : ID fpar ':' rtype localdefs compoundstmt
                                     { let (ITid i) = (unLoc $1) in UDefFun i $2 $4 $5 (UStmtCompound $6) }
+    | error                         {% srcParseFail "expected function decleration" }
 
 fpar :: { [UDef] }
     : '(' ')'                       { [] }
+    | '(' error                     {% srcParseFail "unclosed `)'" }
     | '(' fparlist ')'              { $2 }
+    | '(' fparlist error            {% srcParseFail "unclosed `)'" }
+    | error                         {% srcParseFail "expected function definition parameters" }
 
 fparlist :: { [UDef] }
     : fpardef                       { [$1] }
@@ -99,10 +103,14 @@ fparlist :: { [UDef] }
 fpardef :: { UDef }
     : ID ':' type                   { let (ITid i) = (unLoc $1) in UDefPar i ModeByVal $3 }
     | ID ':' REFERENCE type         { let (ITid i) = (unLoc $1) in UDefPar i ModeByRef $4 }
+    | ID error                      {% srcParseFail "missing `:'for type definition" }
+    | error                         {% srcParseFail "expected parameter definition name" }
 
 type :: { UType }
     : datatype                      { $1 }
     | datatype '[' ']'              { UTypeArray (0, $1) }
+    | datatype '[' error            {% srcParseFail "expected `]'" }
+    | error                         {% srcParseFail "unknown datatype" }
 
 datatype :: { UType }
     : INT                           { UTypeInt }
@@ -111,6 +119,7 @@ datatype :: { UType }
 rtype :: { UType}
     : datatype                      { $1 }
     | PROC                          { UTypeProc }
+    | error                         {% srcParseFail "unknown datatype" }
 
 localdefs :: { [UDef] }
     : {- nothing -}                 { [] }
@@ -125,10 +134,18 @@ vardef :: { UDef }
     | ID ':' datatype '[' DIGIT ']' ';'
                                     { let (ITid x) = (unLoc $1); (ITdigit y) = (unLoc $5) in
                                         UDefVar x (UTypeArray (y, $3)) }
+    | ID ':' datatype '[' DIGIT ']' error
+                                    {% srcParseFail "missing `;'" }
+    | ID ':' datatype '[' DIGIT error
+                                    {% srcParseFail "unclosed `]'" }
+    | ID ':' datatype '[' error     {% srcParseFail "array size must be an integer" }
+    | ID ':' datatype error         {% srcParseFail "missing `;'" }
+    | ID error                      {% srcParseFail "missing `:' for type definition" }
 
 stmt :: { UStmt }
     : ';'                           { UStmtNothing }
     | lvalue '=' expr ';'           { UStmtAssign $1 $3 }
+    | lvalue '=' expr error         {% srcParseFail "missing `;'" }
     | compoundstmt                  { UStmtCompound $1 }
     | ID '(' ')' ';'                { let (ITid i) = (unLoc $1) in UStmtFun i [] }
     | ID '(' exprlist ')' ';'       { let (ITid i) = (unLoc $1) in UStmtFun i $3 }
@@ -188,6 +205,6 @@ cond :: { UCond }
 {
 
 happyError :: (Located Token) -> P a
-happyError _  = srcParseFail
+happyError _  = srcParseFail ""
 
 }

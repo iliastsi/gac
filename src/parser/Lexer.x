@@ -229,23 +229,23 @@ unknownChar span buf len =
 -- Warnings and Errors
 
 warnMsg :: String -> Action
-warnMsg msg span _buf _len = do
-    addPWarning span msg
+warnMsg msg span buf len = do
+    addPWarning span (take len buf) msg
     lexToken
 
 warnThen :: String -> Action -> Action
 warnThen msg action span buf len = do
-    addPWarning span msg
+    addPWarning span (take len buf) msg
     action span buf len
 
 errorMsg :: String -> Action
-errorMsg msg span _buf _len = do
-    addPError span msg
+errorMsg msg span buf len = do
+    addPError span (take len buf) msg
     lexToken
 
 errorThen :: String -> Action -> Action
 errorThen msg action span buf len = do
-    addPError span msg
+    addPError span (take len buf) msg
     action span buf len
 
 -- -------------------------------------------------------------------
@@ -283,20 +283,20 @@ thenP :: P a -> (a -> P b) -> P b
         PFailed msgs -> PFailed msgs
 
 failP :: String -> P a
-failP msg = P $ \s@(PState{messages=ms, last_loc=span}) ->
-    PFailed (addError (mkErrMsg span ParseError msg) ms)
+failP msg = P $ \s@(PState{messages=ms, last_loc=span, last_tok=tok}) ->
+    PFailed (addError (mkErrMsg span (ParseError tok)msg) ms)
 
 failMsgP :: String -> P a
-failMsgP msg = P $ \s@(PState{messages=ms, last_loc=span}) ->
-    PFailed (addError (mkErrMsg span ParseError msg) ms)
+failMsgP msg = P $ \s@(PState{messages=ms, last_loc=span, last_tok=tok}) ->
+    PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
 
 failLocMsgP :: SrcLoc -> SrcLoc -> String -> P a
-failLocMsgP loc1 loc2 msg = P $ \s@(PState{messages=ms}) ->
-    PFailed (addError (mkErrMsg (mkSrcSpan loc1 loc2) ParseError msg) ms)
+failLocMsgP loc1 loc2 msg = P $ \s@(PState{messages=ms, last_tok=tok}) ->
+    PFailed (addError (mkErrMsg (mkSrcSpan loc1 loc2) (ParseError tok) msg) ms)
 
 failSpanMsgP :: SrcSpan -> String -> P a
-failSpanMsgP span msg = P $ \s@(PState{messages=ms}) ->
-    PFailed (addError (mkErrMsg span ParseError msg) ms)
+failSpanMsgP span msg = P $ \s@(PState{messages=ms, last_tok=tok}) ->
+    PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
 
 getPState :: P PState
 getPState = P $ \s -> POk s s
@@ -366,15 +366,15 @@ mkPState buf loc =
     comment_state   = 0
   }
 
-addPWarning :: SrcSpan -> String -> P ()
-addPWarning loc msg
+addPWarning :: SrcSpan -> String -> String -> P ()
+addPWarning loc tok msg
     = P $ \s@(PState{messages=msgs}) ->
-        POk s{ messages=(addWarning (mkWarnMsg loc ParseError msg) msgs) } ()
+        POk s{ messages=(addWarning (mkWarnMsg loc (ParseError tok) msg) msgs) } ()
 
-addPError :: SrcSpan -> String -> P ()
-addPError loc msg
+addPError :: SrcSpan -> String -> String -> P ()
+addPError loc tok msg
     = P $ \s@(PState{messages=msgs}) ->
-        POk s{ messages=(addError (mkErrMsg loc ParseError msg) msgs) } ()
+        POk s{ messages=(addError (mkErrMsg loc (ParseError tok) msg) msgs) } ()
 
 getMessages :: PState -> Messages
 getMessages PState{messages=ms} = ms
@@ -385,13 +385,9 @@ getMessages PState{messages=ms} = ms
 -- Report a parse failure, giving the span of the previous token as
 -- the location of the error. This is the entry point for errors
 -- detected during parsing.
-srcParseFail :: P a
-srcParseFail = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
-    let extra = if null tok
-                    then "at end of file"
-                    else "failed to parse `" ++ tok ++ "'"
-    in
-    PFailed (addError (mkErrMsg span ParseError extra) ms)
+srcParseFail :: String -> P a
+srcParseFail msg = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
+    PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
 
 -- A lexical error is reported at a particular position
 -- in the source file, not over a token range.

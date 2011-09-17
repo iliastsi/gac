@@ -32,7 +32,7 @@ import Util
 -- Don't forget to add the error message into Show instance
 
 data MsgCode
-  = ParseError
+  = ParseError String
   | UnknownErr
 
 data Severity
@@ -111,7 +111,7 @@ instance Show Severity where
     show SevFatal   = "fatal error"
 
 instance Show MsgCode where
-    show ParseError         = "parse error"
+    show (ParseError buf)   = "parse error at `" ++ buf ++ "'"
     show UnknownErr         = "Unknown Error :@"
 
 instance Show Message where
