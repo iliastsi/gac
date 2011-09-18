@@ -8,24 +8,34 @@
 
 module UnTypedAst where
 
+import SrcLoc
+
+
+type LIde = Located Ide
 
 type Ide = String
 
+type LUDef = Located UDef
+
 data UDef
-    = UDefFun Ide [UDef] UType [UDef] UStmt
-    | UDefPar Ide Mode UType
-    | UDefVar Ide UType
+    = UDefFun LIde [LUDef] LUType [LUDef] LUStmt
+    | UDefPar LIde Mode LUType
+    | UDefVar LIde LUType
   deriving (Eq, Show)
+
+type LUStmt = Located UStmt
 
 data UStmt
     = UStmtNothing
-    | UStmtAssign UVariable UExpr
-    | UStmtCompound [UStmt]
+    | UStmtAssign LUVariable LUExpr
+    | UStmtCompound [LUStmt]
     | UStmtFun UFuncCall
-    | UStmtIf UCond UStmt (Maybe UStmt)
-    | UStmtWhile UCond UStmt
-    | UStmtReturn (Maybe UExpr)
+    | UStmtIf LUCond LUStmt (Maybe LUStmt)
+    | UStmtWhile LUCond LUStmt
+    | UStmtReturn (Maybe LUExpr)
   deriving (Eq, Show)
+
+type LUExpr = Located UExpr
 
 data UExpr
     = UExprInt Int
@@ -33,8 +43,11 @@ data UExpr
     | UExprString String
     | UExprVar UVariable
     | UExprFun UFuncCall
-    | UExprOp UExpr Op UExpr
+    | UExprMinus LUExpr
+    | UExprOp LUExpr LOp LUExpr
   deriving (Eq, Show)
+
+type LOp = Located Op
 
 data Op
     = OpPlus
@@ -52,18 +65,24 @@ data Op
     | OpGE
   deriving (Eq, Show)
 
+type LUCond = Located UCond
+
 data UCond
     = UCondTrue
     | UCondFalse
-    | UCondNot UCond
-    | UCondOp UExpr Op UExpr
-    | UCondLog UCond Op UCond
+    | UCondNot LUCond
+    | UCondOp LUExpr LOp LUExpr
+    | UCondLog LUCond LOp LUCond
   deriving (Eq, Show)
+
+type LUVariable = Located UVariable
 
 data UVariable
     = UVar Ide
-    | UVarArray Ide UExpr
+    | UVarArray LIde LUExpr
   deriving (Eq, Show)
+
+type LUType = Located UType
 
 data UType
     = UTypeInt
@@ -77,5 +96,5 @@ data Mode
     | ModeByRef
   deriving (Eq, Show)
 
-data UFuncCall = UFuncCall Ide [UExpr]
+data UFuncCall = UFuncCall LIde [LUExpr]
   deriving (Eq, Show)
