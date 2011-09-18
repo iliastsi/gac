@@ -28,6 +28,7 @@ import UnTypedAst
 %error { happyError }
 %monad { P } { >>= } { return }
 %lexer { lexer } { L _ ITeof }
+%expect 1
 
 %left '|'
 %left '&'
@@ -146,15 +147,26 @@ stmt :: { UStmt }
     : ';'                           { UStmtNothing }
     | lvalue '=' expr ';'           { UStmtAssign $1 $3 }
     | lvalue '=' expr error         {% srcParseFail "missing `;'" }
+    | lvalue '=' error              {% srcParseFail "not a valid expression" }
+    | ID error                      {% srcParseFail "expected an lvalue or `(' for function" }
     | compoundstmt                  { UStmtCompound $1 }
-    | ID '(' ')' ';'                { let (ITid i) = (unLoc $1) in UStmtFun i [] }
-    | ID '(' exprlist ')' ';'       { let (ITid i) = (unLoc $1) in UStmtFun i $3 }
+    | funcall ';'                   { UStmtFun $1 }
+    | funcall error                 {% srcParseFail "missing `;'" }
     | IF '(' cond ')' stmt          { UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
                                     { UStmtIf $3 $5 (Just $7) }
+    | IF '(' cond error             {% srcParseFail "unclosed `)'" }
+    | IF '(' error                  {% srcParseFail "not a valid condition" }
+    | IF error                      {% srcParseFail "expected `('" }
     | WHILE '(' cond ')' stmt       { UStmtWhile $3 $5 }
+    | WHILE '(' cond error          {% srcParseFail "unclosed `)'" }
+    | WHILE '(' error               {% srcParseFail "not a valid condition" }
+    | WHILE error                   {% srcParseFail "expected `('" }
     | RETURN ';'                    { UStmtReturn Nothing }
+    | RETURN error                  {% srcParseFail "missing `;'" }
     | RETURN expr ';'               { UStmtReturn (Just $2) }
+    | RETURN expr error             {% srcParseFail "missing `;'" }
+    | error                         {% srcParseFail "not a valid statement" }
 
 compoundstmt :: { [UStmt] }
     : '{' stmts '}'                 { $2 }
@@ -163,9 +175,16 @@ stmts :: { [UStmt] }
     : {- nothing -}                 { [] }
     | stmts stmt                    { $2 : $1 }
 
+funcall :: { UFuncCall }
+    : ID '(' ')'                    { let (ITid i) = (unLoc $1) in UFuncCall i [] }
+    | ID '(' error                  {% srcParseFail "unclosed `)'" }
+    | ID '(' exprlist ')'           { let (ITid i) = (unLoc $1) in UFuncCall i $3 }
+    | ID '(' exprlist error         {% srcParseFail "unclosed `)'" }
+
 exprlist :: { [UExpr] }
     : expr                          { [$1] }
     | exprlist ',' expr             { $3 : $1 }
+    | exprlist ',' error            {% srcParseFail "not a valid expression" }
 
 expr :: { UExpr }
     : DIGIT                         { let (ITdigit i) = (unLoc $1) in UExprInt i }
@@ -173,33 +192,53 @@ expr :: { UExpr }
     | STRING                        { let (ITstring i) = (unLoc $1) in UExprString i }
     | lvalue                        { UExprVar $1 }
     | '(' expr ')'                  { $2 }
-    | ID '(' ')' ';'                { let (ITid i) = (unLoc $1) in UExprFun i [] }
-    | ID '(' exprlist ')' ';'       { let (ITid i) = (unLoc $1) in UExprFun i $3 }
+    | '(' expr error                {% srcParseFail "unclosed `)'" }
+    | '(' error                     {% srcParseFail "not a valid expression" }
+    | funcall                       { UExprFun $1 }
     | '+' expr %prec SIGN           { $2 }
+    | '+' error %prec SIGN          {% srcParseFail "not a valid expression" }
     | '-' expr %prec SIGN           { UExprOp (UExprInt 0) OpMinus $2 }
+    | '-' error %prec SIGN          {% srcParseFail "not a valid expression" }
     | expr '+' expr                 { UExprOp $1 OpPlus  $3 }
+    | expr '+' error                {% srcParseFail "not a valid expression" }
     | expr '-' expr                 { UExprOp $1 OpMinus $3 }
+    | expr '-' error                {% srcParseFail "not a valid expression" }
     | expr '*' expr                 { UExprOp $1 OpTimes $3 }
+    | expr '*' error                {% srcParseFail "not a valid expression" }
     | expr '/' expr                 { UExprOp $1 OpDiv   $3 }
+    | expr '/' error                {% srcParseFail "not a valid expression" }
     | expr '%' expr                 { UExprOp $1 OpMod   $3 }
+    | expr '%' error                {% srcParseFail "not a valid expression" }
 
 lvalue :: { UVariable }
     : ID                            { let (ITid i) = (unLoc $1) in UVar i }
     | ID '[' expr ']'               { let (ITid i) = (unLoc $1) in UVarArray i $3 }
+    | ID '[' expr error             {% srcParseFail "unclosed `]'" }
+    | ID '[' error                  {% srcParseFail "not a valid expression" }
 
 cond :: { UCond }
     : TRUE                          { UCondTrue }
     | FALSE                         { UCondFalse }
     | '(' cond ')'                  { $2 }
+    | '(' cond error                {% srcParseFail "unclosed `)'" }
     | '!' cond                      { UCondNot $2 }
+    | '!' error                     {% srcParseFail "not a valid condition" }
     | expr '==' expr                { UCondOp  $1 OpEqual    $3 }
+    | expr '==' error               {% srcParseFail "not a valid expression" }
     | expr '!=' expr                { UCondOp  $1 OpNotEqual $3 }
+    | expr '!=' error               {% srcParseFail "not a valid expression" }
     | expr '<'  expr                { UCondOp  $1 OpLT       $3 }
+    | expr '<'  error               {% srcParseFail "not a valid expression" }
     | expr '>'  expr                { UCondOp  $1 OpGT       $3 }
+    | expr '>'  error               {% srcParseFail "not a valid expression" }
     | expr '<=' expr                { UCondOp  $1 OpLE       $3 }
+    | expr '<=' error               {% srcParseFail "not a valid expression" }
     | expr '>=' expr                { UCondOp  $1 OpGE       $3 }
+    | expr '>=' error               {% srcParseFail "not a valid expression" }
     | cond '&'  cond                { UCondLog $1 OpAnd      $3 }
+    | cond '&'  error               {% srcParseFail "not a valid condition" }
     | cond '|'  cond                { UCondLog $1 OpOr       $3 }
+    | cond '|'  error               {% srcParseFail "not a valid condition" }
 
 
 {

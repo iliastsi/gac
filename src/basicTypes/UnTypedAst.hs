@@ -21,7 +21,7 @@ data UStmt
     = UStmtNothing
     | UStmtAssign UVariable UExpr
     | UStmtCompound [UStmt]
-    | UStmtFun Ide [UExpr]
+    | UStmtFun UFuncCall
     | UStmtIf UCond UStmt (Maybe UStmt)
     | UStmtWhile UCond UStmt
     | UStmtReturn (Maybe UExpr)
@@ -32,7 +32,7 @@ data UExpr
     | UExprChar Char
     | UExprString String
     | UExprVar UVariable
-    | UExprFun Ide [UExpr]
+    | UExprFun UFuncCall
     | UExprOp UExpr Op UExpr
   deriving (Eq, Show)
 
@@ -75,4 +75,7 @@ data UType
 data Mode
     = ModeByVal
     | ModeByRef
+  deriving (Eq, Show)
+
+data UFuncCall = UFuncCall Ide [UExpr]
   deriving (Eq, Show)

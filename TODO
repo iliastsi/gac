@@ -4,4 +4,4 @@
 
 ** Fix Parser:
 	Express "this should be between spaces"
-        Add more error messages (and enable parsing to continue)
+        Write better error messages (and enable parsing to continue)
