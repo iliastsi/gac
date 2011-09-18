@@ -1,6 +1,5 @@
 ** Fix in Lexer:
 	Add error messages when include more than one char in \'
-        I thing there is a bug with "\n" (it converts to "\\n")
 
 ** Fix Parser:
 	Express "this should be between spaces"

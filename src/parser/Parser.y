@@ -87,13 +87,13 @@ program :: { UDef }
 
 funcdef :: { UDef }
     : ID fpar ':' rtype localdefs compoundstmt
-                                    { let (ITid i) = (unLoc $1) in UDefFun i $2 $4 $5 (UStmtCompound $6) }
+                                    { let (ITid i) = (unLoc $1) in UDefFun i $2 $4 (reverse $5) (UStmtCompound $6) }
     | error                         {% srcParseFail "expected function decleration" }
 
 fpar :: { [UDef] }
     : '(' ')'                       { [] }
     | '(' error                     {% srcParseFail "unclosed `)'" }
-    | '(' fparlist ')'              { $2 }
+    | '(' fparlist ')'              { reverse $2 }
     | '(' fparlist error            {% srcParseFail "unclosed `)'" }
     | error                         {% srcParseFail "expected function definition parameters" }
 
@@ -169,7 +169,7 @@ stmt :: { UStmt }
     | error                         {% srcParseFail "not a valid statement" }
 
 compoundstmt :: { [UStmt] }
-    : '{' stmts '}'                 { $2 }
+    : '{' stmts '}'                 { reverse $2 }
 
 stmts :: { [UStmt] }
     : {- nothing -}                 { [] }
@@ -178,7 +178,7 @@ stmts :: { [UStmt] }
 funcall :: { UFuncCall }
     : ID '(' ')'                    { let (ITid i) = (unLoc $1) in UFuncCall i [] }
     | ID '(' error                  {% srcParseFail "unclosed `)'" }
-    | ID '(' exprlist ')'           { let (ITid i) = (unLoc $1) in UFuncCall i $3 }
+    | ID '(' exprlist ')'           { let (ITid i) = (unLoc $1) in UFuncCall i (reverse $3) }
     | ID '(' exprlist error         {% srcParseFail "unclosed `)'" }
 
 exprlist :: { [UExpr] }

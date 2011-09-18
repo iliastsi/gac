@@ -72,7 +72,7 @@ $white+             ;
   $digit+           { lex_int_tok }
   \' ($char|@special) \'
                     { lex_char_tok }
-  \" ($char|@special)* \"
+  \" ($char|\'|@special)* \"
                     { lex_string_tok }
 
   "="               { token ITassign }
@@ -190,23 +190,27 @@ lex_int_tok span buf len = do
        else warnThen ("number `" ++ show num ++ "' is bigger than 16 bits")
                 (\_ _ _ -> return (L span (ITdigit num))) span buf len
 
-lex_string_tok :: Action    -- strip out \" from beginng and ending
-lex_string_tok span buf len = return (L span (ITstring (take (len-2) (tail buf))))
+lex_string_tok :: Action
+lex_string_tok span buf len = return (L span (ITstring tok_string))
+    where tok_string = escape (take (len-2) (tail buf))
 
 lex_char_tok :: Action
 lex_char_tok span buf len = return (L span (ITchar c))
-    where c = case take (len-2) (tail buf) of -- stip \' from beginning and ending
-                    "\\n"    -> '\n'
-                    "\\t"    -> '\t'
-                    "\\r"    -> '\r'
-                    "\\0"    -> '\0'
-                    "\\\\"    -> '\\'
-                    "\\\'"    -> '\''
-                    "\\\""    -> '\"'
-                    ('\\':'x':x)    -> chr $ read ("0x" ++ x)
-                    ('\\':x:[])     -> x
-                    (x:[])          -> x
-                    _               -> error "in lex_char_tok"
+    where c = head $ escape (take (len-2) (tail buf))
+
+-- strip out special characters from strings
+escape :: String -> String
+escape ('\\' : 'n'  : s)         = '\n' : escape s
+escape ('\\' : 't'  : s)         = '\t' : escape s
+escape ('\\' : 'r'  : s)         = '\r' : escape s
+escape ('\\' : '0'  : s)         = '\0' : escape s
+escape ('\\' : '\\' : s)         = '\\' : escape s
+escape ('\\' : '\'' : s)         = '\'' : escape s
+escape ('\\' : '\"' : s)         = '\"' : escape s
+escape ('\\' : 'x'  : y : z : s) = chr (read ("0x" ++ (y:z:[]))) : escape s
+escape ('\\' :  x   : s)         =  x   : escape s
+escape (  x  :  s) = x : escape s
+escape [] = []
 
 embedComment :: Action
 embedComment span buf len = do
