@@ -24,7 +24,6 @@ import UnTypedAst
 }
 
 {-
-
 -- -------------------------------------------------------------------
 -- Adding location info
 
@@ -38,16 +37,16 @@ They each add a SrcSpan to their argument.
    L0   adds 'noSrcSpan', used for empty productions
      -- This doesn't seem to work anymore -=chak
 
-   L1   for a production with a single token on the lhs.  Grabs the SrcSpan
+   L1   for a production with a single token.  Grabs the SrcSpan
         from that token.
 
-   LL   for a production with >1 token on the lhs.  Makes up a SrcSpan from
+   LL   for a production with >1 token.  Makes up a SrcSpan from
         the first and last tokens.
 
 These suffice for the majority of cases.  However, we must be
 especially careful with empty productions: LL won't work if the first
 or last token on the lhs can represent an empty span.  In these cases,
-we have to calculate the span using more of the tokens from the lhs, eg.
+we have to calculate the span using more of the tokens, eg.
 
         | 'newtype' tycl_hdr '=' newconstr deriving
                 { L (comb3 $1 $4 $5)
@@ -68,9 +67,7 @@ incorrect.
 #define LL   sL (comb2 $1 $>)
 
 -- -------------------------------------------------------------------
-
 -}
-
 
 %name parser program
 %tokentype { (Located Token) }
@@ -293,7 +290,6 @@ cond :: { Located UCond }
 
 happyError :: (Located Token) -> P a
 happyError _  = srcParseFail ""
-
 
 -- Utilities for combining source spans
 comb2 :: Located a -> Located b -> SrcSpan
