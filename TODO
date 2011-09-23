@@ -4,3 +4,6 @@
 ** Fix Parser:
 	Express "this should be between spaces"
         Write better error messages (and enable parsing to continue)
+        Activate cpp for Parser.y and rename it to Parser.y.pp
+
+** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt

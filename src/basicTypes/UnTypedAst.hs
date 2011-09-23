@@ -11,9 +11,39 @@ module UnTypedAst where
 import SrcLoc
 
 
+-- -------------------------------------------------------------------
+-- This datatypes don't contain a type
+
 type LIde = Located Ide
 
 type Ide = String
+
+type LOp = Located Op
+
+data Op
+    = OpPlus
+    | OpMinus
+    | OpTimes
+    | OpDiv
+    | OpMod
+    | OpAnd
+    | OpOr
+    | OpEqual
+    | OpNotEqual
+    | OpLT
+    | OpGT
+    | OpLE
+    | OpGE
+  deriving (Eq, Show)
+
+data Mode
+    = ModeByVal
+    | ModeByRef
+  deriving (Eq, Show)
+
+
+-- -------------------------------------------------------------------
+-- This datatypes need to be type checked
 
 type LUDef = Located UDef
 
@@ -47,24 +77,6 @@ data UExpr
     | UExprOp LUExpr LOp LUExpr
   deriving (Eq, Show)
 
-type LOp = Located Op
-
-data Op
-    = OpPlus
-    | OpMinus
-    | OpTimes
-    | OpDiv
-    | OpMod
-    | OpAnd
-    | OpOr
-    | OpEqual
-    | OpNotEqual
-    | OpLT
-    | OpGT
-    | OpLE
-    | OpGE
-  deriving (Eq, Show)
-
 type LUCond = Located UCond
 
 data UCond
@@ -89,11 +101,6 @@ data UType
     | UTypeChar
     | UTypeProc
     | UTypeArray (Int, UType)
-  deriving (Eq, Show)
-
-data Mode
-    = ModeByVal
-    | ModeByRef
   deriving (Eq, Show)
 
 data UFuncCall = UFuncCall LIde [LUExpr]

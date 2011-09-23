@@ -1,5 +1,5 @@
 Name: gac
-Version: 0.2
+Version: 0.3
 License: MIT
 License-File: LICENSE
 Author:  Ilias Tsitsimpis
@@ -60,6 +60,7 @@ Executable gac
         SrcLoc
         ErrUtils
         UnTypedAst
+        TypedAst
         Util
         Outputable
         Bag
