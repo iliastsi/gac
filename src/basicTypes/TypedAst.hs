@@ -15,7 +15,7 @@
 
 module TypedAst where
 
-import UnTypedAst
+import UnTypedAst (LIde, LOp, Mode)
 import SrcLoc
 
 import Data.Int
@@ -97,22 +97,13 @@ data TType a where
     TTypeProc  :: TType ()
     TTypeArray :: TType a     -> TType (Ptr a)
 
-{-
 
-data TExpr a where
-    TExprInt    :: Int32   -> TExpr Int32
-    TExprChar   :: Word8   -> TExpr Word8
-    TExprString :: String  -> TExpr (Ptr Word8)
-    TExprVal    :: Ide     -> TType a       -> TExpr a
-    TExprValArr :: Ide     -> TType (Ptr a) -> TExpr Int32 -> TExpr a
-    TExprFun    :: Ide     -> TType a       -> [ATExpr]    -> TExpr a
-    TExprSign   :: Op      -> TExpr a       -> TExpr a
-    TExprOp     :: TExpr a -> Op            -> TExpr a     -> TExpr a
-
-data ATExpr = forall a . (TExpr a) ::: (TType a)
-
-
-
+-- -------------------------------------------------------------------
+-- We need to do the equality test so that it reflects the equality
+-- on the type level. There's a standard trick for this.
+-- If you ever have a value (which must be Eq) of type
+-- Equal foo bar then the type checker will know that foo and
+-- bar are actually the same type.
 data Equal a b where
     Eq :: Equal a a
 
@@ -125,6 +116,11 @@ test (TTypeArray a) (TTypeArray b) = do
     return Eq
 test _              _              = mzero
 
+
+-- -------------------------------------------------------------------
+-- To be able to extract a TDef from a ADef we need some small utilties
+--
+
 class Type a where
     theType :: TType a
 instance Type Int32 where
@@ -136,14 +132,32 @@ instance Type () where
 instance (Type a) => Type (Ptr a) where
     theType = TTypeArray theType
 
-extractATExpr :: (Type a) => ATExpr -> TExpr a
-extractATExpr aexpr =
-    case extract theType aexpr of
+extractTDef :: (Type a) => ADef -> TDef a
+extractTDef adef =
+    case extract theType adef of
          Just x  -> x
-         Nothing -> error "in extractATExpr"
-    where extract :: TType a -> ATExpr -> Maybe (TExpr a)
-          extract s (e ::: t) = do
+         Nothing -> error "in extractTDef"
+    where extract :: TType a -> ADef -> Maybe (TDef a)
+          extract s (ADef e t) = do
               Eq <- test s t
               return e
 
--}
+extractTExpr :: (Type a) => AExpr -> TExpr a
+extractTExpr aexpr =
+    case extract theType aexpr of
+         Just x  -> x
+         Nothing -> error "in extractTExpr"
+    where extract :: TType a -> AExpr -> Maybe (TExpr a)
+          extract s (AExpr e t) = do
+              Eq <- test s t
+              return e
+
+extractTVariable :: (Type a) => AVariable -> TVariable a
+extractTVariable avar =
+    case extract theType avar of
+         Just x  -> x
+         Nothing -> error "in extractTVariable"
+    where extract :: TType a -> AVariable -> Maybe (TVariable a)
+          extract s (AVariable e t) = do
+              Eq <- test s t
+              return e

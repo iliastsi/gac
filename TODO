@@ -5,5 +5,6 @@
 	Express "this should be between spaces"
         Write better error messages (and enable parsing to continue)
         Activate cpp for Parser.y and rename it to Parser.y.pp
+        Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt
