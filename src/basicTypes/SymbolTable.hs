@@ -1,25 +1,38 @@
+--------------------------------------------------------------------------------
+-- (c) Tsitsimpis Ilias, 2011
+--
+-- Symbol Table datatype
+-- It is used for type checking and for code generation
+--
+--------------------------------------------------------------------------------
+
 module SymbolTable where
 
-import Uast
-import Tast
+import UnTypedAst
+
 import qualified Data.Map as Map
 
 
+-- -------------------------------------------------------------------
 -- Symbol Table
 data Table = Table {
     depth       :: Int,         -- current nesting depth
     parent      :: Maybe Table, -- parent scope
 
-    variables   :: Map.Map Ide          -- for local variables
-                          (ATExpr),     -- types
+    variables   :: Map.Map      -- local variables
+                        Ide         -- name (id)
+                        UType,      -- types
 
-    functions   :: Map.Map Ide          -- local functions
-                          ([ATExpr],    -- parameters types
-                           ATExpr),     -- return type
+    functions   :: Map.Map      -- local functions
+                        Ide         -- name (id)
+                        ([UType],   -- parameters types
+                         UType),    -- return type
 
     name        :: Ide          -- defined function
   }
 
+
+-- -------------------------------------------------------------------
 -- Table functionality
 
 initTable :: Ide -> Table
@@ -38,11 +51,11 @@ nested t@Table{parent=pt} f =
 getName :: Table -> Ide
 getName t@Table{name=n} = n
 
-getFuncParams :: Table -> Ide -> Maybe [ATExpr]
+getFuncParams :: Table -> Ide -> Maybe [UType]
 getFuncParams t i =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . fst)
 
-getFuncRetType :: Table -> Ide -> Maybe ATExpr 
+getFuncRetType :: Table -> Ide -> Maybe UType
 getFuncRetType t i =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return .snd)
 
@@ -57,7 +70,7 @@ getVarDepth t i =
 getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d
 
-getVarType :: Table -> Ide -> Maybe ATExpr
+getVarType :: Table -> Ide -> Maybe UType
 getVarType t i =
     nested t (\Table{variables=v} -> Map.lookup i v)
 
@@ -67,11 +80,11 @@ isVarLocal Table{variables=v} i =
          Just _  -> True
          Nothing -> False
 
-addVar :: Table -> (Ide, ATExpr) -> Table
+addVar :: Table -> (Ide, UType) -> Table
 addVar t@Table{variables=v} (i,dt) =
     t{ variables=Map.insert i dt v }
 
-addFunc :: Table -> (Ide, [ATExpr], ATExpr) -> Table
+addFunc :: Table -> (Ide, [UType], UType) -> Table
 addFunc t@Table{functions=f} (i, pt, rt) =
     t{ functions=Map.insert i (pt, rt) f }
 

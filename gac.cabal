@@ -46,22 +46,23 @@ Executable gac
   else
      Build-Depends: unix
 
-  GHC-Options: -Wall -Wwarn -w
+  GHC-Options: -Wall -Wwarn -w -O
 
   Hs-Source-Dirs:
         src
         src/parser
-        src/main
         src/basicTypes
         src/utils
+        src/main
   Other-Modules:
         Parser
         Lexer
-        SrcLoc
         ErrUtils
-        UnTypedAst
+        SrcLoc
+        SymbolTable
         TypedAst
-        Util
-        Outputable
+        UnTypedAst
         Bag
         MonadUtils
+        Util
+        Outputable

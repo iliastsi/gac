@@ -15,7 +15,7 @@
 
 module TypedAst where
 
-import UnTypedAst (LIde, LOp, Mode)
+import UnTypedAst (UType(..), LIde, LOp, Mode)
 import SrcLoc
 
 import Data.Int
@@ -95,7 +95,7 @@ data TType a where
     TTypeInt   :: TType Int32
     TTypeChar  :: TType Word8
     TTypeProc  :: TType ()
-    TTypeArray :: TType a     -> TType (Ptr a)
+    TTypeArray :: Int -> TType a -> TType (Ptr a)
 
 
 -- -------------------------------------------------------------------
@@ -108,13 +108,13 @@ data Equal a b where
     Eq :: Equal a a
 
 test :: TType a -> TType b -> Maybe (Equal a b)
-test TTypeInt       TTypeInt       = return Eq
-test TTypeChar      TTypeChar      = return Eq
-test TTypeProc      TTypeProc      = return Eq
-test (TTypeArray a) (TTypeArray b) = do
+test TTypeInt          TTypeInt         = return Eq
+test TTypeChar         TTypeChar        = return Eq
+test TTypeProc         TTypeProc        = return Eq
+test (TTypeArray _ a)  (TTypeArray _ b) = do
     Eq <- test a b
     return Eq
-test _              _              = mzero
+test _ _ = mzero
 
 
 -- -------------------------------------------------------------------
@@ -130,7 +130,7 @@ instance Type Word8 where
 instance Type () where
     theType = TTypeProc
 instance (Type a) => Type (Ptr a) where
-    theType = TTypeArray theType
+    theType = TTypeArray 0 theType
 
 extractTDef :: (Type a) => ADef -> TDef a
 extractTDef adef =
@@ -161,3 +161,14 @@ extractTVariable avar =
           extract s (AVariable e t) = do
               Eq <- test s t
               return e
+
+
+-- -------------------------------------------------------------------
+-- Match UType with TType
+
+matchType :: UType -> TType a -> Bool
+matchType UTypeInt              TTypeInt         = True
+matchType UTypeChar             TTypeChar        = True
+matchType UTypeProc             TTypeProc        = True
+matchType (UTypeArray (_,ut))  (TTypeArray _ tt) = matchType ut tt
+matchType _  _  = False
