@@ -18,6 +18,7 @@ type LIde = Located Ide
 
 type Ide = String
 
+-- ---------------------------
 type LOp = Located Op
 
 data Op
@@ -34,8 +35,24 @@ data Op
     | OpGT
     | OpLE
     | OpGE
-  deriving (Eq, Show)
+  deriving Eq
 
+instance Show Op where
+    show OpPlus     = "+"
+    show OpMinus    = "-"
+    show OpTimes    = "*"
+    show OpDiv      = "/"
+    show OpMod      = "%"
+    show OpAnd      = "&"
+    show OpOr       = "|"
+    show OpEqual    = "=="
+    show OpNotEqual = "!="
+    show OpLT       = "<"
+    show OpGT       = ">"
+    show OpLE       = "<="
+    show OpGE       = ">="
+
+-- ---------------------------
 data Mode
     = ModeByVal
     | ModeByRef
@@ -53,6 +70,7 @@ data UDef
     | UDefVar LIde LUType
   deriving (Eq, Show)
 
+-- ---------------------------
 type LUStmt = Located UStmt
 
 data UStmt
@@ -65,6 +83,7 @@ data UStmt
     | UStmtReturn (Maybe LUExpr)
   deriving (Eq, Show)
 
+-- ---------------------------
 type LUExpr = Located UExpr
 
 data UExpr
@@ -75,8 +94,19 @@ data UExpr
     | UExprFun UFuncCall
     | UExprMinus LUExpr
     | UExprOp LUExpr LOp LUExpr
-  deriving (Eq, Show)
+  deriving Eq
 
+instance Show UExpr where
+    show (UExprInt i)    = show i
+    show (UExprChar c)   = show c
+    show (UExprString s) = s
+    show (UExprVar v)    = show v
+    show (UExprFun f)    = show f
+    show (UExprMinus e)  = "-" ++ show (unLoc e)
+    show (UExprOp a o b) =
+        show (unLoc a) ++ " " ++ show (unLoc o) ++ " " ++ show (unLoc b)
+
+-- ---------------------------
 type LUCond = Located UCond
 
 data UCond
@@ -87,13 +117,20 @@ data UCond
     | UCondLog LUCond LOp LUCond
   deriving (Eq, Show)
 
+-- ---------------------------
 type LUVariable = Located UVariable
 
 data UVariable
     = UVar Ide
     | UVarArray LIde LUExpr
-  deriving (Eq, Show)
+  deriving Eq
 
+instance Show UVariable where
+    show (UVar i)        = i
+    show (UVarArray i e) =
+        (unLoc i) ++ "[" ++ show (unLoc e) ++ "]"
+
+-- ---------------------------
 type LUType = Located UType
 
 data UType
@@ -103,5 +140,12 @@ data UType
     | UTypeArray (Int, UType)
   deriving (Eq, Show)
 
+-- ---------------------------
 data UFuncCall = UFuncCall LIde [LUExpr]
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show UFuncCall where
+    show (UFuncCall i [])     = (unLoc i) ++ "()"
+    show (UFuncCall i (e:es)) =
+        (unLoc i) ++ "(" ++ show (unLoc e) ++
+            (foldl (\str t -> str ++ ", " ++ show (unLoc t)) "" es) ++ ")"

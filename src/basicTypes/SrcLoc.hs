@@ -178,7 +178,7 @@ data SrcSpan
 
   | UnhelpfulSpan !String   -- Just a general indication
                             -- also used to indicate an empty span
-  deriving (Eq, Show)
+  deriving Eq
 
 -- | Built-in "bad" 'SrcSpan's for common sources of location uncertainty
 noSrcSpan :: SrcSpan
@@ -317,6 +317,14 @@ instance Ord SrcSpan where
         (srcSpanStart a `compare` srcSpanStart b) `thenCmp`
         (srcSpanEnd   a `compare` srcSpanEnd   b)
 
+instance Show SrcSpan where
+    show (UnhelpfulSpan str) = str ++ ":"
+    show other_span          =
+        let file = srcSpanFile other_span
+            line = show $ srcSpanStartLine other_span
+            col  = show $ srcSpanStartCol  other_span
+        in
+        file ++ ":" ++ line ++ ":" ++ col ++ ":"
 
 -- -------------------------------------------------------------------
 -- Attaching SrcSpans to things

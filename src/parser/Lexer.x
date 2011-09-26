@@ -288,7 +288,7 @@ thenP :: P a -> (a -> P b) -> P b
 
 failP :: String -> P a
 failP msg = P $ \s@(PState{messages=ms, last_loc=span, last_tok=tok}) ->
-    PFailed (addError (mkErrMsg span (ParseError tok)msg) ms)
+    PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
 
 failMsgP :: String -> P a
 failMsgP msg = P $ \s@(PState{messages=ms, last_loc=span, last_tok=tok}) ->

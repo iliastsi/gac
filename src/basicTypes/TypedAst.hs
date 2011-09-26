@@ -37,7 +37,7 @@ type LADef = Located ADef
 
 data ADef = forall a . ADef (TDef a) (TType a)
 
-
+-- ---------------------------
 type LTStmt = Located TStmt
 
 data TStmt
@@ -49,7 +49,7 @@ data TStmt
     | TStmtWhile LTCond LTStmt
     | TStmtReturn (Maybe LAExpr )
 
-
+-- ---------------------------
 type LTExpr a = Located (TExpr a)
 
 data TExpr a where
@@ -67,7 +67,7 @@ type LAExpr = Located AExpr
 
 data AExpr = forall a . AExpr (TExpr a) (TType a)
 
-
+-- ---------------------------
 type LTCond = Located TCond
 
 data TCond
@@ -77,7 +77,7 @@ data TCond
     | TCondOp LAExpr LOp LAExpr
     | TCondLog LTCond LOp LTCond
 
-
+-- ---------------------------
 type LTVariable a = Located (TVariable a)
 
 data TVariable a where
@@ -88,7 +88,7 @@ type LAVariable = Located AVariable
 
 data AVariable = forall a . AVariable (TVariable a) (TType a)
 
-
+-- ---------------------------
 type LTType a = Located (TType a)
 
 data TType a where

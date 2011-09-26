@@ -25,6 +25,7 @@ module ErrUtils (
 import Bag
 import SrcLoc
 import Util
+import UnTypedAst (UExpr)
 
 
 -- -------------------------------------------------------------------
@@ -33,6 +34,7 @@ import Util
 
 data MsgCode
   = ParseError String
+  | TypeError (Maybe UExpr)
   | UnknownErr
 
 data Severity
@@ -118,11 +120,6 @@ instance Show MsgCode where
 
 instance Show Message where
     show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
-        let file = srcSpanFile mspan
-            line = show $ srcSpanStartLine mspan
-            col  = show $ srcSpanStartCol  mspan
-            extra' = if null extra then "" else "\n\t" ++ extra
+        let extra' = if null extra then "" else "\n\t" ++ extra
         in
-        file ++ ":" ++ line ++ ":"  ++ col ++ ": "
-             ++ show sev    ++ ": " ++ show code
-             ++ extra'
+        show mspan ++ " " ++ show sev    ++ ": " ++ show code ++ extra'
