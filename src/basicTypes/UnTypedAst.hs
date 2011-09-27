@@ -138,6 +138,7 @@ data UType
     | UTypeChar
     | UTypeProc
     | UTypeArray (Int, UType)
+    | UTypeUnknown -- for type checking
   deriving (Eq, Show)
 
 -- ---------------------------

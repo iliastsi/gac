@@ -114,7 +114,7 @@ instance Show Severity where
 
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
-    show (ParseError buf)     = "Parse error at `" ++ buf ++ "'"
+    show (ParseError buf)     = "Parse error on input `" ++ buf ++ "'"
     show (TypeError Nothing)  = "Type error"
     show (TypeError (Just e)) = "Type error at `" ++ show e ++ "'"
     show UnknownErr           = "Unknown Error :@"

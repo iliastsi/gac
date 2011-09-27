@@ -113,60 +113,61 @@ getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d
 
 -- Get functions
-getFuncName :: Table -> Ide -> String
-getFuncName t i =
-    case getFuncId t i of
+getFuncName :: Ide -> Table -> String
+getFuncName i t =
+    case getFuncId i t of
          Just fid -> i ++ "_" ++ show fid
          Nothing  -> i
 
-getFuncParams :: Table -> Ide -> Maybe [UType]
-getFuncParams t i =
+getFuncParams :: Ide -> Table -> Maybe [UType]
+getFuncParams i t =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . funParType)
 
-getFuncRetType :: Table -> Ide -> Maybe UType
-getFuncRetType t i =
+getFuncRetType :: Ide -> Table -> Maybe UType
+getFuncRetType i t =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . funRetType)
 
-getFuncId :: Table -> Ide -> Maybe Int
-getFuncId t i =
+getFuncId :: Ide -> Table -> Maybe Int
+getFuncId i t =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . funId)
 
-getFuncDepth :: Table -> Ide -> Maybe Int
-getFuncDepth t i =
+getFuncDepth :: Ide -> Table -> Maybe Int
+getFuncDepth i t =
     nested t (\Table{depth=d,functions=f} -> Map.lookup i f >> Just d)
 
 -- Get variables
-getVarName :: Table -> Ide -> String
-getVarName t i =
-    case getVarId t i of
+getVarName :: Ide -> Table -> String
+getVarName i t =
+    case getVarId i t of
          Just vid -> i ++ "_" ++ show vid
          Nothing  -> i
 
-getVarDepth :: Table -> Ide -> Maybe Int
-getVarDepth t i =
+getVarDepth :: Ide -> Table -> Maybe Int
+getVarDepth i t =
     nested t (\Table{depth=d,variables=v} -> Map.lookup i v >> Just d)
 
-getVarType :: Table -> Ide -> Maybe UType
-getVarType t i =
+getVarType :: Ide -> Table -> Maybe UType
+getVarType i t =
     nested t (\Table{variables=v} -> Map.lookup i v >>= return . varType)
 
-getVarId t i =
+getVarId :: Ide -> Table -> Maybe Int
+getVarId i t =
     nested t (\Table{variables=v} -> Map.lookup i v >>= return . varId)
 
-isVarLocal :: Table -> Ide -> Bool
-isVarLocal Table{variables=v} i =
+isVarLocal :: Ide -> Table -> Bool
+isVarLocal i Table{variables=v} =
     case Map.lookup i v of
          Just _  -> True
          Nothing -> False
 
 -- Add functions
-addFunc :: Table -> Ide -> FunInfo -> Table
-addFunc t@Table{functions=f} i fun_info =
+addFunc :: Ide -> FunInfo -> Table -> Table
+addFunc i fun_info t@Table{functions=f} =
     t{ functions=Map.insert i fun_info f }
 
 -- Add variables
-addVar :: Table -> Ide -> VarInfo -> Table
-addVar t@Table{variables=v} i var_info =
+addVar :: Ide -> VarInfo -> Table -> Table
+addVar i var_info t@Table{variables=v} =
     t{ variables=Map.insert i var_info v }
 
 -- Scopes

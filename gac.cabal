@@ -53,6 +53,7 @@ Executable gac
         src/parser
         src/basicTypes
         src/utils
+        src/typecheck
         src/main
   Other-Modules:
         Parser
@@ -60,12 +61,14 @@ Executable gac
         ----------
         ErrUtils
         SrcLoc
-        SymbolTable
         TypedAst
         UnTypedAst
         ----------
         Bag
         MonadUtils
         Util
+        ----------
+        SymbolTable
+        TcMonad
         ----------
         Outputable
