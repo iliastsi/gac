@@ -57,12 +57,15 @@ Executable gac
   Other-Modules:
         Parser
         Lexer
+        ----------
         ErrUtils
         SrcLoc
         SymbolTable
         TypedAst
         UnTypedAst
+        ----------
         Bag
         MonadUtils
         Util
+        ----------
         Outputable

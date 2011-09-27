@@ -10,7 +10,7 @@ module SrcLoc (
     -- * SrcLoc
     SrcLoc,                 -- Abstract
 
-    -- ** Constructiong SrcLoc
+    -- ** Constructing SrcLoc
     mkSrcLoc, mkGeneralSrcLoc,
 
     noSrcLoc,               -- "I'm sorry, I haven't a clue"

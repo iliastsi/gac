@@ -113,10 +113,11 @@ instance Show Severity where
     show SevFatal   = "fatal error"
 
 instance Show MsgCode where
-    show (ParseError buf)   = if null buf
-                                 then "Parse error at end of file"
-                                 else "Parse error at `" ++ buf ++ "'"
-    show UnknownErr         = "Unknown Error :@"
+    show (ParseError "")      = "Parse error at end of file"
+    show (ParseError buf)     = "Parse error at `" ++ buf ++ "'"
+    show (TypeError Nothing)  = "Type error"
+    show (TypeError (Just e)) = "Type error at `" ++ show e ++ "'"
+    show UnknownErr           = "Unknown Error :@"
 
 instance Show Message where
     show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
