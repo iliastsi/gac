@@ -35,6 +35,7 @@ import UnTypedAst (UExpr)
 data MsgCode
   = ParseError String
   | TypeError (Maybe UExpr)
+  | ScopeError String
   | UnknownErr
 
 data Severity
@@ -114,7 +115,8 @@ instance Show Severity where
 
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
-    show (ParseError buf)     = "Parse error on input `" ++ buf ++ "'"
+    show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
+    show (ScopeError buf)     = "Not in scope `" ++ show buf ++ "'"
     show (TypeError Nothing)  = "Type error"
     show (TypeError (Just e)) = "Type error at `" ++ show e ++ "'"
     show UnknownErr           = "Unknown Error :@"

@@ -1,7 +1,5 @@
 ** Fix in Lexer:
 	Add error messages when include more than one char in \'
-        We have to remove escape function from here and move it to codeGen state
-                (we have some problems with error messages)
 
 ** Fix Parser:
 	Express "this should be between spaces"

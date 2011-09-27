@@ -104,16 +104,14 @@ getMessages TcState{messages=ms} = ms
 -- Symbol Table functionality
 
 -- execute the function inside our state monad and on error add
--- the given error message and return the given value
+-- ScopeError and return the given value
 action :: (Table -> Maybe a) -> a -> String -> TcM a
-action f ret msg = do
-    t <- getTable
-    case f t of
-         Just x  -> return x
-         Nothing -> do
-             span <- getSrcSpan
-             addTcError span Nothing msg
-             return ret
+action f ret msg =
+    TcM $ \s@(TcState{messages=msgs,table=t,curr_span=span}) ->
+        case f t of
+             Just x  -> TcOk s x
+             Nothing ->
+                 TcOk s{messages=(addError (mkErrMsg span (ScopeError msg) "") msgs)} ret
 
 -- local function
 getNameM :: TcM Ide
@@ -128,15 +126,15 @@ getFuncNameM ide = liftM (getFuncName ide) getTable
 
 getFuncParamsM :: Ide -> TcM [UType]
 getFuncParamsM ide =
-    action (getFuncParams ide) [] ("Not in scope `" ++ ide ++ "'")
+    action (getFuncParams ide) [] ide
 
 getFuncRetTypeM :: Ide -> TcM UType
 getFuncRetTypeM ide =
-    action (getFuncRetType ide) UTypeUnknown ("Not in scope `" ++ ide ++ "'")
+    action (getFuncRetType ide) UTypeUnknown ide
 
 getFuncDepthM :: Ide -> TcM Int
 getFuncDepthM ide =
-    action (getFuncDepth ide) 0 ("Not in scope `" ++ ide ++ "'")
+    action (getFuncDepth ide) 0 ide
 
 -- Get variables
 getVarNameM :: Ide -> TcM String
@@ -144,11 +142,11 @@ getVarNameM ide = liftM (getVarName ide) getTable
 
 getVarDepthM :: Ide -> TcM Int
 getVarDepthM ide =
-    action (getVarDepth ide) 0 ("Not in scope `" ++ ide ++ "'")
+    action (getVarDepth ide) 0 ide
 
 getVarTypeM :: Ide -> TcM UType 
 getVarTypeM ide =
-    action (getVarType ide) UTypeUnknown ("Not in scope `" ++ ide ++ "'")
+    action (getVarType ide) UTypeUnknown ide
 
 -- Add functions
 addFuncM :: Ide -> FunInfo -> TcM ()
