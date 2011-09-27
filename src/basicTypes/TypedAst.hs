@@ -15,7 +15,7 @@
 
 module TypedAst where
 
-import UnTypedAst (UType(..), LIde, LOp, Mode)
+import UnTypedAst (UType(..), LIde, Ide, LOp, Mode)
 import SrcLoc
 
 import Data.Int
@@ -81,7 +81,7 @@ data TCond
 type LTVariable a = Located (TVariable a)
 
 data TVariable a where
-    TVar      :: LIde -> TType a                 -> TVariable a
+    TVar      :: Ide  -> TType a                 -> TVariable a
     TVarArray :: LIde -> TType a -> LTExpr Int32 -> TVariable a
 
 type LAVariable = Located AVariable
@@ -92,10 +92,15 @@ data AVariable = forall a . AVariable (TVariable a) (TType a)
 type LTType a = Located (TType a)
 
 data TType a where
-    TTypeInt   :: TType Int32
-    TTypeChar  :: TType Word8
-    TTypeProc  :: TType ()
-    TTypeArray :: Int -> TType a -> TType (Ptr a)
+    TTypeInt        :: TType Int32
+    TTypeChar       :: TType Word8
+    TTypeProc       :: TType ()
+    TTypeArray      :: Int -> TType a -> TType (Ptr a)
+    TTypeUnknown    :: TType ()
+
+type LAType = Located AType
+
+data AType = forall a . AType (TType a)
 
 
 -- -------------------------------------------------------------------
@@ -164,7 +169,7 @@ extractTVariable avar =
 
 
 -- -------------------------------------------------------------------
--- Match UType with TType
+-- Convert between UType and TType
 
 matchType :: UType -> TType a -> Bool
 matchType UTypeInt              TTypeInt         = True
@@ -172,3 +177,12 @@ matchType UTypeChar             TTypeChar        = True
 matchType UTypeProc             TTypeProc        = True
 matchType (UTypeArray (_,ut))  (TTypeArray _ tt) = matchType ut tt
 matchType _  _  = False
+
+fromUType :: UType -> AType
+fromUType UTypeInt  = AType TTypeInt
+fromUType UTypeChar = AType TTypeChar
+fromUType UTypeProc = AType TTypeProc
+fromUType (UTypeArray (s,t)) =
+    case fromUType t of
+         AType tt  -> AType (TTypeArray s tt)
+fromUType UTypeUnknown = AType TTypeUnknown

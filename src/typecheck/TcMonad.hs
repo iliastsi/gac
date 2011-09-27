@@ -6,7 +6,22 @@
 -- 
 --------------------------------------------------------------------------------
 
-module TcMonad where
+module TcMonad (
+    -- Type check monad
+    TcResult(..), TcState, TcM(..),
+    failTcM, failSpanMsgTcM, failExprMsgTcM,
+    getTcState, getTable, getUnique, setTable,
+    getSrcSpan, setSrcSpan,
+    mkTcState, addTcWarning, addTcError,
+    getMessages,
+
+    -- symbol table functionality
+    getNameM, getCurrDepthM,
+    getFuncNameM, getFuncParamsM, getFuncRetTypeM, getFuncDepthM,
+    getVarNameM, getVarDepthM, getVarTypeM,
+    addFuncM, addVarM,
+    rawOpenScopeM, rawCloseScopeM
+  ) where
 
 import SrcLoc
 import SymbolTable
