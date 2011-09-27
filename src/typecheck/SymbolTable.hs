@@ -65,7 +65,35 @@ data Table = Table {
 -- Table functionality
 
 initTable :: Ide -> Table
-initTable i = Table 0 Nothing Map.empty Map.empty i
+initTable i = Table 1 (Just predefinedTable) Map.empty Map.empty i
+
+predefinedTable :: Table
+predefinedTable =
+    Table 0 Nothing Map.empty
+        (( -- Input/output
+          Map.insert "writeInteger" (FunInfo [UTypeInt]  UTypeProc 0) .
+          Map.insert "writeByte"    (FunInfo [UTypeChar] UTypeProc 0) .
+          Map.insert "writeChar"    (FunInfo [UTypeChar] UTypeProc 0) .
+          Map.insert "writeString"  (FunInfo [UTypeArray (0, UTypeChar)] UTypeProc 0) .
+          Map.insert "readInteger"  (FunInfo []          UTypeInt  0) .
+          Map.insert "readByte"     (FunInfo []          UTypeChar 0) .
+          Map.insert "readChar"     (FunInfo []          UTypeChar 0) .
+          Map.insert "readString"   (FunInfo [UTypeInt, UTypeArray (0, UTypeChar)] UTypeProc 0) .
+           -- conversions
+          Map.insert "extend"       (FunInfo [UTypeChar] UTypeInt  0) .
+          Map.insert "shrink"       (FunInfo [UTypeInt]  UTypeChar 0) .
+           -- strings
+          Map.insert "strlen"       (FunInfo [UTypeArray (0, UTypeChar)] UTypeInt 0) .
+          Map.insert "strcmp"       (FunInfo [UTypeArray (0, UTypeChar),
+                                                UTypeArray (0, UTypeChar)] UTypeInt 0) .
+          Map.insert "strcpy"       (FunInfo [UTypeArray (0, UTypeChar),
+                                                UTypeArray (0, UTypeChar)] UTypeProc 0) .
+          Map.insert "strcat"       (FunInfo [UTypeArray (0, UTypeChar),
+                                                UTypeArray (0, UTypeChar)] UTypeProc 0)
+         ) -- the end
+          Map.empty
+        ) "prelude"
+
 
 -- search to all nested tables recursively
 nested :: Table -> (Table -> Maybe a) -> Maybe a
