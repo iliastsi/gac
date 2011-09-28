@@ -102,6 +102,14 @@ type LAType = Located AType
 
 data AType = forall a . AType (TType a)
 
+instance Eq AType where
+    (AType TTypeUnknown) == (AType _)            = True
+    (AType _)            == (AType TTypeUnknown) = True
+    (AType a)            == (AType b) =
+        case test a b of
+             Just Eq -> True
+             Nothing -> False
+
 
 -- -------------------------------------------------------------------
 -- We need to do the equality test so that it reflects the equality

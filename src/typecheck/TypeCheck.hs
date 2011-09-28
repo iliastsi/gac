@@ -66,6 +66,10 @@ typeCheckExpr uexpr@(L span (UExprVar (UVarArray lide lexpr))) = do
              tcIntExprErr uexpr
              let lexpr' = sL noSrcSpan (TExprInt 0)
              return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
+typeCheckExpr (L span (UExprFun (UFuncCall lide [lupar]))) = do
+    ret_type <- liftM fromUType (getFuncRetTypeM (unLoc lide))
+    par_type <- liftM (map fromUType) (getFuncParamsM (unLoc lide))
+    return $ AExpr (TExprInt 0) TTypeInt
 
 
 -- Error when the array index expression is not of type of int
