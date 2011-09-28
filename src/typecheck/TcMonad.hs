@@ -164,14 +164,20 @@ getVarTypeM ide =
     action (getVarType ide) UTypeUnknown ide
 
 -- Add functions
-addFuncM :: Ide -> FunInfo -> TcM ()
-addFuncM ide fun_info =
-    TcM $ \s@TcState{table=t} -> TcOk s{table=addFunc ide fun_info t} ()
+addFuncM :: Ide -> [UType] -> UType -> TcM ()
+addFuncM ide pt rt = do
+    u <- getUnique
+    t <- getTable
+    let finfo = FunInfo pt rt u
+    setTable (addFunc ide finfo t)
 
 -- Add variables
-addVarM :: Ide -> VarInfo -> TcM ()
-addVarM ide var_info =
-    TcM $ \s@TcState{table=t} -> TcOk s{table=addVar ide var_info t} ()
+addVarM :: Ide -> UType -> TcM ()
+addVarM ide vt = do
+    u <- getUnique
+    t <- getTable
+    let vinfo = VarInfo vt u
+    setTable (addVar ide vinfo t)
 
 -- Scopes
 rawOpenScopeM :: Ide -> TcM ()

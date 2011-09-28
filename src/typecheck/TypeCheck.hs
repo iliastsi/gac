@@ -33,6 +33,7 @@ module TypeCheck where
 import UnTypedAst
 import TypedAst
 import TcMonad
+import SrcLoc
 
 import Data.Int
 import Data.Word
@@ -40,13 +41,43 @@ import Foreign.Ptr
 import Control.Monad
 
 
-typeCheckExpr :: UExpr -> TcM (AExpr)
-typeCheckExpr (UExprInt i) = return $ AExpr (TExprInt (fromIntegral i)) (TTypeInt)
-typeCheckExpr (UExprChar c) = return $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar)
-typeCheckExpr (UExprString s) = return $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar)
-typeCheckExpr (UExprVar (UVar ide)) = do
+typeCheckExpr :: Located UExpr -> TcM (AExpr)
+typeCheckExpr (L span (UExprInt i)) = do
+    return $ AExpr (TExprInt (fromIntegral i)) (TTypeInt)
+typeCheckExpr (L span (UExprChar c)) = do
+    return $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar)
+typeCheckExpr (L span (UExprString s)) = do
+    return $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar)
+typeCheckExpr (L span (UExprVar (UVar ide))) = do
+    setSrcSpan span
     AType var_type <- liftM fromUType (getVarTypeM ide)
-    return $ AExpr (TExprVar (TVar ide var_type)) var_type
+    ide' <- getVarNameM ide
+    return $ AExpr (TExprVar (TVar ide' var_type)) var_type
+typeCheckExpr uexpr@(L span (UExprVar (UVarArray lide lexpr))) = do
+    expr_type <- typeCheckExpr lexpr
+    setSrcSpan span
+    AType var_type <- liftM fromUType (getVarTypeM (unLoc lide))
+    lide' <- liftM (sL (getLoc lide)) (getVarNameM (unLoc lide))
+    case expr_type of
+         AExpr e' TTypeInt -> do
+             let lexpr' = sL (getLoc lexpr) e'
+             return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
+         otherwise  -> do
+             tcIntExprErr uexpr
+             let lexpr' = sL noSrcSpan (TExprInt 0)
+             return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
+
+
+-- Error when the array index expression is not of type of int
+tcIntExprErr :: Located UExpr -> TcM ()
+tcIntExprErr luexpr@(L span (uexpr@(UExprVar (UVarArray lide lexpr)))) = do
+    addTcError span (Just uexpr)
+                ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type of `int'")
+
+-- strict constructor version:
+{-# INLINE sL #-}
+sL :: SrcSpan -> a -> Located a
+sL span a = span `seq` a `seq` L span a
 
 -- ---------------------------
 {-
