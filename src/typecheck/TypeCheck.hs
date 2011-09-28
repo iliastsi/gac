@@ -50,13 +50,13 @@ typeCheckExpr (L span (UExprString s)) = do
     return $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar)
 typeCheckExpr (L span (UExprVar (UVar ide))) = do
     setSrcSpan span
-    AType var_type <- liftM fromUType (getVarTypeM ide)
+    AType var_type <- getVarTypeM ide
     ide' <- getVarNameM ide
     return $ AExpr (TExprVar (TVar ide' var_type)) var_type
 typeCheckExpr uexpr@(L span (UExprVar (UVarArray lide lexpr))) = do
     expr_type <- typeCheckExpr lexpr
-    setSrcSpan span
-    AType var_type <- liftM fromUType (getVarTypeM (unLoc lide))
+    setSrcSpan (getLoc lide)
+    AType var_type <- getVarTypeM (unLoc lide)
     lide' <- liftM (sL (getLoc lide)) (getVarNameM (unLoc lide))
     case expr_type of
          AExpr e' TTypeInt -> do
@@ -67,8 +67,9 @@ typeCheckExpr uexpr@(L span (UExprVar (UVarArray lide lexpr))) = do
              let lexpr' = sL noSrcSpan (TExprInt 0)
              return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
 typeCheckExpr (L span (UExprFun (UFuncCall lide [lupar]))) = do
-    ret_type <- liftM fromUType (getFuncRetTypeM (unLoc lide))
-    par_type <- liftM (map fromUType) (getFuncParamsM (unLoc lide))
+    setSrcSpan (getLoc lide)
+    ret_type <- getFuncRetTypeM (unLoc lide)
+    par_type <- getFuncParamsM (unLoc lide)
     return $ AExpr (TExprInt 0) TTypeInt
 
 

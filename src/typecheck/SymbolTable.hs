@@ -26,7 +26,8 @@ module SymbolTable (
     rawOpenScope, rawCloseScope
   ) where
 
-import UnTypedAst
+import TypedAst (AType(..), TType(..))
+import UnTypedAst (Ide)
 
 import qualified Data.Map as Map
 
@@ -35,13 +36,13 @@ import qualified Data.Map as Map
 -- Symbol Table
 
 data VarInfo = VarInfo {
-    varType     :: UType,       -- variable type
+    varType     :: AType,       -- variable type
     varId       :: !Int         -- variable unique id
   }
 
 data FunInfo = FunInfo {
-    funParType  :: [UType],     -- parameters types
-    funRetType  :: UType,       -- return type
+    funParType  :: [AType],     -- parameters types
+    funRetType  :: AType,       -- return type
     funId       :: !Int         -- function unique id
   }
 
@@ -71,25 +72,26 @@ predefinedTable :: Table
 predefinedTable =
     Table 0 Nothing Map.empty
         (( -- Input/output
-          Map.insert "writeInteger" (FunInfo [UTypeInt]  UTypeProc 0) .
-          Map.insert "writeByte"    (FunInfo [UTypeChar] UTypeProc 0) .
-          Map.insert "writeChar"    (FunInfo [UTypeChar] UTypeProc 0) .
-          Map.insert "writeString"  (FunInfo [UTypeArray (0, UTypeChar)] UTypeProc 0) .
-          Map.insert "readInteger"  (FunInfo []          UTypeInt  0) .
-          Map.insert "readByte"     (FunInfo []          UTypeChar 0) .
-          Map.insert "readChar"     (FunInfo []          UTypeChar 0) .
-          Map.insert "readString"   (FunInfo [UTypeInt, UTypeArray (0, UTypeChar)] UTypeProc 0) .
+          Map.insert "writeInteger" (FunInfo [AType TTypeInt]  (AType TTypeProc) 0) .
+          Map.insert "writeByte"    (FunInfo [AType TTypeChar] (AType TTypeProc) 0) .
+          Map.insert "writeChar"    (FunInfo [AType TTypeChar] (AType TTypeProc) 0) .
+          Map.insert "writeString"  (FunInfo [AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
+          Map.insert "readInteger"  (FunInfo []                (AType TTypeInt)  0) .
+          Map.insert "readByte"     (FunInfo []                (AType TTypeChar) 0) .
+          Map.insert "readChar"     (FunInfo []                (AType TTypeChar) 0) .
+          Map.insert "readString"   (FunInfo [AType TTypeInt, AType (TTypeArray 0 TTypeChar)]
+                                                (AType TTypeProc) 0) .
            -- conversions
-          Map.insert "extend"       (FunInfo [UTypeChar] UTypeInt  0) .
-          Map.insert "shrink"       (FunInfo [UTypeInt]  UTypeChar 0) .
+          Map.insert "extend"       (FunInfo [AType TTypeChar] (AType TTypeInt)  0) .
+          Map.insert "shrink"       (FunInfo [AType TTypeInt]  (AType TTypeChar) 0) .
            -- strings
-          Map.insert "strlen"       (FunInfo [UTypeArray (0, UTypeChar)] UTypeInt 0) .
-          Map.insert "strcmp"       (FunInfo [UTypeArray (0, UTypeChar),
-                                                UTypeArray (0, UTypeChar)] UTypeInt 0) .
-          Map.insert "strcpy"       (FunInfo [UTypeArray (0, UTypeChar),
-                                                UTypeArray (0, UTypeChar)] UTypeProc 0) .
-          Map.insert "strcat"       (FunInfo [UTypeArray (0, UTypeChar),
-                                                UTypeArray (0, UTypeChar)] UTypeProc 0)
+          Map.insert "strlen"       (FunInfo [AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
+          Map.insert "strcmp"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
+          Map.insert "strcpy"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
+          Map.insert "strcat"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0)
          ) -- the end
           Map.empty
         ) "prelude"
@@ -119,11 +121,11 @@ getFuncName i t =
          Just fid -> i ++ "_" ++ show fid
          Nothing  -> i
 
-getFuncParams :: Ide -> Table -> Maybe [UType]
+getFuncParams :: Ide -> Table -> Maybe [AType]
 getFuncParams i t =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . funParType)
 
-getFuncRetType :: Ide -> Table -> Maybe UType
+getFuncRetType :: Ide -> Table -> Maybe AType
 getFuncRetType i t =
     nested t (\Table{functions=f} -> Map.lookup i f >>= return . funRetType)
 
@@ -146,7 +148,7 @@ getVarDepth :: Ide -> Table -> Maybe Int
 getVarDepth i t =
     nested t (\Table{depth=d,variables=v} -> Map.lookup i v >> Just d)
 
-getVarType :: Ide -> Table -> Maybe UType
+getVarType :: Ide -> Table -> Maybe AType
 getVarType i t =
     nested t (\Table{variables=v} -> Map.lookup i v >>= return . varType)
 

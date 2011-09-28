@@ -26,7 +26,8 @@ module TcMonad (
 import SrcLoc
 import SymbolTable
 import ErrUtils
-import UnTypedAst (UType(..), UExpr, Ide)
+import UnTypedAst (UExpr, Ide)
+import TypedAst (AType(..), TType(..))
 
 import Control.Monad
 
@@ -139,13 +140,13 @@ getCurrDepthM = liftM getCurrDepth getTable
 getFuncNameM :: Ide -> TcM String
 getFuncNameM ide = liftM (getFuncName ide) getTable
 
-getFuncParamsM :: Ide -> TcM [UType]
+getFuncParamsM :: Ide -> TcM [AType]
 getFuncParamsM ide =
     action (getFuncParams ide) [] ide
 
-getFuncRetTypeM :: Ide -> TcM UType
+getFuncRetTypeM :: Ide -> TcM AType
 getFuncRetTypeM ide =
-    action (getFuncRetType ide) UTypeUnknown ide
+    action (getFuncRetType ide) (AType TTypeUnknown) ide
 
 getFuncDepthM :: Ide -> TcM Int
 getFuncDepthM ide =
@@ -159,12 +160,12 @@ getVarDepthM :: Ide -> TcM Int
 getVarDepthM ide =
     action (getVarDepth ide) 0 ide
 
-getVarTypeM :: Ide -> TcM UType 
+getVarTypeM :: Ide -> TcM AType 
 getVarTypeM ide =
-    action (getVarType ide) UTypeUnknown ide
+    action (getVarType ide) (AType TTypeUnknown) ide
 
 -- Add functions
-addFuncM :: Ide -> [UType] -> UType -> TcM ()
+addFuncM :: Ide -> [AType] -> AType -> TcM ()
 addFuncM ide pt rt = do
     u <- getUnique
     t <- getTable
@@ -172,7 +173,7 @@ addFuncM ide pt rt = do
     setTable (addFunc ide finfo t)
 
 -- Add variables
-addVarM :: Ide -> UType -> TcM ()
+addVarM :: Ide -> AType -> TcM ()
 addVarM ide vt = do
     u <- getUnique
     t <- getTable
