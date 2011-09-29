@@ -11,7 +11,6 @@ module TcMonad (
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getTable, getUnique, setTable,
-    getSrcSpan, setSrcSpan,
     mkTcState, addTcWarning, addTcError,
     getMessages,
 
@@ -41,7 +40,6 @@ data TcResult a
 data TcState = TcState {
     table       :: Table,           -- the symbol table
     messages    :: Messages,        -- the error messages
-    curr_span   :: SrcSpan,         -- current location
     unique      :: !Int             -- unique id number
   }
 
@@ -66,12 +64,12 @@ failTcM msg = TcM $ \s@(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg noSrcSpan (TypeError Nothing) msg) ms)
 
 failSpanMsgTcM :: SrcSpan -> String -> TcM a
-failSpanMsgTcM span msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg span (TypeError Nothing) msg) ms)
+failSpanMsgTcM loc msg = TcM $ \s@(TcState{messages=ms}) ->
+    TcFailed (addError (mkErrMsg loc (TypeError Nothing) msg) ms)
 
 failExprMsgTcM :: SrcSpan -> Maybe UExpr -> String -> TcM a
-failExprMsgTcM span expr msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg span (TypeError expr) msg) ms)
+failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
+    TcFailed (addError (mkErrMsg loc (TypeError expr) msg) ms)
 
 getTcState :: TcM TcState
 getTcState = TcM $  \s -> TcOk s s
@@ -85,12 +83,6 @@ getUnique = TcM $ \s@(TcState{unique=u}) -> TcOk s{unique=u+1} u
 setTable :: Table -> TcM ()
 setTable t = TcM $ \s -> TcOk s{table=t} ()
 
-getSrcSpan :: TcM SrcSpan
-getSrcSpan = TcM $ \s@(TcState{curr_span=span}) -> TcOk s span
-
-setSrcSpan :: SrcSpan -> TcM ()
-setSrcSpan span = TcM $ \s -> TcOk s{curr_span=span} ()
-
 -- create a type check state
 --
 mkTcState :: Table -> TcState
@@ -98,7 +90,6 @@ mkTcState t =
     TcState {
         table       = t,
         messages    = emptyMessages,
-        curr_span   = noSrcSpan,
         unique      = 1
     }
 
@@ -121,13 +112,13 @@ getMessages TcState{messages=ms} = ms
 
 -- execute the function inside our state monad and on error add
 -- ScopeError and return the given value
-action :: (Table -> Maybe a) -> a -> String -> TcM a
-action f ret msg =
-    TcM $ \s@(TcState{messages=msgs,table=t,curr_span=span}) ->
+action :: (Table -> Maybe a) -> a -> SrcSpan -> String -> TcM a
+action f ret loc msg =
+    TcM $ \s@(TcState{messages=msgs,table=t}) ->
         case f t of
              Just x  -> TcOk s x
              Nothing ->
-                 TcOk s{messages=(addError (mkErrMsg span (ScopeError msg) "") msgs)} ret
+                 TcOk s{messages=(addError (mkErrMsg loc (ScopeError msg) "") msgs)} ret
 
 -- local function
 getNameM :: TcM Ide
@@ -137,32 +128,32 @@ getCurrDepthM :: TcM Int
 getCurrDepthM = liftM getCurrDepth getTable
 
 -- Get functions
-getFuncNameM :: Ide -> TcM String
-getFuncNameM ide = liftM (getFuncName ide) getTable
+getFuncNameM :: Located Ide -> TcM String
+getFuncNameM (L _ ide) = liftM (getFuncName ide) getTable
 
-getFuncParamsM :: Ide -> TcM [AType]
-getFuncParamsM ide =
-    action (getFuncParams ide) [] ide
+getFuncParamsM :: Located Ide -> TcM [AType]
+getFuncParamsM (L loc ide) =
+    action (getFuncParams ide) [] loc ide
 
-getFuncRetTypeM :: Ide -> TcM AType
-getFuncRetTypeM ide =
-    action (getFuncRetType ide) (AType TTypeUnknown) ide
+getFuncRetTypeM :: Located Ide -> TcM AType
+getFuncRetTypeM (L loc ide) =
+    action (getFuncRetType ide) (AType TTypeUnknown) loc ide
 
-getFuncDepthM :: Ide -> TcM Int
-getFuncDepthM ide =
-    action (getFuncDepth ide) 0 ide
+getFuncDepthM :: Located Ide -> TcM Int
+getFuncDepthM (L loc ide) =
+    action (getFuncDepth ide) 0 loc ide
 
 -- Get variables
-getVarNameM :: Ide -> TcM String
-getVarNameM ide = liftM (getVarName ide) getTable
+getVarNameM :: Located Ide -> TcM String
+getVarNameM (L _ ide) = liftM (getVarName ide) getTable
 
-getVarDepthM :: Ide -> TcM Int
-getVarDepthM ide =
-    action (getVarDepth ide) 0 ide
+getVarDepthM :: Located Ide -> TcM Int
+getVarDepthM (L loc ide) =
+    action (getVarDepth ide) 0 loc ide
 
-getVarTypeM :: Ide -> TcM AType 
-getVarTypeM ide =
-    action (getVarType ide) (AType TTypeUnknown) ide
+getVarTypeM :: Located Ide -> TcM AType 
+getVarTypeM (L loc ide) =
+    action (getVarType ide) (AType TTypeUnknown) loc ide
 
 -- Add functions
 addFuncM :: Ide -> [AType] -> AType -> TcM ()
