@@ -61,7 +61,7 @@ data TExpr a where
     TExprVar    :: TVariable a                         -> TExpr a
     TExprFun    :: LIde        -> TType a  -> [LAExpr] -> TExpr a
     TExprMinus  :: LTExpr a                            -> TExpr a
-    TExprOp     :: LTExpr a    -> LTExpr a -> LTExpr a -> TExpr a
+    TExprOp     :: LTExpr a    -> LOp      -> LTExpr a -> TExpr a
 
 type LAExpr = Located AExpr
 

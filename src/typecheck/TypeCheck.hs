@@ -81,6 +81,19 @@ typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
 typeCheckExpr (L loc (UExprMinus luexpr)) = do
     AExpr texpr ttype <- typeCheckExpr luexpr
     return $ AExpr (TExprMinus (L (getLoc luexpr) texpr)) ttype
+typeCheckExpr (L loc (UExprOp lue1 lop lue2)) = do
+    AExpr te1 tt1 <- typeCheckExpr lue1
+    AExpr te2 tt2 <- typeCheckExpr lue2
+    let lte1 = L (getLoc lue1) te1
+        lte2 = L (getLoc lue2) te2
+        unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
+    if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
+       then return $ AExpr unknown_expr TTypeUnknown
+       else do
+           case test tt1 tt2 of
+                Just Eq -> return $ AExpr (TExprOp lte1 lop lte2) tt1
+                Nothing -> return $ AExpr unknown_expr TTypeUnknown
+
 
 
 -- Type Check function parameters
