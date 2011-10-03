@@ -78,6 +78,10 @@ typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
            return $ AExpr (TExprFun lide ret_type lapars) ret_type
        else
            return $ AExpr (TExprFun lide TTypeUnknown []) TTypeUnknown
+typeCheckExpr (L loc (UExprMinus luexpr)) = do
+    AExpr texpr ttype <- typeCheckExpr luexpr
+    return $ AExpr (TExprMinus (L (getLoc luexpr) texpr)) ttype
+
 
 -- Type Check function parameters
 tcFunPar :: Located UExpr -> [AType] -> TcM [LAExpr]
