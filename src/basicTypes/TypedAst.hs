@@ -110,6 +110,13 @@ instance Eq AType where
              Just Eq -> True
              Nothing -> False
 
+instance Show AType where
+    show (AType TTypeInt)         = "int"
+    show (AType TTypeChar)        = "byte"
+    show (AType TTypeProc)        = "proc"
+    show (AType (TTypeArray _ t)) = "array of " ++ show (AType t)
+    show (AType TTypeUnknown)     = "unknown"
+
 
 -- -------------------------------------------------------------------
 -- We need to do the equality test so that it reflects the equality

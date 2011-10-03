@@ -11,13 +11,13 @@ module TcMonad (
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getTable, getUnique, setTable,
-    mkTcState, addTcWarning, addTcError,
+    mkTcState, addTcWarning, addTcError, addScopeError,
     getMessages,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
-    getFuncNameM, getFuncParamsM, getFuncRetTypeM, getFuncDepthM,
-    getVarNameM, getVarDepthM, getVarTypeM,
+    getFuncM, getFuncNameM, getFuncParamsM, getFuncRetTypeM,
+    getVarM, getVarNameM, getVarTypeM,
     addFuncM, addVarM,
     rawOpenScopeM, rawCloseScopeM
   ) where
@@ -103,22 +103,17 @@ addTcError loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (TypeError expr) msg) msgs) } ()
 
+addScopeError :: Located Ide -> String -> TcM ()
+addScopeError (L loc ide) msg =
+    TcM $ \s@(TcState{messages=msgs}) ->
+        TcOk s{ messages=(addError (mkErrMsg loc (ScopeError ide) msg) msgs) } ()
+
 getMessages :: TcState -> Messages
 getMessages TcState{messages=ms} = ms
 
 
 ----------------------------------------------------------------------
 -- Symbol Table functionality
-
--- execute the function inside our state monad and on error add
--- ScopeError and return the given value
-action :: (Table -> Maybe a) -> a -> SrcSpan -> String -> TcM a
-action f ret loc msg =
-    TcM $ \s@(TcState{messages=msgs,table=t}) ->
-        case f t of
-             Just x  -> TcOk s x
-             Nothing ->
-                 TcOk s{messages=(addError (mkErrMsg loc (ScopeError msg) "") msgs)} ret
 
 -- local function
 getNameM :: TcM Ide
@@ -128,32 +123,39 @@ getCurrDepthM :: TcM Int
 getCurrDepthM = liftM getCurrDepth getTable
 
 -- Get functions
-getFuncNameM :: Located Ide -> TcM String
-getFuncNameM (L _ ide) = liftM (getFuncName ide) getTable
+getFuncM :: Located Ide -> TcM (Maybe FunInfo)
+getFuncM lide@(L _ ide) = do
+    mfi <- liftM (getFunc ide) getTable
+    case mfi of
+         Just fi -> return (Just fi)
+         Nothing -> do
+             addScopeError lide ""
+             return Nothing
 
-getFuncParamsM :: Located Ide -> TcM [AType]
-getFuncParamsM (L loc ide) =
-    action (getFuncParams ide) [] loc ide
+getFuncNameM :: Ide -> Maybe FunInfo -> TcM String
+getFuncNameM = ((.).(.)) return  getFuncName
 
-getFuncRetTypeM :: Located Ide -> TcM AType
-getFuncRetTypeM (L loc ide) =
-    action (getFuncRetType ide) (AType TTypeUnknown) loc ide
+getFuncParamsM :: Maybe FunInfo -> TcM [AType]
+getFuncParamsM = return . getFuncParams
 
-getFuncDepthM :: Located Ide -> TcM Int
-getFuncDepthM (L loc ide) =
-    action (getFuncDepth ide) 0 loc ide
+getFuncRetTypeM :: Maybe FunInfo -> TcM AType
+getFuncRetTypeM = return . getFuncRetType
 
 -- Get variables
-getVarNameM :: Located Ide -> TcM String
-getVarNameM (L _ ide) = liftM (getVarName ide) getTable
+getVarM :: Located Ide -> TcM (Maybe VarInfo)
+getVarM lide@(L _ ide) = do
+    mvi <- liftM (getVar ide) getTable
+    case mvi of
+         Just vi -> return (Just vi)
+         Nothing -> do
+             addScopeError lide ""
+             return Nothing
 
-getVarDepthM :: Located Ide -> TcM Int
-getVarDepthM (L loc ide) =
-    action (getVarDepth ide) 0 loc ide
+getVarNameM :: Ide -> Maybe VarInfo -> TcM String
+getVarNameM = ((.).(.)) return  getVarName
 
-getVarTypeM :: Located Ide -> TcM AType 
-getVarTypeM (L loc ide) =
-    action (getVarType ide) (AType TTypeUnknown) loc ide
+getVarTypeM :: Maybe VarInfo -> TcM AType
+getVarTypeM = return . getVarType
 
 -- Add functions
 addFuncM :: Ide -> [AType] -> AType -> TcM ()

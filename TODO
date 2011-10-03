@@ -8,3 +8,6 @@
         Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt
+
+** Fix in TcMonad:
+        Report `not in scope' only once

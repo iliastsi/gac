@@ -16,8 +16,8 @@ module SymbolTable (
 
     -- ** Extract from Table
     getName, getCurrDepth,
-    getFuncName, getFuncParams, getFuncRetType, getFuncId, getFuncDepth,
-    getVarName, getVarDepth, getVarType, getVarId, isVarLocal,
+    getFunc, getFuncName, getFuncParams, getFuncRetType,
+    getVar, getVarName, getVarType,
 
     -- ** Add to Table
     addFunc, addVar,
@@ -115,46 +115,34 @@ getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d
 
 -- Get functions
-getFuncName :: Ide -> Table -> String
-getFuncName i t =
-    case getFuncId i t of
-         Just fid -> i ++ "_" ++ show fid
-         Nothing  -> i
+getFunc :: Ide -> Table -> Maybe FunInfo
+getFunc i t =
+    nested t (\Table{functions=f} -> Map.lookup i f)
 
-getFuncParams :: Ide -> Table -> Maybe [AType]
-getFuncParams i t =
-    nested t (\Table{functions=f} -> Map.lookup i f >>= return . funParType)
+getFuncName :: Ide -> Maybe FunInfo -> String
+getFuncName i (Just (FunInfo _ _ fid)) = show i ++ "_" ++ show fid
+getFuncName i Nothing = show i
 
-getFuncRetType :: Ide -> Table -> Maybe AType
-getFuncRetType i t =
-    nested t (\Table{functions=f} -> Map.lookup i f >>= return . funRetType)
+getFuncParams :: Maybe FunInfo -> [AType]
+getFuncParams (Just (FunInfo fpt _ _)) = fpt
+getFuncParams Nothing = []
 
-getFuncId :: Ide -> Table -> Maybe Int
-getFuncId i t =
-    nested t (\Table{functions=f} -> Map.lookup i f >>= return . funId)
-
-getFuncDepth :: Ide -> Table -> Maybe Int
-getFuncDepth i t =
-    nested t (\Table{depth=d,functions=f} -> Map.lookup i f >> Just d)
+getFuncRetType :: Maybe FunInfo -> AType
+getFuncRetType (Just (FunInfo _ frt _)) = frt
+getFuncRetType Nothing = AType TTypeUnknown
 
 -- Get variables
-getVarName :: Ide -> Table -> String
-getVarName i t =
-    case getVarId i t of
-         Just vid -> i ++ "_" ++ show vid
-         Nothing  -> i
+getVar :: Ide -> Table -> Maybe VarInfo
+getVar i v =
+    nested v (\Table{variables=v} -> Map.lookup i v)
 
-getVarDepth :: Ide -> Table -> Maybe Int
-getVarDepth i t =
-    nested t (\Table{depth=d,variables=v} -> Map.lookup i v >> Just d)
+getVarName :: Ide -> Maybe VarInfo -> String
+getVarName i (Just (VarInfo _ vid)) = show i ++ "_" ++ show vid
+getVarName i Nothing = show i
 
-getVarType :: Ide -> Table -> Maybe AType
-getVarType i t =
-    nested t (\Table{variables=v} -> Map.lookup i v >>= return . varType)
-
-getVarId :: Ide -> Table -> Maybe Int
-getVarId i t =
-    nested t (\Table{variables=v} -> Map.lookup i v >>= return . varId)
+getVarType :: Maybe VarInfo -> AType
+getVarType (Just (VarInfo vt _)) = vt
+getVarType Nothing = AType TTypeUnknown
 
 isVarLocal :: Ide -> Table -> Bool
 isVarLocal i Table{variables=v} =
