@@ -42,32 +42,32 @@ import Foreign.Ptr
 import Control.Monad
 
 
-typeCheckExpr :: Located UExpr -> TcM (AExpr)
+typeCheckExpr :: Located UExpr -> TcM (Located AExpr)
 typeCheckExpr (L loc (UExprInt i)) = do
-    return $ AExpr (TExprInt (fromIntegral i)) (TTypeInt)
+    return (L loc $ AExpr (TExprInt (fromIntegral i)) (TTypeInt))
 typeCheckExpr (L loc (UExprChar c)) = do
-    return $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar)
+    return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))
 typeCheckExpr (L loc (UExprString s)) = do
-    return $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar)
+    return (L loc $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar))
 typeCheckExpr (L loc (UExprVar (UVar ide))) = do
     let lide = L loc ide
     m_var_info <- getVarM lide
     ide' <- getVarNameM ide m_var_info
     (AType var_type) <- getVarTypeM m_var_info
-    return $ AExpr (TExprVar (TVar ide' var_type)) var_type
+    return (L loc $ AExpr (TExprVar (TVar ide' var_type)) var_type)
 typeCheckExpr luexpr@(L loc (UExprVar (UVarArray lide lexpr))) = do
-    aexpr <- typeCheckExpr lexpr
+    (L aeloc aexpr) <- typeCheckExpr lexpr
     m_var_info <- getVarM lide
     lide' <- liftM (L (getLoc lide)) (getVarNameM (unLoc lide) m_var_info)
     (AType var_type) <- getVarTypeM m_var_info
     case aexpr of
          AExpr e' TTypeInt -> do
-             let lexpr' = L (getLoc lexpr) e'
-             return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
+             let lexpr' = L aeloc e'
+             return (L loc $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type)
          otherwise  -> do
              tcIntExprErr luexpr
              let lexpr' = L noSrcSpan (TExprInt 0)
-             return $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type
+             return (L loc $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type)
 typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
     m_fun_info <- getFuncM lide
     AType ret_type <- getFuncRetTypeM m_fun_info
@@ -75,24 +75,24 @@ typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
     if (AType ret_type) /= (AType TTypeUnknown)
        then do
            lapars <- tcFunPar luexpr apar_type
-           return $ AExpr (TExprFun lide ret_type lapars) ret_type
+           return (L loc $ AExpr (TExprFun lide ret_type lapars) ret_type)
        else
-           return $ AExpr (TExprFun lide TTypeUnknown []) TTypeUnknown
+           return (L loc $ AExpr (TExprFun lide TTypeUnknown []) TTypeUnknown)
 typeCheckExpr (L loc (UExprMinus luexpr)) = do
-    AExpr texpr ttype <- typeCheckExpr luexpr
-    return $ AExpr (TExprMinus (L (getLoc luexpr) texpr)) ttype
+    (L teloc (AExpr texpr ttype)) <- typeCheckExpr luexpr
+    return (L loc $ AExpr (TExprMinus (L teloc texpr)) ttype)
 typeCheckExpr (L loc (UExprOp lue1 lop lue2)) = do
-    AExpr te1 tt1 <- typeCheckExpr lue1
-    AExpr te2 tt2 <- typeCheckExpr lue2
-    let lte1 = L (getLoc lue1) te1
-        lte2 = L (getLoc lue2) te2
+    (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
+    (L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
+    let lte1 = L l1 te1
+        lte2 = L l2 te2
         unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
-       then return $ AExpr unknown_expr TTypeUnknown
+       then return (L loc $ AExpr unknown_expr TTypeUnknown)
        else do
            case test tt1 tt2 of
-                Just Eq -> return $ AExpr (TExprOp lte1 lop lte2) tt1
-                Nothing -> return $ AExpr unknown_expr TTypeUnknown
+                Just Eq -> return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
+                Nothing -> return (L loc $ AExpr unknown_expr TTypeUnknown)
 
 
 
@@ -101,23 +101,23 @@ tcFunPar :: Located UExpr -> [AType] -> TcM [LAExpr]
 tcFunPar luexpr@(L loc (UExprFun (UFuncCall lide lupars))) expr_atype = do
     let pars_len = length lupars
         type_len = length expr_atype
-    lapars <- tcFunPar' (unLoc lide) lupars expr_atype []
-    case lapars of
-         (True,  ret) -> return $ reverse ret
-         (False, _)   -> do
-             tcParLenErr luexpr pars_len type_len
-             return []
+    if pars_len /= type_len
+       then do
+           tcParLenErr luexpr pars_len type_len
+           return []
+       else do
+           lapars <- tcFunPar' (unLoc lide) lupars expr_atype []
+           return $ reverse lapars
 
-tcFunPar' :: Ide -> [LUExpr] -> [AType] -> [LAExpr] -> TcM (Bool, [LAExpr])
-tcFunPar' ide [] [] acc = return (True, acc)
-tcFunPar' ide [] _  _   = return (False, [])
-tcFunPar' ide _  [] _   = return (False, [])
+tcFunPar' :: Ide -> [LUExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
+tcFunPar' ide [] [] acc = return acc
 tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
-    aexpr@(AExpr texpr ttype) <- typeCheckExpr pexpr
+    (L aeloc aexpr@(AExpr texpr ttype)) <- typeCheckExpr pexpr
     if (AType ttype) == ptype
        then return ()
        else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
-    tcFunPar' ide pexprs ptypes ((L (getLoc pexpr) aexpr):acc)
+    tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
+tcFunPar' ide _  _  _   = error "in tcFunPar'"
 
 tcParLenErr :: Located UExpr -> Int -> Int -> TcM ()
 tcParLenErr (L loc uexpr@(UExprFun (UFuncCall lide lupars))) pars_len type_len =
