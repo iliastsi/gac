@@ -103,12 +103,12 @@ type LAType = Located AType
 data AType = forall a . AType (TType a)
 
 instance Eq AType where
-    (AType TTypeUnknown) == (AType _)            = True
-    (AType _)            == (AType TTypeUnknown) = True
-    (AType a)            == (AType b) =
-        case test a b of
-             Just Eq -> True
-             Nothing -> False
+    (AType TTypeUnknown)     == (AType _)                = True
+    (AType _)                == (AType TTypeUnknown)     = True
+    (AType TTypeInt)         == (AType TTypeInt)         = True
+    (AType TTypeChar)        == (AType TTypeChar)        = True
+    (AType TTypeProc)        == (AType TTypeProc)        = True
+    (AType (TTypeArray _ a)) == (AType (TTypeArray _ b)) = AType a == AType b
 
 instance Show AType where
     show (AType TTypeInt)         = "int"

@@ -81,7 +81,7 @@ typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
 typeCheckExpr (L loc (UExprMinus luexpr)) = do
     (L teloc (AExpr texpr ttype)) <- typeCheckExpr luexpr
     return (L loc $ AExpr (TExprMinus (L teloc texpr)) ttype)
-typeCheckExpr (L loc (UExprOp lue1 lop lue2)) = do
+typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
     (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
     (L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
     let lte1 = L l1 te1
@@ -91,8 +91,11 @@ typeCheckExpr (L loc (UExprOp lue1 lop lue2)) = do
        then return (L loc $ AExpr unknown_expr TTypeUnknown)
        else do
            case test tt1 tt2 of
-                Just Eq -> return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
-                Nothing -> return (L loc $ AExpr unknown_expr TTypeUnknown)
+                Just Eq -> do
+                    return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
+                Nothing -> do
+                    tcOpExprErr luexpr (AType tt1) (AType tt2)
+                    return (L loc $ AExpr unknown_expr TTypeUnknown)
 
 
 
@@ -119,12 +122,14 @@ tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
 tcFunPar' ide _  _  _   = error "in tcFunPar'"
 
+-- Error when the function parameter's number is different from the prototype
 tcParLenErr :: Located UExpr -> Int -> Int -> TcM ()
 tcParLenErr (L loc uexpr@(UExprFun (UFuncCall lide lupars))) pars_len type_len =
     addTcError loc (Just uexpr)
                 ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
                  show pars_len ++ " parameters but its type has " ++ show type_len)
 
+-- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
     addTcError loc (Just uexpr)
@@ -132,12 +137,19 @@ tcParTypeErr ide (L loc uexpr) count exptype acttype =
                  show ide ++"'\n\tExpected `" ++ show exptype ++
                  "' but argument is of type `" ++ show acttype ++ "'")
 
-
 -- Error when the array index expression is not of type of int
 tcIntExprErr :: Located UExpr -> TcM ()
 tcIntExprErr (L loc (uexpr@(UExprVar (UVarArray lide lexpr)))) =
     addTcError loc (Just uexpr)
                 ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
+
+-- Error when the type of expressions on TExprOp is different
+tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
+tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
+    addTcError loc (Just uexpr)
+                ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
+                 show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
+                 "' is of type `" ++ show stype ++ "'")
 
 -- ---------------------------
 {-
