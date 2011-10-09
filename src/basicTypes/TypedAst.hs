@@ -44,7 +44,7 @@ data TStmt
     = TStmtNothing
     | TStmtAssign LAVariable LAExpr
     | TStmtCompound [LTStmt]
-    | TStmtFun LIde [LAExpr]
+    | TStmtFun AFuncCall
     | TStmtIf LTCond LTStmt (Maybe LTStmt)
     | TStmtWhile LTCond LTStmt
     | TStmtReturn (Maybe LAExpr )
@@ -59,7 +59,7 @@ data TExpr a where
     -- ^ use createStringNul llvm instruction to store this
     -- and then getElementPtr to convert it into Ptr Word8
     TExprVar    :: TVariable a                         -> TExpr a
-    TExprFun    :: LIde        -> TType a  -> [LAExpr] -> TExpr a
+    TExprFun    :: TFuncCall a                         -> TExpr a
     TExprMinus  :: LTExpr a                            -> TExpr a
     TExprOp     :: LTExpr a    -> LOp      -> LTExpr a -> TExpr a
 
@@ -117,6 +117,15 @@ instance Show AType where
     show (AType (TTypeArray _ t)) = "array of " ++ show (AType t)
     show (AType TTypeUnknown)     = "unknown"
 
+-- ---------------------------
+type LTFuncCall a = Located (TFuncCall a)
+
+data TFuncCall a where
+    TFuncCall :: LIde -> TType a -> [LAExpr] -> TFuncCall a
+
+type LAFuncCall = Located AFuncCall
+
+data AFuncCall = forall a . AFuncCall (TFuncCall a) (TType a)
 
 -- -------------------------------------------------------------------
 -- We need to do the equality test so that it reflects the equality

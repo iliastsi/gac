@@ -42,32 +42,24 @@ import Foreign.Ptr
 import Control.Monad
 
 
+-- -------------------------------------------------------------------
+-- TypeCheck UExpr
+
 typeCheckExpr :: Located UExpr -> TcM (Located AExpr)
+-- UExprInt
 typeCheckExpr (L loc (UExprInt i)) = do
     return (L loc $ AExpr (TExprInt (fromIntegral i)) (TTypeInt))
+-- UExprChar
 typeCheckExpr (L loc (UExprChar c)) = do
     return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))
+-- UExprString
 typeCheckExpr (L loc (UExprString s)) = do
     return (L loc $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar))
-typeCheckExpr (L loc (UExprVar (UVar ide))) = do
-    let lide = L loc ide
-    m_var_info <- getVarM lide
-    ide' <- getVarNameM ide m_var_info
-    (AType var_type) <- getVarTypeM m_var_info
-    return (L loc $ AExpr (TExprVar (TVar ide' var_type)) var_type)
-typeCheckExpr luexpr@(L loc (UExprVar (UVarArray lide lexpr))) = do
-    (L aeloc aexpr) <- typeCheckExpr lexpr
-    m_var_info <- getVarM lide
-    lide' <- liftM (L (getLoc lide)) (getVarNameM (unLoc lide) m_var_info)
-    (AType var_type) <- getVarTypeM m_var_info
-    case aexpr of
-         AExpr e' TTypeInt -> do
-             let lexpr' = L aeloc e'
-             return (L loc $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type)
-         otherwise  -> do
-             tcIntExprErr luexpr
-             let lexpr' = L noSrcSpan (TExprInt 0)
-             return (L loc $ AExpr (TExprVar (TVarArray lide' var_type lexpr')) var_type)
+-- UExprVar
+typeCheckExpr (L loc (UExprVar v)) = do
+    (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
+    return (L loc $ AExpr (TExprVar tvar) ttype)
+-- UExprFun
 typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
     m_fun_info <- getFuncM lide
     AType ret_type <- getFuncRetTypeM m_fun_info
@@ -75,12 +67,14 @@ typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
     if (AType ret_type) /= (AType TTypeUnknown)
        then do
            lapars <- tcFunPar luexpr apar_type
-           return (L loc $ AExpr (TExprFun lide ret_type lapars) ret_type)
+           return (L loc $ AExpr (TExprFun (TFuncCall lide ret_type lapars)) ret_type)
        else
-           return (L loc $ AExpr (TExprFun lide TTypeUnknown []) TTypeUnknown)
+           return (L loc $ AExpr (TExprFun (TFuncCall lide TTypeUnknown [])) TTypeUnknown)
+-- UExprMinus
 typeCheckExpr (L loc (UExprMinus luexpr)) = do
     (L teloc (AExpr texpr ttype)) <- typeCheckExpr luexpr
     return (L loc $ AExpr (TExprMinus (L teloc texpr)) ttype)
+-- UExprOp
 typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
     (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
     (L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
@@ -97,8 +91,7 @@ typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
                     tcOpExprErr luexpr (AType tt1) (AType tt2)
                     return (L loc $ AExpr unknown_expr TTypeUnknown)
 
-
-
+-- ---------------------------
 -- Type Check function parameters
 tcFunPar :: Located UExpr -> [AType] -> TcM [LAExpr]
 tcFunPar luexpr@(L loc (UExprFun (UFuncCall lide lupars))) expr_atype = do
@@ -122,75 +115,59 @@ tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
 tcFunPar' ide _  _  _   = error "in tcFunPar'"
 
+-- ---------------------------
 -- Error when the function parameter's number is different from the prototype
 tcParLenErr :: Located UExpr -> Int -> Int -> TcM ()
 tcParLenErr (L loc uexpr@(UExprFun (UFuncCall lide lupars))) pars_len type_len =
-    addTcError loc (Just uexpr)
+    addTcError loc (UAstE uexpr)
                 ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
                  show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
-    addTcError loc (Just uexpr)
+    addTcError loc (UAstE uexpr)
                 ("Incompatible type of argument " ++ show count ++ " of `" ++
                  show ide ++"'\n\tExpected `" ++ show exptype ++
                  "' but argument is of type `" ++ show acttype ++ "'")
 
--- Error when the array index expression is not of type of int
-tcIntExprErr :: Located UExpr -> TcM ()
-tcIntExprErr (L loc (uexpr@(UExprVar (UVarArray lide lexpr)))) =
-    addTcError loc (Just uexpr)
-                ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
-
 -- Error when the type of expressions on TExprOp is different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
-    addTcError loc (Just uexpr)
+    addTcError loc (UAstE uexpr)
                 ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
                  show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
                  "' is of type `" ++ show stype ++ "'")
 
--- ---------------------------
-{-
-typeCheckExpr :: UExpr -> GacMonad (ATExpr)
-typeCheckExpr (UExprInt i)  = return $ TExprInt (fromIntegral i)  ::: TTypeInt
-typeCheckExpr (UExprChar c) = return $ TExprChar (toEnum $ fromEnum c) ::: TTypeChar --find smt else
-typeCheckExpr (UExprString s) = return $ TExprString s ::: (TTypeArray TTypeChar)
-typeCheckExpr (UExprVal v)  =
-    case v of
-         UVal ide          -> do (_ ::: t) <- getVarTypeM ide
-                                 return $ TExprVal ide t ::: t
-         UValArray ide off -> do (TExprInt i) ::: toff' <- typeCheckExpr off -- sure Int32
-                                 (_ ::: (TTypeArray t)) <- getVarTypeM ide  -- check for errors
-                                 return $ TExprValArr ide (TTypeArray t) (TExprInt i) ::: t
-typeCheckExpr (UExprPar p) = typeCheckExpr p
-typeCheckExpr (UExprFun (UFunCall i pars)) =
-    do uapars <- mapM typeCheckExpr pars
-       tapars <- getFuncParamsM i
-       when (checkPars uapars tapars) (addErrorM "in parameters")
-       (_ ::: rett) <- getFuncRetTypeM i
-       return $ TExprFun i rett uapars ::: rett
-    where checkPars :: [ATExpr] -> [ATExpr] -> Bool
-          checkPars ((e1:::t1):l1) ((e2:::t2):l2) =
-              case test t1 t2 of
-                   Just Eq -> checkPars l1 l2
-                   Nothing -> False
-typeCheckExpr (UExprSign op e) =
-    do (te ::: t) <- typeCheckExpr e
-       case test t TTypeInt of
-            Just Eq -> return $ TExprSign op te ::: t
-            Nothing -> do addErrorM "in ExprSign"
-                          return $ TExprSign op (TExprInt 42) ::: TTypeInt
-typeCheckExpr (UExprOp e1 op e2) =
-    do (te1 ::: t1) <- typeCheckExpr e1
-       (te2 ::: t2) <- typeCheckExpr e2
-       case test t1 TTypeInt of
-            Nothing -> do addErrorM "in ExprOp"
-                          return $ TExprOp (TExprInt 42) op (TExprInt 42) ::: TTypeInt
-            Just Eq -> case test t2 TTypeInt of
-                            Nothing -> do addErrorM "in ExprOp"
-                                          return $ TExprOp (TExprInt 42) op (TExprInt 42) ::: TTypeInt
-                            Just Eq -> return $ TExprOp te1 op te2 ::: TTypeInt
 
--}
+-- -------------------------------------------------------------------
+-- TypeCheck UVariable
+
+typeCheckVariable :: Located UVariable -> TcM (Located AVariable)
+-- UVar
+typeCheckVariable (L loc (UVar ide)) = do
+    m_var_info <- getVarM (L loc ide)
+    ide' <- getVarNameM ide m_var_info
+    (AType var_type) <- getVarTypeM m_var_info
+    return (L loc $ AVariable (TVar ide var_type) var_type)
+-- UVarArray
+typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
+    (L aeloc aexpr) <- typeCheckExpr lexpr
+    m_var_info <- getVarM lide
+    lide' <- liftM (L (getLoc lide)) (getVarNameM (unLoc lide) m_var_info)
+    (AType var_type) <- getVarTypeM m_var_info
+    case aexpr of
+         AExpr e' TTypeInt -> do
+             let lexpr' = L aeloc e'
+             return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
+         otherwise  -> do
+             tcIntExprErr luvar
+             let lexpr' = L noSrcSpan (TExprInt 0)
+             return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
+
+-- ---------------------------
+-- Error when the array index expression is not of type of int
+tcIntExprErr :: Located UVariable -> TcM ()
+tcIntExprErr (L loc (uvar@(UVarArray lide lexpr))) =
+    addTcError loc (UAstV uvar)
+                ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")

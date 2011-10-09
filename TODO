@@ -11,3 +11,7 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
+
+** Fix in TypeCheck:
+        For UVarArray check if variable is an array
+        Create new function to typecheck UFuncCall
