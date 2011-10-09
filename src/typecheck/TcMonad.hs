@@ -61,15 +61,15 @@ thenTcM :: TcM a -> (a -> TcM b) -> TcM b
 
 failTcM :: String -> TcM a
 failTcM msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg noSrcSpan (TypeError Nothing) msg) ms)
+    TcFailed (addError (mkErrMsg noSrcSpan UnknownErr msg) ms)
 
 failSpanMsgTcM :: SrcSpan -> String -> TcM a
 failSpanMsgTcM loc msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg loc (TypeError Nothing) msg) ms)
+    TcFailed (addError (mkErrMsg loc UnknownErr msg) ms)
 
 failExprMsgTcM :: SrcSpan -> UAst -> String -> TcM a
 failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg loc (TypeError (Just expr)) msg) ms)
+    TcFailed (addError (mkErrMsg loc (TypeError expr) msg) ms)
 
 getTcState :: TcM TcState
 getTcState = TcM $  \s -> TcOk s s
@@ -93,12 +93,12 @@ mkTcState t =
         unique      = 1
     }
 
-addTcWarning :: SrcSpan -> (Maybe UAst) -> String -> TcM ()
+addTcWarning :: SrcSpan -> UAst -> String -> TcM ()
 addTcWarning loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addWarning (mkWarnMsg loc (TypeError expr) msg) msgs) } ()
 
-addTcError :: SrcSpan -> (Maybe UAst) -> String -> TcM ()
+addTcError :: SrcSpan -> UAst -> String -> TcM ()
 addTcError loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (TypeError expr) msg) msgs) } ()

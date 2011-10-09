@@ -34,7 +34,7 @@ import UnTypedAst (UAst)
 
 data MsgCode
   = ParseError String
-  | TypeError (Maybe UAst)
+  | TypeError UAst
   | ScopeError String
   | UnknownErr
 
@@ -117,8 +117,7 @@ instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
     show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
     show (ScopeError buf)     = "Not in scope `" ++ show buf ++ "'"
-    show (TypeError Nothing)  = "Type error"
-    show (TypeError (Just a)) = "Type error at `" ++ show a ++ "'"
+    show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
     show UnknownErr           = "Unknown Error :@"
 
 instance Show Message where
