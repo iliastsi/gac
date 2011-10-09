@@ -12,6 +12,24 @@ import SrcLoc
 
 
 -- -------------------------------------------------------------------
+-- DataType containing the basic blocks of the UnTyped AST
+-- (for printing purposes, used in TypeError of MsgCode)
+
+data UAst
+    = UAstS UStmt
+    | UAstE UExpr
+    | UAstC UCond
+    | UAstV UVariable
+    | UAstF UFuncCall
+
+instance Show UAst where
+    show (UAstS s) = show s
+    show (UAstE e) = show e
+    show (UAstC c) = show c
+    show (UAstV v) = show v
+    show (UAstF f) = show f
+
+-- -------------------------------------------------------------------
 -- This datatypes don't contain a type
 
 type LIde = Located Ide
@@ -56,7 +74,11 @@ instance Show Op where
 data Mode
     = ModeByVal
     | ModeByRef
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show Mode where
+    show ModeByVal = ""
+    show ModeByRef = "reference"
 
 
 -- -------------------------------------------------------------------
@@ -68,7 +90,7 @@ data UDef
     = UDefFun LIde [LUDef] LUType [LUDef] LUStmt
     | UDefPar LIde Mode LUType
     | UDefVar LIde LUType
-  deriving (Eq, Show)
+  deriving Eq
 
 -- ---------------------------
 type LUStmt = Located UStmt
@@ -81,7 +103,15 @@ data UStmt
     | UStmtIf LUCond LUStmt (Maybe LUStmt)
     | UStmtWhile LUCond LUStmt
     | UStmtReturn (Maybe LUExpr)
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show UStmt where
+    show (UStmtAssign lvar lexpr) =
+                show (unLoc lvar) ++ " = " ++ show (unLoc lexpr) ++ ";"
+    show (UStmtFun f)           = show f
+    show (UStmtReturn Nothing)  = "return;"
+    show (UStmtReturn (Just e)) = "return " ++ show (unLoc e) ++ ";"
+
 
 -- ---------------------------
 type LUExpr = Located UExpr
@@ -115,7 +145,16 @@ data UCond
     | UCondNot LUCond
     | UCondOp LUExpr LOp LUExpr
     | UCondLog LUCond LOp LUCond
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show UCond where
+    show UCondTrue  = "true"
+    show UCondFalse = "false"
+    show (UCondNot lcond) = "!" ++ show (unLoc lcond)
+    show (UCondOp a o b) =
+        show (unLoc a) ++ " " ++ show (unLoc o) ++ " " ++ show (unLoc b)
+    show (UCondLog a o b) =
+        show (unLoc a) ++ " " ++ show (unLoc o) ++ " " ++ show (unLoc b)
 
 -- ---------------------------
 type LUVariable = Located UVariable
@@ -139,7 +178,7 @@ data UType
     | UTypeProc
     | UTypeArray (Int, UType)
     | UTypeUnknown -- for type checking
-  deriving (Eq, Show)
+  deriving Eq
 
 -- ---------------------------
 data UFuncCall = UFuncCall LIde [LUExpr]

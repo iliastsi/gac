@@ -25,7 +25,7 @@ module ErrUtils (
 import Bag
 import SrcLoc
 import Util
-import UnTypedAst (UExpr)
+import UnTypedAst (UAst)
 
 
 -- -------------------------------------------------------------------
@@ -34,7 +34,7 @@ import UnTypedAst (UExpr)
 
 data MsgCode
   = ParseError String
-  | TypeError (Maybe UExpr)
+  | TypeError (Maybe UAst)
   | ScopeError String
   | UnknownErr
 
@@ -118,7 +118,7 @@ instance Show MsgCode where
     show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
     show (ScopeError buf)     = "Not in scope `" ++ show buf ++ "'"
     show (TypeError Nothing)  = "Type error"
-    show (TypeError (Just e)) = "Type error at `" ++ show e ++ "'"
+    show (TypeError (Just a)) = "Type error at `" ++ show a ++ "'"
     show UnknownErr           = "Unknown Error :@"
 
 instance Show Message where
