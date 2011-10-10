@@ -11,7 +11,7 @@ module TcMonad (
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getTable, getUnique, setTable,
-    mkTcState, addTcWarning, addTcError, addScopeError,
+    mkTcState, addTcWarning, addTcError, addScopeError, addUnreachWarning,
     getMessages,
 
     -- symbol table functionality
@@ -61,11 +61,11 @@ thenTcM :: TcM a -> (a -> TcM b) -> TcM b
 
 failTcM :: String -> TcM a
 failTcM msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg noSrcSpan UnknownErr msg) ms)
+    TcFailed (addError (mkErrMsg noSrcSpan UnknownError msg) ms)
 
 failSpanMsgTcM :: SrcSpan -> String -> TcM a
 failSpanMsgTcM loc msg = TcM $ \s@(TcState{messages=ms}) ->
-    TcFailed (addError (mkErrMsg loc UnknownErr msg) ms)
+    TcFailed (addError (mkErrMsg loc UnknownError msg) ms)
 
 failExprMsgTcM :: SrcSpan -> UAst -> String -> TcM a
 failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
@@ -107,6 +107,11 @@ addScopeError :: Located Ide -> String -> TcM ()
 addScopeError (L loc ide) msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (ScopeError ide) msg) msgs) } ()
+
+addUnreachWarning :: SrcSpan -> String -> TcM ()
+addUnreachWarning loc msg =
+    TcM $ \s@(TcState{messages=msgs}) ->
+        TcOk s{ messages=(addWarning (mkWarnMsg loc UnreachError msg) msgs) } ()
 
 getMessages :: TcState -> Messages
 getMessages TcState{messages=ms} = ms

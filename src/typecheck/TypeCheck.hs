@@ -43,6 +43,69 @@ import Control.Monad
 
 
 -- -------------------------------------------------------------------
+-- TypeCheck UStmt
+
+typeCheckStmt :: Located UStmt -> TcM (Maybe AType, Located TStmt)
+-- UStmtNothing
+typeCheckStmt (L loc UStmtNothing) = do
+    return (Nothing, L loc TStmtNothing)
+-- UStmtAssign
+typeCheckStmt lustmt@(L loc (UStmtAssign luvar luexpr)) = do
+    lavar@(L locv (AVariable tvar var_type)) <- typeCheckVariable luvar
+    laexpr@(L loce (AExpr texpr expr_type))   <- typeCheckExpr luexpr
+    if (AType var_type) == (AType TTypeUnknown) || (AType expr_type) == (AType TTypeUnknown)
+       then return (Nothing, L loc TStmtNothing)
+       else do
+           case test var_type expr_type of
+                Just Eq -> do
+                    return (Nothing, L loc $ TStmtAssign lavar laexpr)
+                Nothing -> do
+                    tcAssignErr lustmt (AType var_type) (AType expr_type)
+                    return (Nothing, L loc TStmtNothing)
+-- UStmtCompound
+typeCheckStmt (L loc (UStmtCompound lustmts)) = do
+    (ret_type, ltstmts) <- tcCompoundStmt loc lustmts
+    return (ret_type, L loc $ TStmtCompound ltstmts)
+
+-- ---------------------------
+-- Type Check compound stmts
+-- As first argument (AType) we have the return type of the block
+tcCompoundStmt :: SrcSpan -> [Located UStmt] -> TcM (Maybe AType, [Located TStmt])
+tcCompoundStmt _ [] = do
+    return (Nothing, [])
+tcCompoundStmt loc (lustmt:lustmts) = do
+    (r1, ltstmt)  <- typeCheckStmt lustmt
+    if r1 == Nothing
+       then do
+           (r2, ltstmts) <- tcCompoundStmt loc lustmts
+           return (r2, ltstmt:ltstmts)
+       else do
+           if null lustmts
+              then do
+                  return (r1, [ltstmt])
+              else do
+                  let unreach_start = srcSpanStart (getLoc (head lustmts))
+                      unreach_end   = srcSpanEnd loc
+                      unreach_loc   = mkSrcSpan unreach_start unreach_end
+                  tcUnreachableErr unreach_loc
+                  return (r1, [ltstmt])
+
+-- ---------------------------
+-- Error when the types of expression and variable in an assigment are different
+tcAssignErr :: Located UStmt -> AType -> AType -> TcM ()
+tcAssignErr (L loc ustmt@(UStmtAssign _ _)) vtype etype =
+    addTcError loc (UAstS ustmt)
+        ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
+         show etype ++ "'")
+
+-- Error when we have unreachable code on a block
+tcUnreachableErr :: SrcSpan -> TcM ()
+tcUnreachableErr loc =
+    addUnreachWarning loc
+        ("Dead code has been eliminated")
+
+
+-- -------------------------------------------------------------------
 -- TypeCheck UExpr
 
 typeCheckExpr :: Located UExpr -> TcM (Located AExpr)
@@ -85,7 +148,7 @@ typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
                     return (L loc $ AExpr unknown_expr TTypeUnknown)
 
 -- ---------------------------
--- Error when the type of expressions on TExprOp is different
+-- Error when the types of expressions on TExprOp are different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
     addTcError loc (UAstE uexpr)
@@ -127,7 +190,7 @@ typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
     return (L loc $ TCondLog ltc1 lop ltc2)
 
 -- ---------------------------
--- Error when the type of expressions on TCondOp is different
+-- Error when the types of expressions on TCondOp are different
 tcOpCondErr :: Located UCond -> AType -> AType -> TcM ()
 tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
     addTcError loc (UAstC ucond)

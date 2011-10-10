@@ -36,7 +36,8 @@ data MsgCode
   = ParseError String
   | TypeError UAst
   | ScopeError String
-  | UnknownErr
+  | UnreachError
+  | UnknownError
 
 data Severity
   = SevInfo
@@ -118,7 +119,8 @@ instance Show MsgCode where
     show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
     show (ScopeError buf)     = "Not in scope `" ++ show buf ++ "'"
     show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
-    show UnknownErr           = "Unknown Error :@"
+    show UnreachError         = "Unreachable code"
+    show UnknownError         = "Unknown Error :@"
 
 instance Show Message where
     show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =

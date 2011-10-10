@@ -72,7 +72,6 @@ data SrcLoc
             !Int                -- line number, begins at 1
             !Int                -- column number, begins at 1
   | UnhelpfulLoc String     -- Just a general indication
-  deriving Show
 
 
 -- -------------------------------------------------------------------
