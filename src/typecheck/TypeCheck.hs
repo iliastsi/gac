@@ -60,16 +60,9 @@ typeCheckExpr (L loc (UExprVar v)) = do
     (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
     return (L loc $ AExpr (TExprVar tvar) ttype)
 -- UExprFun
-typeCheckExpr luexpr@(L loc (UExprFun (UFuncCall lide lupars))) = do
-    m_fun_info <- getFuncM lide
-    AType ret_type <- getFuncRetTypeM m_fun_info
-    apar_type <- getFuncParamsM m_fun_info
-    if (AType ret_type) /= (AType TTypeUnknown)
-       then do
-           lapars <- tcFunPar luexpr apar_type
-           return (L loc $ AExpr (TExprFun (TFuncCall lide ret_type lapars)) ret_type)
-       else
-           return (L loc $ AExpr (TExprFun (TFuncCall lide TTypeUnknown [])) TTypeUnknown)
+typeCheckExpr(L loc (UExprFun f)) = do
+    (L _ (AFuncCall tfun ttype)) <- typeCheckFunc (L loc f)
+    return (L loc $ AExpr (TExprFun tfun) ttype)
 -- UExprMinus
 typeCheckExpr (L loc (UExprMinus luexpr)) = do
     (L teloc (AExpr texpr ttype)) <- typeCheckExpr luexpr
@@ -92,45 +85,6 @@ typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
                     return (L loc $ AExpr unknown_expr TTypeUnknown)
 
 -- ---------------------------
--- Type Check function parameters
-tcFunPar :: Located UExpr -> [AType] -> TcM [LAExpr]
-tcFunPar luexpr@(L loc (UExprFun (UFuncCall lide lupars))) expr_atype = do
-    let pars_len = length lupars
-        type_len = length expr_atype
-    if pars_len /= type_len
-       then do
-           tcParLenErr luexpr pars_len type_len
-           return []
-       else do
-           lapars <- tcFunPar' (unLoc lide) lupars expr_atype []
-           return $ reverse lapars
-
-tcFunPar' :: Ide -> [LUExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
-tcFunPar' ide [] [] acc = return acc
-tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
-    (L aeloc aexpr@(AExpr texpr ttype)) <- typeCheckExpr pexpr
-    if (AType ttype) == ptype
-       then return ()
-       else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
-    tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
-tcFunPar' ide _  _  _   = error "in tcFunPar'"
-
--- ---------------------------
--- Error when the function parameter's number is different from the prototype
-tcParLenErr :: Located UExpr -> Int -> Int -> TcM ()
-tcParLenErr (L loc uexpr@(UExprFun (UFuncCall lide lupars))) pars_len type_len =
-    addTcError loc (UAstE uexpr)
-        ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
-         show pars_len ++ " parameters but its type has " ++ show type_len)
-
--- Error when the function parameter's type is different from the prototype
-tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
-tcParTypeErr ide (L loc uexpr) count exptype acttype =
-    addTcError loc (UAstE uexpr)
-        ("Incompatible type of argument " ++ show count ++ " of `" ++
-         show ide ++"'\n\tExpected `" ++ show exptype ++
-         "' but argument is of type `" ++ show acttype ++ "'")
-
 -- Error when the type of expressions on TExprOp is different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
@@ -197,3 +151,59 @@ tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
         ("Incompatible type of variable `" ++ show (unLoc lide) ++
          "'\n\tExpected `array' but variable is of type `" ++
          show var_type ++ "'")
+
+
+-- -------------------------------------------------------------------
+-- TypeCheck UFuncCall
+
+typeCheckFunc :: Located UFuncCall -> TcM (Located AFuncCall)
+typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
+    m_fun_info <- getFuncM lide
+    AType ret_type <- getFuncRetTypeM m_fun_info
+    apar_type <- getFuncParamsM m_fun_info
+    if (AType ret_type) /= (AType TTypeUnknown)
+       then do
+           lapars <- tcFunPar lufunc apar_type
+           return (L loc $ AFuncCall (TFuncCall lide ret_type lapars) ret_type)
+       else do
+           return (L loc $ AFuncCall (TFuncCall lide TTypeUnknown []) TTypeUnknown)
+
+-- ---------------------------
+-- Type Check function parameters
+tcFunPar :: Located UFuncCall -> [AType] -> TcM [LAExpr]
+tcFunPar lufunc@(L loc (UFuncCall lide lupars)) expr_atype = do
+    let pars_len = length lupars
+        type_len = length expr_atype
+    if pars_len /= type_len
+       then do
+           tcParLenErr lufunc pars_len type_len
+           return []
+       else do
+           lapars <- tcFunPar' (unLoc lide) lupars expr_atype []
+           return $ reverse lapars
+
+tcFunPar' :: Ide -> [LUExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
+tcFunPar' ide [] [] acc = return acc
+tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
+    (L aeloc aexpr@(AExpr texpr ttype)) <- typeCheckExpr pexpr
+    if (AType ttype) == ptype
+       then return ()
+       else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
+    tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
+tcFunPar' ide _  _  _   = error "in tcFunPar'"
+
+-- ---------------------------
+-- Error when the function parameter's number is different from the prototype
+tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
+tcParLenErr (L loc ufunc@(UFuncCall lide lupars)) pars_len type_len =
+    addTcError loc (UAstF ufunc)
+        ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
+         show pars_len ++ " parameters but its type has " ++ show type_len)
+
+-- Error when the function parameter's type is different from the prototype
+tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
+tcParTypeErr ide (L loc uexpr) count exptype acttype =
+    addTcError loc (UAstE uexpr)
+        ("Incompatible type of argument " ++ show count ++ " of function `" ++
+         show ide ++"'\n\tExpected `" ++ show exptype ++
+         "' but argument is of type `" ++ show acttype ++ "'")

@@ -127,6 +127,7 @@ type LAFuncCall = Located AFuncCall
 
 data AFuncCall = forall a . AFuncCall (TFuncCall a) (TType a)
 
+
 -- -------------------------------------------------------------------
 -- We need to do the equality test so that it reflects the equality
 -- on the type level. There's a standard trick for this.
@@ -148,7 +149,6 @@ test _ _ = mzero
 
 -- -------------------------------------------------------------------
 -- To be able to extract a TDef from a ADef we need some small utilties
---
 
 class Type a where
     theType :: TType a
