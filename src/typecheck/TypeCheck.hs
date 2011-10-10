@@ -95,6 +95,48 @@ tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
 
 
 -- -------------------------------------------------------------------
+-- TypeCheck UCond
+
+typeCheckCond :: Located UCond -> TcM (Located TCond)
+-- UCondTrue
+typeCheckCond (L loc UCondTrue) = do
+    return (L loc TCondTrue)
+-- UCondFalse
+typeCheckCond (L loc UCondFalse) = do
+    return (L loc TCondFalse)
+-- UCondNot
+typeCheckCond (L loc (UCondNot lucond)) = do
+    ltcond <- typeCheckCond lucond
+    return (L loc (TCondNot ltcond))
+typeCheckCond lucond@(L loc (UCondOp lue1 lop lue2)) = do
+    lae1@(L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
+    lae2@(L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
+    if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
+       then return (L loc TCondFalse)
+       else do
+           case test tt1 tt2 of
+                Just Eq -> do
+                    return (L loc $ TCondOp lae1 lop lae2)
+                Nothing -> do
+                    tcOpCondErr lucond (AType tt1) (AType tt2)
+                    return (L loc TCondFalse)
+-- UCondLog
+typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
+    ltc1 <- typeCheckCond luc1
+    ltc2 <- typeCheckCond luc2
+    return (L loc $ TCondLog ltc1 lop ltc2)
+
+-- ---------------------------
+-- Error when the type of expressions on TCondOp is different
+tcOpCondErr :: Located UCond -> AType -> AType -> TcM ()
+tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
+    addTcError loc (UAstC ucond)
+        ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
+         show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
+         "' is of type `" ++ show stype ++ "'")
+
+
+-- -------------------------------------------------------------------
 -- TypeCheck UVariable
 
 typeCheckVariable :: Located UVariable -> TcM (Located AVariable)
