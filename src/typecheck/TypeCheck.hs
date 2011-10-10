@@ -120,24 +120,24 @@ tcFunPar' ide _  _  _   = error "in tcFunPar'"
 tcParLenErr :: Located UExpr -> Int -> Int -> TcM ()
 tcParLenErr (L loc uexpr@(UExprFun (UFuncCall lide lupars))) pars_len type_len =
     addTcError loc (UAstE uexpr)
-                ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
-                 show pars_len ++ " parameters but its type has " ++ show type_len)
+        ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
+         show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
     addTcError loc (UAstE uexpr)
-                ("Incompatible type of argument " ++ show count ++ " of `" ++
-                 show ide ++"'\n\tExpected `" ++ show exptype ++
-                 "' but argument is of type `" ++ show acttype ++ "'")
+        ("Incompatible type of argument " ++ show count ++ " of `" ++
+         show ide ++"'\n\tExpected `" ++ show exptype ++
+         "' but argument is of type `" ++ show acttype ++ "'")
 
 -- Error when the type of expressions on TExprOp is different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
     addTcError loc (UAstE uexpr)
-                ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
-                 show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
-                 "' is of type `" ++ show stype ++ "'")
+        ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
+         show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
+         "' is of type `" ++ show stype ++ "'")
 
 
 -- -------------------------------------------------------------------
@@ -152,22 +152,48 @@ typeCheckVariable (L loc (UVar ide)) = do
     return (L loc $ AVariable (TVar ide var_type) var_type)
 -- UVarArray
 typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
-    (L aeloc aexpr) <- typeCheckExpr lexpr
+    (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr lexpr
     m_var_info <- getVarM lide
     lide' <- liftM (L (getLoc lide)) (getVarNameM (unLoc lide) m_var_info)
     (AType var_type) <- getVarTypeM m_var_info
-    case aexpr of
-         AExpr e' TTypeInt -> do
-             let lexpr' = L aeloc e'
-             return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
-         otherwise  -> do
-             tcIntExprErr luvar
-             let lexpr' = L noSrcSpan (TExprInt 0)
-             return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
+    let exprIsInt     = (AType expr_type) == (AType TTypeInt)
+        exprIsUnknown = (AType expr_type) == (AType TTypeUnknown)
+        varIsArray    = atypeIsArray (AType var_type)
+        varIsUnknown  = (AType var_type)  == (AType TTypeUnknown)
+    if (not exprIsInt) && (not exprIsUnknown)
+       then tcIntExprErr luvar
+       else return ()
+    if (not varIsArray) && (not varIsUnknown)
+       then tcArrayVarErr luvar (AType var_type)
+       else return ()
+    if exprIsInt && varIsArray
+       then do
+           let lexpr' = L aeloc texpr
+           case test expr_type TTypeInt of
+                Just Eq ->
+                    return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
+                Nothing ->
+                    error "in typeCheckVariable"
+       else do
+           return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
+
+-- ---------------------------
+-- Check if a given AType is of TTypeArray
+atypeIsArray :: AType -> Bool
+atypeIsArray (AType (TTypeArray _ _)) = True
+atypeIsArray _ = False
 
 -- ---------------------------
 -- Error when the array index expression is not of type of int
 tcIntExprErr :: Located UVariable -> TcM ()
 tcIntExprErr (L loc (uvar@(UVarArray lide lexpr))) =
     addTcError loc (UAstV uvar)
-                ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
+        ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
+
+-- Error when variable is not of type `array'
+tcArrayVarErr :: Located UVariable -> AType -> TcM ()
+tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
+    addTcError loc (UAstV uvar)
+        ("Incompatible type of variable `" ++ show (unLoc lide) ++
+         "'\n\tExpected `array' but variable is of type `" ++
+         show var_type ++ "'")
