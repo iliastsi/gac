@@ -11,4 +11,3 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
-        Add error in redefinitions

@@ -17,7 +17,7 @@ module SymbolTable (
     -- ** Extract from Table
     getName, getCurrDepth,
     getFunc, getFuncName, getFuncParams, getFuncRetType,
-    getVar, getVarName, getVarType,
+    getVar, getVarName, getVarType, isVarLocal,
 
     -- ** Add to Table
     addFunc, addVar,
@@ -168,11 +168,8 @@ getVarType :: Maybe VarInfo -> AType
 getVarType (Just (VarInfo _ vt _)) = vt
 getVarType Nothing = AType TTypeUnknown
 
-isVarLocal :: Ide -> Table -> Bool
-isVarLocal i Table{variables=v} =
-    case Map.lookup i v of
-         Just _  -> True
-         Nothing -> False
+isVarLocal :: Ide -> Table -> Maybe VarInfo
+isVarLocal i Table{variables=v} = Map.lookup i v
 
 -- Add functions
 addFunc :: Ide -> FunInfo -> Table -> Table
