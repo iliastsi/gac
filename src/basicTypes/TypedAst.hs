@@ -47,7 +47,7 @@ data TStmt
     | TStmtFun AFuncCall
     | TStmtIf LTCond LTStmt (Maybe LTStmt)
     | TStmtWhile LTCond LTStmt
-    | TStmtReturn (Maybe LAExpr )
+    | TStmtReturn (Maybe LAExpr)
 
 -- ---------------------------
 type LTExpr a = Located (TExpr a)

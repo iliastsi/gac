@@ -1,8 +1,8 @@
 ** Fix in Lexer:
-	Add error messages when include more than one char in \'
+        Add error messages when include more than one char in \'
 
 ** Fix Parser:
-	Express "this should be between spaces"
+        Express "this should be between spaces"
         Write better error messages (and enable parsing to continue)
         Activate cpp for Parser.y and rename it to Parser.y.pp
         Add the grammar rule to write `<string-literal>[<int>]>'
@@ -11,6 +11,3 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
-
-** Fix in TypeCheck:
-        Create new function to typecheck UFuncCall

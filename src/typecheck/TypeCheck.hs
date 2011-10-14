@@ -45,50 +45,84 @@ import Control.Monad
 -- -------------------------------------------------------------------
 -- TypeCheck UStmt
 
-typeCheckStmt :: Located UStmt -> TcM (Maybe AType, Located TStmt)
+typeCheckStmt :: AType -> Located UStmt -> TcM (Bool, Located TStmt)
 -- UStmtNothing
-typeCheckStmt (L loc UStmtNothing) = do
-    return (Nothing, L loc TStmtNothing)
+typeCheckStmt ret_type (L loc UStmtNothing) = do
+    return (False, L loc TStmtNothing)
 -- UStmtAssign
-typeCheckStmt lustmt@(L loc (UStmtAssign luvar luexpr)) = do
+typeCheckStmt ret_type lustmt@(L loc (UStmtAssign luvar luexpr)) = do
     lavar@(L locv (AVariable tvar var_type)) <- typeCheckVariable luvar
-    laexpr@(L loce (AExpr texpr expr_type))   <- typeCheckExpr luexpr
+    laexpr@(L loce (AExpr texpr expr_type))  <- typeCheckExpr luexpr
     if (AType var_type) == (AType TTypeUnknown) || (AType expr_type) == (AType TTypeUnknown)
-       then return (Nothing, L loc TStmtNothing)
+       then return (False, L loc TStmtNothing)
        else do
            case test var_type expr_type of
                 Just Eq -> do
-                    return (Nothing, L loc $ TStmtAssign lavar laexpr)
+                    return (False, L loc $ TStmtAssign lavar laexpr)
                 Nothing -> do
                     tcAssignErr lustmt (AType var_type) (AType expr_type)
-                    return (Nothing, L loc TStmtNothing)
+                    return (False, L loc TStmtNothing)
 -- UStmtCompound
-typeCheckStmt (L loc (UStmtCompound lustmts)) = do
-    (ret_type, ltstmts) <- tcCompoundStmt loc lustmts
-    return (ret_type, L loc $ TStmtCompound ltstmts)
+typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
+    (does_ret, ltstmts) <- tcCompoundStmt loc ret_type lustmts
+    return (does_ret, L loc $ TStmtCompound ltstmts)
+-- UStmtFun
+typeCheckStmt ret_type (L loc (UStmtFun f)) = do
+    (L _ afunc) <- typeCheckFunc (L loc f)
+    return (False, L loc $ TStmtFun afunc)
+-- UStmtIf
+typeCheckStmt ret_type (L loc (UStmtIf lucond lustmt1 m_lustmt2)) = do
+    ltcond <- typeCheckCond lucond
+    (dsr1, ltstmt1) <- typeCheckStmt ret_type lustmt1
+    case m_lustmt2 of
+         Nothing ->
+             return (False, L loc $ TStmtIf ltcond ltstmt1 Nothing)
+         Just lustmt2 -> do
+             (dsr2, ltstmt2) <- typeCheckStmt ret_type lustmt2
+             return (dsr1 && dsr2, L loc $ TStmtIf ltcond ltstmt1 (Just ltstmt2))
+-- UStmtWhile
+typeCheckStmt ret_type (L loc (UStmtWhile lucond lustmt)) = do
+    ltcond <- typeCheckCond lucond
+    (does_ret, ltstmt) <- typeCheckStmt ret_type lustmt
+    return (False, L loc $ TStmtWhile ltcond ltstmt)
+-- UStmtReturn
+typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
+    case m_expr of
+         Nothing -> do
+             if ret_type /= (AType TTypeProc)
+                then tcRetStmtErr lustmt ret_type (AType TTypeProc)
+                else return ()
+             return (True, L loc $ TStmtReturn Nothing)
+         Just luexpr -> do
+             laexpr@(L loce (AExpr texpr expr_type)) <- typeCheckExpr luexpr
+             if ret_type /= (AType expr_type)
+                then tcRetStmtErr lustmt ret_type (AType expr_type)
+                else return ()
+             return (True, L loc $ TStmtReturn (Just laexpr))
 
 -- ---------------------------
 -- Type Check compound stmts
--- As first argument (AType) we have the return type of the block
-tcCompoundStmt :: SrcSpan -> [Located UStmt] -> TcM (Maybe AType, [Located TStmt])
-tcCompoundStmt _ [] = do
-    return (Nothing, [])
-tcCompoundStmt loc (lustmt:lustmts) = do
-    (r1, ltstmt)  <- typeCheckStmt lustmt
-    if r1 == Nothing
+-- As first argument (SrcSpan) we have to srcspan of the compound stmt
+-- As second argument (AType) we have the return type of the block
+tcCompoundStmt :: SrcSpan -> AType -> [Located UStmt] -> TcM (Bool, [Located TStmt])
+tcCompoundStmt _ _ [] = do
+    return (False, [])
+tcCompoundStmt loc ret_type (lustmt:lustmts) = do
+    (r1, ltstmt)  <- typeCheckStmt ret_type lustmt
+    if not r1
        then do
-           (r2, ltstmts) <- tcCompoundStmt loc lustmts
+           (r2, ltstmts) <- tcCompoundStmt loc ret_type lustmts
            return (r2, ltstmt:ltstmts)
        else do
            if null lustmts
               then do
-                  return (r1, [ltstmt])
+                  return (True, [ltstmt])
               else do
                   let unreach_start = srcSpanStart (getLoc (head lustmts))
                       unreach_end   = srcSpanEnd loc
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
-                  return (r1, [ltstmt])
+                  return (True, [ltstmt])
 
 -- ---------------------------
 -- Error when the types of expression and variable in an assigment are different
@@ -103,6 +137,13 @@ tcUnreachableErr :: SrcSpan -> TcM ()
 tcUnreachableErr loc =
     addUnreachWarning loc
         ("Dead code has been eliminated")
+
+-- Error when the return type is different from the one in function header
+tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
+tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype =
+    addTcError loc (UAstS ustmt)
+        ("Incopatible return type\n\tExpected `" ++ show exptype ++
+         "' but instead function returned `" ++ show acttype ++ "'")
 
 
 -- -------------------------------------------------------------------
