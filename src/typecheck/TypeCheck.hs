@@ -44,7 +44,7 @@ import Control.Monad
 
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
-typeCheckDef :: Located UDef -> TcM (Located TDef)
+--typeCheckDef :: Located UDef -> TcM (Located TDef)
 -- UDefFun (without parameters)
 
 
@@ -253,14 +253,14 @@ typeCheckVariable :: Located UVariable -> TcM (Located AVariable)
 -- UVar
 typeCheckVariable (L loc (UVar ide)) = do
     m_var_info <- getVarM (L loc ide)
-    ide' <- getVarNameM ide m_var_info
+    ide' <- getVarNameM m_var_info
     (AType var_type) <- getVarTypeM m_var_info
     return (L loc $ AVariable (TVar ide var_type) var_type)
 -- UVarArray
 typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
     (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr lexpr
     m_var_info <- getVarM lide
-    lide' <- liftM (L (getLoc lide)) (getVarNameM (unLoc lide) m_var_info)
+    lide' <- liftM (L (getLoc lide)) (getVarNameM m_var_info)
     (AType var_type) <- getVarTypeM m_var_info
     let exprIsInt     = (AType expr_type) == (AType TTypeInt)
         exprIsUnknown = (AType expr_type) == (AType TTypeUnknown)
@@ -311,14 +311,15 @@ tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
 typeCheckFunc :: Located UFuncCall -> TcM (Located AFuncCall)
 typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
     m_fun_info <- getFuncM lide
+    lide' <- liftM (L (getLoc lide)) (getFuncNameM m_fun_info)
     AType ret_type <- getFuncRetTypeM m_fun_info
     apar_type <- getFuncParamsM m_fun_info
     if (AType ret_type) /= (AType TTypeUnknown)
        then do
            lapars <- tcFunPar lufunc apar_type
-           return (L loc $ AFuncCall (TFuncCall lide ret_type lapars) ret_type)
+           return (L loc $ AFuncCall (TFuncCall lide' ret_type lapars) ret_type)
        else do
-           return (L loc $ AFuncCall (TFuncCall lide TTypeUnknown []) TTypeUnknown)
+           return (L loc $ AFuncCall (TFuncCall lide' TTypeUnknown []) TTypeUnknown)
 
 -- ---------------------------
 -- Type Check function parameters

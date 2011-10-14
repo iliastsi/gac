@@ -137,8 +137,8 @@ getFuncM lide@(L _ ide) = do
              addScopeError lide ""
              return Nothing
 
-getFuncNameM :: Ide -> Maybe FunInfo -> TcM String
-getFuncNameM = ((.).(.)) return  getFuncName
+getFuncNameM :: Maybe FunInfo -> TcM String
+getFuncNameM = return . getFuncName
 
 getFuncParamsM :: Maybe FunInfo -> TcM [AType]
 getFuncParamsM = return . getFuncParams
@@ -156,26 +156,26 @@ getVarM lide@(L _ ide) = do
              addScopeError lide ""
              return Nothing
 
-getVarNameM :: Ide -> Maybe VarInfo -> TcM String
-getVarNameM = ((.).(.)) return  getVarName
+getVarNameM :: Maybe VarInfo -> TcM String
+getVarNameM = return . getVarName
 
 getVarTypeM :: Maybe VarInfo -> TcM AType
 getVarTypeM = return . getVarType
 
 -- Add functions
-addFuncM :: Ide -> [AType] -> AType -> TcM ()
-addFuncM ide pt rt = do
+addFuncM :: Located Ide -> [AType] -> AType -> TcM ()
+addFuncM lide@(L _ ide) pt rt = do
     u <- getUnique
     t <- getTable
-    let finfo = FunInfo pt rt u
+    let finfo = FunInfo lide pt rt u
     setTable (addFunc ide finfo t)
 
 -- Add variables
-addVarM :: Ide -> AType -> TcM ()
-addVarM ide vt = do
+addVarM :: Located Ide -> AType -> TcM ()
+addVarM lide@(L _ ide) vt = do
     u <- getUnique
     t <- getTable
-    let vinfo = VarInfo vt u
+    let vinfo = VarInfo lide vt u
     setTable (addVar ide vinfo t)
 
 -- Scopes
