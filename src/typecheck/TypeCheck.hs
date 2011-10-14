@@ -44,8 +44,9 @@ import Control.Monad
 
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
---typeCheckDef :: Located UDef -> TcM (Located TDef)
+--typeCheckDef :: Located UDef -> TcM (Located ADef)
 -- UDefFun (without parameters)
+    
 
 
 -- -------------------------------------------------------------------
@@ -305,6 +306,25 @@ tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
         ("Incompatible type of variable `" ++ show (unLoc lide) ++
          "'\n\tExpected `array' but variable is of type `" ++
          show var_type ++ "'")
+
+
+-- -------------------------------------------------------------------
+-- TypeCheck UType
+
+typeCheckType :: Located UType -> TcM (Located AType)
+-- UTypeInt
+typeCheckType (L loc UTypeInt) =
+    return (L loc $ AType TTypeInt)
+-- UTypeChar
+typeCheckType (L loc UTypeChar) =
+    return (L loc $ AType TTypeChar)
+-- UTypeProc
+typeCheckType (L loc UTypeProc) =
+    return (L loc $ AType TTypeProc)
+-- UTypeArray
+typeCheckType (L loc (UTypeArray (l, utype))) = do
+    (L _ (AType ttype)) <- typeCheckType (L noSrcSpan utype)
+    return (L loc $ AType (TTypeArray l ttype))
 
 
 -- -------------------------------------------------------------------
