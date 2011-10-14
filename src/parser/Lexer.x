@@ -31,7 +31,7 @@ module Lexer (
     lexer, lexDummy, getPState,
     getInput, setInput, AlexInput(..),
     getSrcLoc, setSrcLoc,
-    getMessages,
+    getPMessages,
     addPWarning, addPError
   ) where
 
@@ -380,8 +380,8 @@ addPError loc tok msg
     = P $ \s@(PState{messages=msgs}) ->
         POk s{ messages=(addError (mkErrMsg loc (ParseError tok) msg) msgs) } ()
 
-getMessages :: PState -> Messages
-getMessages PState{messages=ms} = ms
+getPMessages :: PState -> Messages
+getPMessages PState{messages=ms} = ms
 
 -- -------------------------------------------------------------------
 -- Construct a parse error

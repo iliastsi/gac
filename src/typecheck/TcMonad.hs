@@ -12,7 +12,7 @@ module TcMonad (
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getTable, getUnique, setTable,
     mkTcState, addTcWarning, addTcError, addScopeError, addUnreachWarning,
-    getMessages,
+    getTcMessages,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
@@ -120,8 +120,8 @@ addRedefError ide curr prev = do
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg curr (RedefError ide) msg) msgs) } ()
 
-getMessages :: TcState -> Messages
-getMessages TcState{messages=ms} = ms
+getTcMessages :: TcState -> Messages
+getTcMessages TcState{messages=ms} = ms
 
 
 ----------------------------------------------------------------------
@@ -146,7 +146,7 @@ getFuncM lide@(L _ ide) = do
              addScopeError lide ""
              return Nothing
 
-getFuncNameM :: Maybe FunInfo -> TcM String
+getFuncNameM :: Maybe FunInfo -> TcM Ide
 getFuncNameM = return . getFuncName
 
 getFuncParamsM :: Maybe FunInfo -> TcM [AType]
@@ -166,7 +166,7 @@ getVarM lide@(L _ ide) = do
              addScopeError lide ""
              return Nothing
 
-getVarNameM :: Maybe VarInfo -> TcM String
+getVarNameM :: Maybe VarInfo -> TcM Ide
 getVarNameM = return . getVarName
 
 getVarTypeM :: Maybe VarInfo -> TcM AType
@@ -174,7 +174,7 @@ getVarTypeM = return . getVarType
 
 -- ---------------------------
 -- Add functions
-addFuncM :: Located Ide -> [AType] -> AType -> TcM ()
+addFuncM :: Located Ide -> [AType] -> AType -> TcM Ide
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
     case getFunc ide t of
@@ -187,10 +187,11 @@ addFuncM lide@(L loc ide) pt rt = do
     u <- getUnique
     let finfo = FunInfo lide pt rt u
     setTable (addFunc ide finfo t)
+    return (getFuncName (Just finfo))
 
 -- ---------------------------
 -- Add variables
-addVarM :: Located Ide -> AType -> TcM ()
+addVarM :: Located Ide -> AType -> TcM Ide
 addVarM lide@(L loc ide) vt = do
     t <- getTable
     case isVarLocal ide t of
@@ -198,9 +199,11 @@ addVarM lide@(L loc ide) vt = do
              u <- getUnique
              let vinfo = VarInfo lide vt u
              setTable (addVar ide vinfo t)
-         Just (VarInfo lprev _ _) ->
+             return (getVarName (Just vinfo))
+         Just (VarInfo lprev _ _) -> do
              -- Here we don't re-insert the variable
              addRedefError ide loc (getLoc lprev)
+             return "unknown"
 
 -- ---------------------------
 -- Scopes
