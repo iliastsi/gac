@@ -146,9 +146,11 @@ tcUnreachableErr loc =
 
 -- Error when the return type is different from the one in function header
 tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
-tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype =
+tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
+    fun_name <- getNameM
     addTcError loc (UAstS ustmt)
-        ("Incopatible return type\n\tExpected `" ++ show exptype ++
+        ("Incopatible return type of function `" ++  show fun_name ++
+         "'\n\tExpected `" ++ show exptype ++
          "' but instead function returned `" ++ show acttype ++ "'")
 
 
