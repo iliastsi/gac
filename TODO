@@ -11,3 +11,8 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
+        Add error in redefinitions
+        Change getFuncNameM / getVarNameM
+
+** Fix in TypeCheck:
+        Add function name in tcRetStmtErr (with getNameM)

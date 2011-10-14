@@ -28,6 +28,7 @@ module SymbolTable (
 
 import TypedAst (AType(..), TType(..))
 import UnTypedAst (Ide)
+import SrcLoc
 
 import qualified Data.Map as Map
 
@@ -36,11 +37,13 @@ import qualified Data.Map as Map
 -- Symbol Table
 
 data VarInfo = VarInfo {
+    varName     :: Located Ide, -- variable location and name
     varType     :: AType,       -- variable type
     varId       :: !Int         -- variable unique id
   }
 
 data FunInfo = FunInfo {
+    funName     :: Located Ide, -- function location and name
     funParType  :: [AType],     -- parameters types
     funRetType  :: AType,       -- return type
     funId       :: !Int         -- function unique id
@@ -68,29 +71,50 @@ data Table = Table {
 initTable :: Ide -> Table
 initTable i = Table 1 (Just predefinedTable) Map.empty Map.empty i
 
+-- strict library SrcSpan constructor:
+{-# INLINE lL #-}
+lL :: a -> Located a
+lL a =
+    let lspan = mkGeneralSrcSpan "<library function>"
+    in lspan `seq` a `seq` L lspan a
+
 predefinedTable :: Table
 predefinedTable =
     Table 0 Nothing Map.empty
         (( -- Input/output
-          Map.insert "writeInteger" (FunInfo [AType TTypeInt]  (AType TTypeProc) 0) .
-          Map.insert "writeByte"    (FunInfo [AType TTypeChar] (AType TTypeProc) 0) .
-          Map.insert "writeChar"    (FunInfo [AType TTypeChar] (AType TTypeProc) 0) .
-          Map.insert "writeString"  (FunInfo [AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
-          Map.insert "readInteger"  (FunInfo []                (AType TTypeInt)  0) .
-          Map.insert "readByte"     (FunInfo []                (AType TTypeChar) 0) .
-          Map.insert "readChar"     (FunInfo []                (AType TTypeChar) 0) .
-          Map.insert "readString"   (FunInfo [AType TTypeInt, AType (TTypeArray 0 TTypeChar)]
+          Map.insert "writeInteger"
+                (FunInfo (lL "writeInteger") [AType TTypeInt] (AType TTypeProc) 0) .
+          Map.insert "writeByte"
+                (FunInfo (lL "writeByte") [AType TTypeChar] (AType TTypeProc) 0) .
+          Map.insert "writeChar"
+                (FunInfo (lL "writeChar") [AType TTypeChar] (AType TTypeProc) 0) .
+          Map.insert "writeString"
+                (FunInfo (lL "writeString") [AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
+          Map.insert "readInteger"
+                (FunInfo (lL "readInteger") [] (AType TTypeInt) 0) .
+          Map.insert "readByte"
+                (FunInfo (lL "readByte") [] (AType TTypeChar) 0) .
+          Map.insert "readChar"
+                (FunInfo (lL "readChar") [] (AType TTypeChar) 0) .
+          Map.insert "readString"
+                (FunInfo (lL "readString") [AType TTypeInt, AType (TTypeArray 0 TTypeChar)]
                                                 (AType TTypeProc) 0) .
            -- conversions
-          Map.insert "extend"       (FunInfo [AType TTypeChar] (AType TTypeInt)  0) .
-          Map.insert "shrink"       (FunInfo [AType TTypeInt]  (AType TTypeChar) 0) .
+          Map.insert "extend"
+                (FunInfo (lL "extend") [AType TTypeChar] (AType TTypeInt) 0) .
+          Map.insert "shrink"
+                (FunInfo (lL "shrink") [AType TTypeInt] (AType TTypeChar) 0) .
            -- strings
-          Map.insert "strlen"       (FunInfo [AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
-          Map.insert "strcmp"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+          Map.insert "strlen"
+                (FunInfo (lL "strlen") [AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
+          Map.insert "strcmp"
+                (FunInfo (lL "strcmp") [AType (TTypeArray 0 TTypeChar),
                                                 AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
-          Map.insert "strcpy"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+          Map.insert "strcpy"
+                (FunInfo (lL "strcpy") [AType (TTypeArray 0 TTypeChar),
                                                 AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
-          Map.insert "strcat"       (FunInfo [AType (TTypeArray 0 TTypeChar),
+          Map.insert "strcat"
+                (FunInfo (lL "strcat") [AType (TTypeArray 0 TTypeChar),
                                                 AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0)
          ) -- the end
           Map.empty
@@ -119,16 +143,16 @@ getFunc :: Ide -> Table -> Maybe FunInfo
 getFunc i t =
     nested t (\Table{functions=f} -> Map.lookup i f)
 
-getFuncName :: Ide -> Maybe FunInfo -> String
-getFuncName i (Just (FunInfo _ _ fid)) = show i ++ "_" ++ show fid
-getFuncName i Nothing = show i
+getFuncName :: Maybe FunInfo -> String
+getFuncName (Just (FunInfo n _ _ fid)) = show n ++ "_" ++ show fid
+getFuncName Nothing = "unknown"
 
 getFuncParams :: Maybe FunInfo -> [AType]
-getFuncParams (Just (FunInfo fpt _ _)) = fpt
+getFuncParams (Just (FunInfo _ fpt _ _)) = fpt
 getFuncParams Nothing = []
 
 getFuncRetType :: Maybe FunInfo -> AType
-getFuncRetType (Just (FunInfo _ frt _)) = frt
+getFuncRetType (Just (FunInfo _ _ frt _)) = frt
 getFuncRetType Nothing = AType TTypeUnknown
 
 -- Get variables
@@ -136,12 +160,12 @@ getVar :: Ide -> Table -> Maybe VarInfo
 getVar i v =
     nested v (\Table{variables=v} -> Map.lookup i v)
 
-getVarName :: Ide -> Maybe VarInfo -> String
-getVarName i (Just (VarInfo _ vid)) = show i ++ "_" ++ show vid
-getVarName i Nothing = show i
+getVarName :: Maybe VarInfo -> String
+getVarName (Just (VarInfo n _ vid)) = show n ++ "_" ++ show vid
+getVarName Nothing = "unknown"
 
 getVarType :: Maybe VarInfo -> AType
-getVarType (Just (VarInfo vt _)) = vt
+getVarType (Just (VarInfo _ vt _)) = vt
 getVarType Nothing = AType TTypeUnknown
 
 isVarLocal :: Ide -> Table -> Bool

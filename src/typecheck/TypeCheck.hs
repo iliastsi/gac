@@ -43,6 +43,12 @@ import Control.Monad
 
 
 -- -------------------------------------------------------------------
+-- TypeCheck UDef
+typeCheckDef :: Located UDef -> TcM (Located TDef)
+-- UDefFun (without parameters)
+
+
+-- -------------------------------------------------------------------
 -- TypeCheck UStmt
 
 typeCheckStmt :: AType -> Located UStmt -> TcM (Bool, Located TStmt)
