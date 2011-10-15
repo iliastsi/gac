@@ -44,9 +44,27 @@ import Control.Monad
 
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
---typeCheckDef :: Located UDef -> TcM (Located ADef)
+typeCheckDef :: Located UDef -> TcM (Located ADef)
 -- UDefFun (without parameters)
-    
+typeCheckDef (L loc (UDefFun lide [] lutype ludefs lustmt)) = do
+    (L type_loc (AType ftype)) <- typeCheckType lutype
+    fname <- liftM (L (getLoc lide)) (addFuncM lide [] (AType ftype))
+    rawOpenScopeM (unLoc lide)
+    ladefs <- mapM typeCheckDef ludefs
+    (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
+    if (not does_ret) && ((AType ftype) /= (AType TTypeProc))
+       then tcNoRetErr (unLoc lide) (getLoc ltstmt)
+       else return ()
+    rawCloseScopeM
+    return (L loc $ ADef (TDefFunE fname (L type_loc ftype) ladefs ltstmt) ftype)
+
+-- ---------------------------
+-- Error when functions doesn't return a value
+tcNoRetErr :: Ide -> SrcSpan -> TcM ()
+tcNoRetErr ide loc = do
+    -- we have to take the end of statements location
+    let loc' = srcLocSpan (srcSpanEnd loc)
+    addNoRetError loc' ide ""
 
 
 -- -------------------------------------------------------------------
@@ -135,7 +153,7 @@ tcCompoundStmt loc ret_type (lustmt:lustmts) = do
 -- Error when the types of expression and variable in an assigment are different
 tcAssignErr :: Located UStmt -> AType -> AType -> TcM ()
 tcAssignErr (L loc ustmt@(UStmtAssign _ _)) vtype etype =
-    addTcError loc (UAstS ustmt)
+    addTypeError loc (UAstS ustmt)
         ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
          show etype ++ "'")
 
@@ -149,7 +167,7 @@ tcUnreachableErr loc =
 tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
 tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
     fun_name <- getNameM
-    addTcError loc (UAstS ustmt)
+    addTypeError loc (UAstS ustmt)
         ("Incopatible return type of function `" ++  show fun_name ++
          "'\n\tExpected `" ++ show exptype ++
          "' but instead function returned `" ++ show acttype ++ "'")
@@ -201,7 +219,7 @@ typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
 -- Error when the types of expressions on TExprOp are different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
-    addTcError loc (UAstE uexpr)
+    addTypeError loc (UAstE uexpr)
         ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
          show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
          "' is of type `" ++ show stype ++ "'")
@@ -243,7 +261,7 @@ typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
 -- Error when the types of expressions on TCondOp are different
 tcOpCondErr :: Located UCond -> AType -> AType -> TcM ()
 tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
-    addTcError loc (UAstC ucond)
+    addTypeError loc (UAstC ucond)
         ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
          show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
          "' is of type `" ++ show stype ++ "'")
@@ -296,13 +314,13 @@ atypeIsArray _ = False
 -- Error when the array index expression is not of type of int
 tcIntExprErr :: Located UVariable -> TcM ()
 tcIntExprErr (L loc (uvar@(UVarArray lide lexpr))) =
-    addTcError loc (UAstV uvar)
+    addTypeError loc (UAstV uvar)
         ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
 
 -- Error when variable is not of type `array'
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
 tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
-    addTcError loc (UAstV uvar)
+    addTypeError loc (UAstV uvar)
         ("Incompatible type of variable `" ++ show (unLoc lide) ++
          "'\n\tExpected `array' but variable is of type `" ++
          show var_type ++ "'")
@@ -371,14 +389,14 @@ tcFunPar' ide _  _  _   = error "in tcFunPar'"
 -- Error when the function parameter's number is different from the prototype
 tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
 tcParLenErr (L loc ufunc@(UFuncCall lide lupars)) pars_len type_len =
-    addTcError loc (UAstF ufunc)
+    addTypeError loc (UAstF ufunc)
         ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
          show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
-    addTcError loc (UAstE uexpr)
+    addTypeError loc (UAstE uexpr)
         ("Incompatible type of argument " ++ show count ++ " of function `" ++
          show ide ++"'\n\tExpected `" ++ show exptype ++
          "' but argument is of type `" ++ show acttype ++ "'")

@@ -27,11 +27,11 @@ import Control.Monad
 type LTDef a = Located (TDef a)
 
 data TDef a where
-    TDefFun  :: LIde -> TDef a   -> LTType b -> [LADef] -> TDef (a -> b)
-    TDefFunE :: LIde             -> LTType b -> [LADef] -> TDef b
-    TDefParH :: LIde -> Mode     -> LTType a -> TDef b  -> TDef (a -> b)
-    TDefParT :: LIde -> Mode     -> LTType a            -> TDef a
-    TDefVar  :: LIde -> LTType a                        -> TDef a
+    TDefFun  :: LIde -> TDef a   -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
+    TDefFunE :: LIde             -> LTType b -> [LADef] -> LTStmt -> TDef b
+    TDefParH :: LIde -> Mode     -> LTType a -> TDef b            -> TDef (a -> b)
+    TDefParT :: LIde -> Mode     -> LTType a                      -> TDef a
+    TDefVar  :: LIde -> LTType a                                  -> TDef a
 
 type LADef = Located ADef
 

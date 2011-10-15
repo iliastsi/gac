@@ -11,7 +11,8 @@ module TcMonad (
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getTable, getUnique, setTable,
-    mkTcState, addTcWarning, addTcError, addScopeError, addUnreachWarning,
+    mkTcState, addTypeWarning, addTypeError, addScopeError,
+    addUnreachWarning, addNoRetError,
     getTcMessages,
 
     -- symbol table functionality
@@ -93,13 +94,13 @@ mkTcState t =
         unique      = 1
     }
 
-addTcWarning :: SrcSpan -> UAst -> String -> TcM ()
-addTcWarning loc expr msg =
+addTypeWarning :: SrcSpan -> UAst -> String -> TcM ()
+addTypeWarning loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addWarning (mkWarnMsg loc (TypeError expr) msg) msgs) } ()
 
-addTcError :: SrcSpan -> UAst -> String -> TcM ()
-addTcError loc expr msg =
+addTypeError :: SrcSpan -> UAst -> String -> TcM ()
+addTypeError loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (TypeError expr) msg) msgs) } ()
 
@@ -119,6 +120,11 @@ addRedefError ide curr prev = do
                "          " ++ show curr)
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg curr (RedefError ide) msg) msgs) } ()
+
+addNoRetError :: SrcSpan -> Ide -> String -> TcM ()
+addNoRetError loc ide msg =
+    TcM $ \s@(TcState{messages=msgs}) ->
+        TcOk s{ messages=(addError (mkErrMsg loc (NoRetError ide) msg) msgs) } ()
 
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms

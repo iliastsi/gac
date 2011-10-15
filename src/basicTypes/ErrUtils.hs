@@ -38,6 +38,7 @@ data MsgCode
   | ScopeError Ide
   | UnreachError        -- unreachable code
   | RedefError Ide      -- function/variable redefinition
+  | NoRetError Ide      -- missing return statement
   | UnknownError
 
 data Severity
@@ -122,6 +123,7 @@ instance Show MsgCode where
     show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
     show UnreachError         = "Unreachable code"
     show (RedefError ide)     = "Conflicting definitions for `" ++ show ide ++ "'"
+    show (NoRetError ide)     = "Control reaches end of non-void function `" ++ show ide ++ "'"
     show UnknownError         = "Unknown Error :@"
 
 instance Show Message where
