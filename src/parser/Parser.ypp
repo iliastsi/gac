@@ -60,7 +60,7 @@ incorrect.
 
 /*
  * We must expand these macros *before* running Happy, which is why this file is
- * Parser.y.pp rather than just Parser.y - we run the C pre-processor first.
+ * Parser.ypp rather than just Parser.y - we run the C pre-processor first.
  */
 #define L0   L noSrcSpan
 #define L1   sL (getLoc $1)
@@ -133,7 +133,7 @@ program :: { Located UDef }
 
 funcdef :: { Located UDef }
     : ID fpar ':' rtype localdefs compoundstmt
-                                    { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UDefFun (sL span i) $2 $4 (reverse $5) $6 }
+                                    { LL $ let (L span (ITid i)) = $1 in UDefFun (sL span i) $2 $4 (reverse $5) $6 }
     | error                         {% srcParseFail "expected function decleration" }
 
 fpar :: { [Located UDef] }
@@ -148,24 +148,24 @@ fparlist :: { [Located UDef] }
     | fparlist ',' fpardef          { $3 : $1 }
 
 fpardef :: { Located UDef }
-    : ID ':' type                   { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByVal $3 }
-    | ID ':' REFERENCE type         { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByRef $4 }
+    : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByVal $3 }
+    | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByRef $4 }
     | ID error                      {% srcParseFail "missing `:'for type definition" }
     | error                         {% srcParseFail "expected parameter definition name" }
 
 type :: { Located UType }
     : datatype                      { $1 }
-    | datatype '[' ']'              { sL (comb2 $1 $>) $ UTypeArray (0, unLoc $1) }
+    | datatype '[' ']'              { LL $ UTypeArray (0, unLoc $1) }
     | datatype '[' error            {% srcParseFail "expected `]'" }
     | error                         {% srcParseFail "unknown datatype" }
 
 datatype :: { Located UType }
-    : INT                           { sL (getLoc $1) $ UTypeInt }
-    | BYTE                          { sL (getLoc $1) $ UTypeChar }
+    : INT                           { L1 $ UTypeInt }
+    | BYTE                          { L1 $ UTypeChar }
 
 rtype :: { Located UType}
     : datatype                      { $1 }
-    | PROC                          { sL (getLoc $1) $ UTypeProc }
+    | PROC                          { L1 $ UTypeProc }
     | error                         {% srcParseFail "unknown datatype" }
 
 localdefs :: { [Located UDef] }
@@ -177,9 +177,9 @@ localdef :: { Located UDef }
     | vardef                        { $1 }
 
 vardef :: { Located UDef }
-    : ID ':' datatype ';'           { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
+    : ID ':' datatype ';'           { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
     | ID ':' datatype '[' DIGIT ']' ';'
-                                    { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1; (ITdigit d) = unLoc $5 in UDefVar (sL span i) (sL (comb2 $3 $6) (UTypeArray (d, unLoc $3))) }
+                                    { LL $ let (L span (ITid i)) = $1; (ITdigit d) = unLoc $5 in UDefVar (sL span i) (sL (comb2 $3 $6) (UTypeArray (d, unLoc $3))) }
     | ID ':' datatype '[' DIGIT ']' error
                                     {% srcParseFail "missing `;'" }
     | ID ':' datatype '[' DIGIT error
@@ -189,41 +189,41 @@ vardef :: { Located UDef }
     | ID error                      {% srcParseFail "missing `:' for type definition" }
 
 stmt :: { Located UStmt }
-    : ';'                           { sL (getLoc $1) $ UStmtNothing }
-    | lvalue '=' expr ';'           { sL (comb2 $1 $>) $ UStmtAssign $1 $3 }
+    : ';'                           { L1 $ UStmtNothing }
+    | lvalue '=' expr ';'           { LL $ UStmtAssign $1 $3 }
     | lvalue '=' expr error         {% srcParseFail "missing `;'" }
     | lvalue '=' error              {% srcParseFail "not a valid expression" }
     | ID error                      {% srcParseFail "expected an lvalue or `(' for function" }
     | compoundstmt                  { $1 }
-    | funcall ';'                   { sL (comb2 $1 $>) $ UStmtFun (unLoc $1) }
+    | funcall ';'                   { LL $ UStmtFun (unLoc $1) }
     | funcall error                 {% srcParseFail "missing `;'" }
-    | IF '(' cond ')' stmt          { sL (comb2 $1 $>) $ UStmtIf $3 $5 Nothing}
+    | IF '(' cond ')' stmt          { LL $ UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
-                                    { sL (comb2 $1 $>) $ UStmtIf $3 $5 (Just $7) }
+                                    { LL $ UStmtIf $3 $5 (Just $7) }
     | IF '(' cond error             {% srcParseFail "unclosed `)'" }
     | IF '(' error                  {% srcParseFail "not a valid condition" }
     | IF error                      {% srcParseFail "expected `('" }
-    | WHILE '(' cond ')' stmt       { sL (comb2 $1 $>) $ UStmtWhile $3 $5 }
+    | WHILE '(' cond ')' stmt       { LL $ UStmtWhile $3 $5 }
     | WHILE '(' cond error          {% srcParseFail "unclosed `)'" }
     | WHILE '(' error               {% srcParseFail "not a valid condition" }
     | WHILE error                   {% srcParseFail "expected `('" }
-    | RETURN ';'                    { sL (comb2 $1 $>) $ UStmtReturn Nothing }
+    | RETURN ';'                    { LL $ UStmtReturn Nothing }
     | RETURN error                  {% srcParseFail "missing `;'" }
-    | RETURN expr ';'               { sL (comb2 $1 $>) $ UStmtReturn (Just $2) }
+    | RETURN expr ';'               { LL $ UStmtReturn (Just $2) }
     | RETURN expr error             {% srcParseFail "missing `;'" }
     | error                         {% srcParseFail "not a valid statement" }
 
 compoundstmt :: { Located UStmt }
-    : '{' stmts '}'                 { sL (comb2 $1 $>) $ UStmtCompound (reverse $2) }
+    : '{' stmts '}'                 { LL $ UStmtCompound (reverse $2) }
 
 stmts :: { [Located UStmt] }
     : {- nothing -}                 { [] }
     | stmts stmt                    { $2 : $1 }
 
 funcall :: { Located UFuncCall }
-    : ID '(' ')'                    { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) [] }
+    : ID '(' ')'                    { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) [] }
     | ID '(' error                  {% srcParseFail "unclosed `)'" }
-    | ID '(' exprlist ')'           { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) (reverse $3) }
+    | ID '(' exprlist ')'           { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) (reverse $3) }
     | ID '(' exprlist error         {% srcParseFail "unclosed `)'" }
 
 exprlist :: { [Located UExpr] }
@@ -232,57 +232,57 @@ exprlist :: { [Located UExpr] }
     | exprlist ',' error            {% srcParseFail "not a valid expression" }
 
 expr :: { Located UExpr }
-    : DIGIT                         { sL (getLoc $1) $ let (ITdigit i) = (unLoc $1) in UExprInt i }
-    | CHAR                          { sL (getLoc $1) $ let (ITchar i) = (unLoc $1) in UExprChar i }
-    | STRING                        { sL (getLoc $1) $ let (ITstring i) = (unLoc $1) in UExprString i }
-    | lvalue                        { sL (getLoc $1) $ let v = unLoc $1 in UExprVar v }
-    | '(' expr ')'                  { sL (comb2 $1 $>) $ let e = unLoc $2 in e}
+    : DIGIT                         { L1 $ let (ITdigit i) = (unLoc $1) in UExprInt i }
+    | CHAR                          { L1 $ let (ITchar i) = (unLoc $1) in UExprChar i }
+    | STRING                        { L1 $ let (ITstring i) = (unLoc $1) in UExprString i }
+    | lvalue                        { L1 $ let v = unLoc $1 in UExprVar v }
+    | '(' expr ')'                  { LL $ let e = unLoc $2 in e}
     | '(' expr error                {% srcParseFail "unclosed `)'" }
     | '(' error                     {% srcParseFail "not a valid expression" }
-    | funcall                       { sL (getLoc $1) $ let f = unLoc $1 in UExprFun f }
-    | '+' expr %prec SIGN           { sL (comb2 $1 $>) $ let e = unLoc $2 in e}
+    | funcall                       { L1 $ let f = unLoc $1 in UExprFun f }
+    | '+' expr %prec SIGN           { LL $ let e = unLoc $2 in e}
     | '+' error %prec SIGN          {% srcParseFail "not a valid expression" }
-    | '-' expr %prec SIGN           { sL (comb2 $1 $>) $ UExprMinus $2 }
+    | '-' expr %prec SIGN           { LL $ UExprMinus $2 }
     | '-' error %prec SIGN          {% srcParseFail "not a valid expression" }
-    | expr '+' expr                 { sL (comb2 $1 $>) $ UExprOp $1 (sL (getLoc $2) OpPlus) $3 }
+    | expr '+' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpPlus) $3 }
     | expr '+' error                {% srcParseFail "not a valid expression" }
-    | expr '-' expr                 { sL (comb2 $1 $>) $ UExprOp $1 (sL (getLoc $2) OpMinus) $3 }
+    | expr '-' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMinus) $3 }
     | expr '-' error                {% srcParseFail "not a valid expression" }
-    | expr '*' expr                 { sL (comb2 $1 $>) $ UExprOp $1 (sL (getLoc $2) OpTimes) $3 }
+    | expr '*' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpTimes) $3 }
     | expr '*' error                {% srcParseFail "not a valid expression" }
-    | expr '/' expr                 { sL (comb2 $1 $>) $ UExprOp $1 (sL (getLoc $2) OpDiv) $3 }
+    | expr '/' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpDiv) $3 }
     | expr '/' error                {% srcParseFail "not a valid expression" }
-    | expr '%' expr                 { sL (comb2 $1 $>) $ UExprOp $1 (sL (getLoc $2) OpMod) $3 }
+    | expr '%' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMod) $3 }
     | expr '%' error                {% srcParseFail "not a valid expression" }
 
 lvalue :: { Located UVariable }
-    : ID                            { sL (getLoc $1) $ let (ITid i) = unLoc $1 in UVar i }
-    | ID '[' expr ']'               { sL (comb2 $1 $>) $ let (L span (ITid i)) = $1 in UVarArray (sL span i) $3 }
+    : ID                            { L1 $ let (ITid i) = unLoc $1 in UVar i }
+    | ID '[' expr ']'               { LL $ let (L span (ITid i)) = $1 in UVarArray (sL span i) $3 }
     | ID '[' expr error             {% srcParseFail "unclosed `]'" }
     | ID '[' error                  {% srcParseFail "not a valid expression" }
 
 cond :: { Located UCond }
-    : TRUE                          { sL (getLoc $1) $ UCondTrue }
-    | FALSE                         { sL (getLoc $1) $ UCondFalse }
-    | '(' cond ')'                  { sL (comb2 $1 $>) $ let c = unLoc $2 in c }
+    : TRUE                          { L1 $ UCondTrue }
+    | FALSE                         { L1 $ UCondFalse }
+    | '(' cond ')'                  { LL $ let c = unLoc $2 in c }
     | '(' cond error                {% srcParseFail "unclosed `)'" }
-    | '!' cond                      { sL (comb2 $1 $>) $ UCondNot $2 }
+    | '!' cond                      { LL $ UCondNot $2 }
     | '!' error                     {% srcParseFail "not a valid condition" }
-    | expr '==' expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpEqual) $3 }
+    | expr '==' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpEqual) $3 }
     | expr '==' error               {% srcParseFail "not a valid expression" }
-    | expr '!=' expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpNotEqual) $3 }
+    | expr '!=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpNotEqual) $3 }
     | expr '!=' error               {% srcParseFail "not a valid expression" }
-    | expr '<'  expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpLT) $3 }
+    | expr '<'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLT) $3 }
     | expr '<'  error               {% srcParseFail "not a valid expression" }
-    | expr '>'  expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpGT) $3 }
+    | expr '>'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGT) $3 }
     | expr '>'  error               {% srcParseFail "not a valid expression" }
-    | expr '<=' expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpLE) $3 }
+    | expr '<=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLE) $3 }
     | expr '<=' error               {% srcParseFail "not a valid expression" }
-    | expr '>=' expr                { sL (comb2 $1 $>) $ UCondOp $1 (sL (getLoc $2) OpGE) $3 }
+    | expr '>=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGE) $3 }
     | expr '>=' error               {% srcParseFail "not a valid expression" }
-    | cond '&'  cond                { sL (comb2 $1 $>) $ UCondLog $1 (sL (getLoc $2) OpAnd) $3 }
+    | cond '&'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpAnd) $3 }
     | cond '&'  error               {% srcParseFail "not a valid condition" }
-    | cond '|'  cond                { sL (comb2 $1 $>) $ UCondLog $1 (sL (getLoc $2) OpOr) $3 }
+    | cond '|'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpOr) $3 }
     | cond '|'  error               {% srcParseFail "not a valid condition" }
 
 

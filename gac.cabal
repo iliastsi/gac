@@ -10,7 +10,7 @@ Description:
     using Alex as a lexer
     and Happy as a parser
 Category: Development
-Build-Type: Simple
+Build-Type: Custom
 Cabal-Version: >= 1.6
 Tested-With: GHC
 
