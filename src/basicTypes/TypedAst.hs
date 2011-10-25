@@ -106,7 +106,7 @@ data TType a where
     TTypeProc       :: TType ()
     TTypePtr        :: Int -> TType a -> TType (Ptr a)
     TTypeUnknown    :: TType ()
-    TTypeArray      :: TType a -> TType b -> TType (a -> b)
+    TTypeFunc       :: TType a -> TType b -> TType (a -> b)
 
 type LAType = Located AType
 

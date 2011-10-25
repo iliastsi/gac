@@ -72,7 +72,7 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
        else return ()
     rawCloseScopeM
     return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
-                            (TTypeArray ptype ftype))
+                            (TTypeFunc ptype ftype))
 -- UDefVar
 typeCheckDef (L loc (UDefVar lide lutype)) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
@@ -111,7 +111,7 @@ typeCheckParam' (L loc (UParam lide mode lutype)) (atypes, laparam) = do
     addVarM lide (AType ftype)
     let atype_accum   = (AType ftype) : atypes
         laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
-                                        (L par_loc tparam)) (TTypeArray ftype par_types)
+                                        (L par_loc tparam)) (TTypeFunc ftype par_types)
     return (atype_accum, laparam_accum)
 
 
