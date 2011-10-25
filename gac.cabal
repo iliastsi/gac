@@ -39,8 +39,7 @@ Executable gac
   Main-is: Main.hs
   Build-Tools: happy, alex
 
-  Build-Depends: base
-  Build-Depends: array
+  Build-Depends: base, array, containers
   if os(windows)
      Build-Depends: Win32
   else
@@ -70,5 +69,6 @@ Executable gac
         ----------
         SymbolTable
         TcMonad
+        TypeCheck
         ----------
         Outputable

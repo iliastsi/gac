@@ -12,7 +12,7 @@ module SymbolTable (
     VarInfo(..), FunInfo(..),
 
     -- ** Constructing Table
-    initTable,
+    predefinedTable,
 
     -- ** Extract from Table
     getName, getCurrDepth,
@@ -67,9 +67,6 @@ data Table = Table {
 
 -- -------------------------------------------------------------------
 -- Table functionality
-
-initTable :: Ide -> Table
-initTable i = Table 1 (Just predefinedTable) Map.empty Map.empty i
 
 -- strict library SrcSpan constructor:
 {-# INLINE lL #-}

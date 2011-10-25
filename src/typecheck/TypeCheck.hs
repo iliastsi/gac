@@ -28,7 +28,7 @@
 
 {-# LANGUAGE GADTs, PatternGuards #-}
 
-module TypeCheck where
+module TypeCheck (typeCheckDef) where
 
 import UnTypedAst
 import TypedAst
