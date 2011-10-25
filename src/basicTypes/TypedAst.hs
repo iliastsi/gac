@@ -42,6 +42,10 @@ data TParam a where
     TParHead :: LIde -> Mode -> LTType a -> LTParam b -> TParam (a -> b)
     TParTail :: LIde -> Mode -> LTType a              -> TParam a
 
+type LAParam = Located AParam
+
+data AParam = forall a . AParam (TParam a) (TType a)
+
 -- ---------------------------
 type LTStmt = Located TStmt
 
@@ -102,6 +106,7 @@ data TType a where
     TTypeProc       :: TType ()
     TTypeArray      :: Int -> TType a -> TType (Ptr a)
     TTypeUnknown    :: TType ()
+    TTypeParam      :: TType a -> TType b -> TType (a -> b)
 
 type LAType = Located AType
 

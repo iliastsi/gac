@@ -35,6 +35,7 @@ import TypedAst
 import TcMonad
 import SrcLoc
 import SymbolTable
+import MonadUtils
 
 import Data.Int
 import Data.Word
@@ -65,6 +66,31 @@ tcNoRetErr ide loc = do
     -- we have to take the end of statements location
     let loc' = srcLocSpan (srcSpanEnd loc)
     addNoRetError loc' ide ""
+
+
+-- -------------------------------------------------------------------
+-- TypeCheck UParam
+
+typeCheckParam :: [Located UParam] -> TcM ([AType], LAParam)
+typeCheckParam [] = error "in typeCheckParam"
+typeCheckParam lparams = do
+    let empty_lide  = L noSrcSpan "empty"
+        empty_ltype = L noSrcSpan TTypeUnknown
+        empty_tpar  = TParTail empty_lide ModeByVal empty_ltype
+        empty_apar  = AParam empty_tpar TTypeUnknown
+    foldrM typeCheckParam' ([], L noSrcSpan $ empty_apar) lparams
+
+typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam)
+typeCheckParam' (L loc (UParam lide mode lutype)) ([], _) = do
+    (L type_loc (AType ftype)) <- typeCheckType lutype
+    return ([AType ftype], L loc $ AParam (TParTail lide mode (L type_loc ftype)) ftype)
+typeCheckParam' (L loc (UParam lide mode lutype)) (atypes, laparam) = do
+    (L type_loc (AType ftype)) <- typeCheckType lutype
+    (L par_loc (AParam tparam par_types)) <- return laparam
+    let atype_accum   = (AType ftype) : atypes
+        laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
+                                        (L par_loc tparam)) (TTypeParam ftype par_types)
+    return (atype_accum, laparam_accum)
 
 
 -- -------------------------------------------------------------------
