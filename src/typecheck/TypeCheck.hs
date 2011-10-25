@@ -63,7 +63,7 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     fname <- liftM (L (getLoc lide)) (addFuncM lide [] (AType ftype))
     rawOpenScopeM (unLoc lide)
-    (par_types, L ploc (AParam tpar ptype)) <- typeCheckParam lupar
+    (par_types, L par_loc (AParam tpar ptype)) <- typeCheckParam lupar
     updateFuncM par_types
     ladefs <- mapM typeCheckDef ludefs
     (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
@@ -71,8 +71,13 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
        then tcNoRetErr (unLoc lide) (getLoc ltstmt)
        else return ()
     rawCloseScopeM
-    return (L loc $ ADef (TDefFun fname (L ploc tpar) (L type_loc ftype) ladefs ltstmt)
+    return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
                             (TTypeArray ptype ftype))
+-- UDefVar
+typeCheckDef (L loc (UDefVar lide lutype)) = do
+    (L type_loc (AType ftype)) <- typeCheckType lutype
+    addVarM lide (AType ftype)
+    return (L loc $ ADef (TDefVar lide (L type_loc ftype)) ftype)
 
 -- ---------------------------
 -- Error when functions doesn't return a value
