@@ -7,6 +7,9 @@ import System.FilePath
 main = defaultMainWithHooks
         simpleUserHooks{hookedPreProcessors=[("ypp",ppYpp)]}
 
+
+-- For this files we need to run cpp befor happy
+-- Code from http://stackoverflow.com/questions/7370029/any-example-of-a-custom-preprocessor-in-haskell
 ppYpp build local =
     PreProcessor {
         platformIndependent = True,
