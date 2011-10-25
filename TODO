@@ -14,6 +14,4 @@
 
 ** Fix in TypeCheck:
         Problems when typechecking arrays
-
-** Fix in Printing:
-        remove `show' from strings
+        Arrays have to be pashed as references

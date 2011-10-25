@@ -134,8 +134,8 @@ data UExpr
 
 instance Show UExpr where
     show (UExprInt i)    = show i
-    show (UExprChar c)   = show c
-    show (UExprString s) = show s
+    show (UExprChar c)   = [c]
+    show (UExprString s) = s
     show (UExprVar v)    = show v
     show (UExprFun f)    = show f
     show (UExprMinus e)  = "-" ++ show (unLoc e)
@@ -171,9 +171,9 @@ data UVariable
   deriving Eq
 
 instance Show UVariable where
-    show (UVar i)        = show i
+    show (UVar i)        = i
     show (UVarArray i e) =
-        show (unLoc i) ++ "[" ++ show (unLoc e) ++ "]"
+       (unLoc i) ++ "[" ++ show (unLoc e) ++ "]"
 
 -- ---------------------------
 type LUType = Located UType
@@ -191,7 +191,7 @@ data UFuncCall = UFuncCall LIde [LUExpr]
   deriving Eq
 
 instance Show UFuncCall where
-    show (UFuncCall i [])     = show (unLoc i) ++ "()"
+    show (UFuncCall i [])     = (unLoc i) ++ "()"
     show (UFuncCall i (e:es)) =
-        show (unLoc i) ++ "(" ++ show (unLoc e) ++
+        (unLoc i) ++ "(" ++ show (unLoc e) ++
             (foldl (\str t -> str ++ ", " ++ show (unLoc t)) "" es) ++ ")"

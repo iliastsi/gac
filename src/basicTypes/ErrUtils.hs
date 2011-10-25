@@ -119,11 +119,11 @@ instance Show Severity where
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
     show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
-    show (ScopeError ide)     = "Not in scope `" ++ show ide ++ "'"
+    show (ScopeError ide)     = "Not in scope `" ++ ide ++ "'"
     show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
     show UnreachError         = "Unreachable code"
-    show (RedefError ide)     = "Conflicting definitions for `" ++ show ide ++ "'"
-    show (NoRetError ide)     = "Control reaches end of non-void function `" ++ show ide ++ "'"
+    show (RedefError ide)     = "Conflicting definitions for `" ++ ide ++ "'"
+    show (NoRetError ide)     = "Control reaches end of non-void function `" ++ ide ++ "'"
     show UnknownError         = "Unknown Error :@"
 
 instance Show Message where

@@ -141,7 +141,7 @@ getFunc i t =
     nested t (\Table{functions=f} -> Map.lookup i f)
 
 getFuncName :: Maybe FunInfo -> Ide
-getFuncName (Just (FunInfo n _ _ fid)) = show n ++ "_" ++ show fid
+getFuncName (Just (FunInfo n _ _ fid)) = (unLoc n) ++ "_" ++ show fid
 getFuncName Nothing = "unknown"
 
 getFuncParams :: Maybe FunInfo -> [AType]
@@ -158,7 +158,7 @@ getVar i t =
     nested t (\Table{variables=v} -> Map.lookup i v)
 
 getVarName :: Maybe VarInfo -> Ide
-getVarName (Just (VarInfo n _ vid)) = show n ++ "_" ++ show vid
+getVarName (Just (VarInfo n _ vid)) = (unLoc n) ++ "_" ++ show vid
 getVarName Nothing = "unknown"
 
 getVarType :: Maybe VarInfo -> AType

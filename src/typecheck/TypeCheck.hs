@@ -216,7 +216,7 @@ tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
 tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
     fun_name <- getNameM
     addTypeError loc (UAstS ustmt)
-        ("Incopatible return type of function `" ++  show fun_name ++
+        ("Incopatible return type of function `" ++ fun_name ++
          "'\n\tExpected `" ++ show exptype ++
          "' but instead function returned `" ++ show acttype ++ "'")
 
@@ -369,7 +369,7 @@ tcIntExprErr (L loc (uvar@(UVarArray lide lexpr))) =
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
 tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
     addTypeError loc (UAstV uvar)
-        ("Incompatible type of variable `" ++ show (unLoc lide) ++
+        ("Incompatible type of variable `" ++ (unLoc lide) ++
          "'\n\tExpected `array' but variable is of type `" ++
          show var_type ++ "'")
 
@@ -438,7 +438,7 @@ tcFunPar' ide _  _  _   = error "in tcFunPar'"
 tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
 tcParLenErr (L loc ufunc@(UFuncCall lide lupars)) pars_len type_len =
     addTypeError loc (UAstF ufunc)
-        ("The function `" ++ show (unLoc lide) ++ "' is applied to " ++
+        ("The function `" ++ (unLoc lide) ++ "' is applied to " ++
          show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
@@ -446,5 +446,5 @@ tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
     addTypeError loc (UAstE uexpr)
         ("Incompatible type of argument " ++ show count ++ " of function `" ++
-         show ide ++"'\n\tExpected `" ++ show exptype ++
+         ide ++"'\n\tExpected `" ++ show exptype ++
          "' but argument is of type `" ++ show acttype ++ "'")
