@@ -89,7 +89,7 @@ predefinedTable =
           Map.insert "writeChar"
                 (FunInfo (lL "writeChar") [AType TTypeChar] (AType TTypeProc) 0) .
           Map.insert "writeString"
-                (FunInfo (lL "writeString") [AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
+                (FunInfo (lL "writeString") [AType (TTypePtr 0 TTypeChar)] (AType TTypeProc) 0) .
           Map.insert "readInteger"
                 (FunInfo (lL "readInteger") [] (AType TTypeInt) 0) .
           Map.insert "readByte"
@@ -97,7 +97,7 @@ predefinedTable =
           Map.insert "readChar"
                 (FunInfo (lL "readChar") [] (AType TTypeChar) 0) .
           Map.insert "readString"
-                (FunInfo (lL "readString") [AType TTypeInt, AType (TTypeArray 0 TTypeChar)]
+                (FunInfo (lL "readString") [AType TTypeInt, AType (TTypePtr 0 TTypeChar)]
                                                 (AType TTypeProc) 0) .
            -- conversions
           Map.insert "extend"
@@ -106,16 +106,16 @@ predefinedTable =
                 (FunInfo (lL "shrink") [AType TTypeInt] (AType TTypeChar) 0) .
            -- strings
           Map.insert "strlen"
-                (FunInfo (lL "strlen") [AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
+                (FunInfo (lL "strlen") [AType (TTypePtr 0 TTypeChar)] (AType TTypeInt) 0) .
           Map.insert "strcmp"
-                (FunInfo (lL "strcmp") [AType (TTypeArray 0 TTypeChar),
-                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeInt) 0) .
+                (FunInfo (lL "strcmp") [AType (TTypePtr 0 TTypeChar),
+                                                AType (TTypePtr 0 TTypeChar)] (AType TTypeInt) 0) .
           Map.insert "strcpy"
-                (FunInfo (lL "strcpy") [AType (TTypeArray 0 TTypeChar),
-                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0) .
+                (FunInfo (lL "strcpy") [AType (TTypePtr 0 TTypeChar),
+                                                AType (TTypePtr 0 TTypeChar)] (AType TTypeProc) 0) .
           Map.insert "strcat"
-                (FunInfo (lL "strcat") [AType (TTypeArray 0 TTypeChar),
-                                                AType (TTypeArray 0 TTypeChar)] (AType TTypeProc) 0)
+                (FunInfo (lL "strcat") [AType (TTypePtr 0 TTypeChar),
+                                                AType (TTypePtr 0 TTypeChar)] (AType TTypeProc) 0)
          ) -- the end
           Map.empty
         ) "prelude"

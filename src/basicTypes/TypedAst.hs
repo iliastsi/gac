@@ -104,28 +104,28 @@ data TType a where
     TTypeInt        :: TType Int32
     TTypeChar       :: TType Word8
     TTypeProc       :: TType ()
-    TTypeArray      :: Int -> TType a -> TType (Ptr a)
+    TTypePtr        :: Int -> TType a -> TType (Ptr a)
     TTypeUnknown    :: TType ()
-    TTypeParam      :: TType a -> TType b -> TType (a -> b)
+    TTypeArray      :: TType a -> TType b -> TType (a -> b)
 
 type LAType = Located AType
 
 data AType = forall a . AType (TType a)
 
 instance Eq AType where
-    (AType TTypeUnknown)     == (AType _)                = True
-    (AType _)                == (AType TTypeUnknown)     = True
-    (AType TTypeInt)         == (AType TTypeInt)         = True
-    (AType TTypeChar)        == (AType TTypeChar)        = True
-    (AType TTypeProc)        == (AType TTypeProc)        = True
-    (AType (TTypeArray _ a)) == (AType (TTypeArray _ b)) = AType a == AType b
+    (AType TTypeUnknown)   == (AType _)              = True
+    (AType _)              == (AType TTypeUnknown)   = True
+    (AType TTypeInt)       == (AType TTypeInt)       = True
+    (AType TTypeChar)      == (AType TTypeChar)      = True
+    (AType TTypeProc)      == (AType TTypeProc)      = True
+    (AType (TTypePtr _ a)) == (AType (TTypePtr _ b)) = AType a == AType b
 
 instance Show AType where
-    show (AType TTypeInt)         = "int"
-    show (AType TTypeChar)        = "byte"
-    show (AType TTypeProc)        = "proc"
-    show (AType (TTypeArray _ t)) = "array of " ++ show (AType t)
-    show (AType TTypeUnknown)     = "unknown"
+    show (AType TTypeInt)       = "int"
+    show (AType TTypeChar)      = "byte"
+    show (AType TTypeProc)      = "proc"
+    show (AType (TTypePtr _ t)) = "array of " ++ show (AType t)
+    show (AType TTypeUnknown)   = "unknown"
 
 -- ---------------------------
 type LTFuncCall a = Located (TFuncCall a)
@@ -148,10 +148,10 @@ data Equal a b where
     Eq :: Equal a a
 
 test :: TType a -> TType b -> Maybe (Equal a b)
-test TTypeInt          TTypeInt         = return Eq
-test TTypeChar         TTypeChar        = return Eq
-test TTypeProc         TTypeProc        = return Eq
-test (TTypeArray _ a)  (TTypeArray _ b) = do
+test TTypeInt        TTypeInt       = return Eq
+test TTypeChar       TTypeChar      = return Eq
+test TTypeProc       TTypeProc      = return Eq
+test (TTypePtr _ a)  (TTypePtr _ b) = do
     Eq <- test a b
     return Eq
 test _ _ = mzero
@@ -169,7 +169,7 @@ instance Type Word8 where
 instance Type () where
     theType = TTypeProc
 instance (Type a) => Type (Ptr a) where
-    theType = TTypeArray 0 theType
+    theType = TTypePtr 0 theType
 
 extractTDef :: (Type a) => ADef -> TDef a
 extractTDef adef =
@@ -206,10 +206,10 @@ extractTVariable avar =
 -- Convert between UType and TType
 
 matchType :: UType -> TType a -> Bool
-matchType UTypeInt              TTypeInt         = True
-matchType UTypeChar             TTypeChar        = True
-matchType UTypeProc             TTypeProc        = True
-matchType (UTypeArray (_,ut))  (TTypeArray _ tt) = matchType ut tt
+matchType UTypeInt              TTypeInt       = True
+matchType UTypeChar             TTypeChar      = True
+matchType UTypeProc             TTypeProc      = True
+matchType (UTypeArray (_,ut))  (TTypePtr _ tt) = matchType ut tt
 matchType _  _  = False
 
 fromUType :: UType -> AType
@@ -218,5 +218,5 @@ fromUType UTypeChar = AType TTypeChar
 fromUType UTypeProc = AType TTypeProc
 fromUType (UTypeArray (s,t)) =
     case fromUType t of
-         AType tt  -> AType (TTypeArray s tt)
+         AType tt  -> AType (TTypePtr s tt)
 fromUType UTypeUnknown = AType TTypeUnknown

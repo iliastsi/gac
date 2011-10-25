@@ -89,7 +89,7 @@ typeCheckParam' (L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L par_loc (AParam tparam par_types)) <- return laparam
     let atype_accum   = (AType ftype) : atypes
         laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
-                                        (L par_loc tparam)) (TTypeParam ftype par_types)
+                                        (L par_loc tparam)) (TTypeArray ftype par_types)
     return (atype_accum, laparam_accum)
 
 
@@ -211,7 +211,7 @@ typeCheckExpr (L loc (UExprChar c)) = do
     return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))
 -- UExprString
 typeCheckExpr (L loc (UExprString s)) = do
-    return (L loc $ AExpr (TExprString s) (TTypeArray (length s) TTypeChar))
+    return (L loc $ AExpr (TExprString s) (TTypePtr (length s) TTypeChar))
 -- UExprVar
 typeCheckExpr (L loc (UExprVar v)) = do
     (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
@@ -331,9 +331,9 @@ typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
            return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
 
 -- ---------------------------
--- Check if a given AType is of TTypeArray
+-- Check if a given AType is of TTypePtr
 atypeIsArray :: AType -> Bool
-atypeIsArray (AType (TTypeArray _ _)) = True
+atypeIsArray (AType (TTypePtr _ _)) = True
 atypeIsArray _ = False
 
 -- ---------------------------
@@ -368,7 +368,7 @@ typeCheckType (L loc UTypeProc) =
 -- UTypeArray
 typeCheckType (L loc (UTypeArray (l, utype))) = do
     (L _ (AType ttype)) <- typeCheckType (L noSrcSpan utype)
-    return (L loc $ AType (TTypeArray l ttype))
+    return (L loc $ AType (TTypePtr l ttype))
 
 
 -- -------------------------------------------------------------------
