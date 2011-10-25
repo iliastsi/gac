@@ -27,15 +27,20 @@ import Control.Monad
 type LTDef a = Located (TDef a)
 
 data TDef a where
-    TDefFun  :: LIde -> TDef a   -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
-    TDefFunE :: LIde             -> LTType b -> [LADef] -> LTStmt -> TDef b
-    TDefParH :: LIde -> Mode     -> LTType a -> TDef b            -> TDef (a -> b)
-    TDefParT :: LIde -> Mode     -> LTType a                      -> TDef a
-    TDefVar  :: LIde -> LTType a                                  -> TDef a
+    TDefFun  :: LIde -> LTParam a -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
+    TDefFunE :: LIde              -> LTType b -> [LADef] -> LTStmt -> TDef b
+    TDefVar  :: LIde -> LTType a  -> TDef a
 
 type LADef = Located ADef
 
 data ADef = forall a . ADef (TDef a) (TType a)
+
+-- ---------------------------
+type LTParam a = Located (TParam a)
+
+data TParam a where
+    TParHead :: LIde -> Mode -> LTType a -> LTParam b -> TParam (a -> b)
+    TParTail :: LIde -> Mode -> LTType a              -> TParam a
 
 -- ---------------------------
 type LTStmt = Located TStmt
