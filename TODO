@@ -11,3 +11,9 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
+
+** Fix in TypeCheck:
+        Problems when typechecking arrays
+
+** Fix in Printing:
+        remove `show' from strings

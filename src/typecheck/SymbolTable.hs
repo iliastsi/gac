@@ -180,9 +180,14 @@ addVar i var_info t@Table{variables=v} =
 
 -- Update local function
 updateFunc :: [AType] -> Table -> Table
-updateFunc pt t@Table{name=fun_name, functions=f} =
-    t{ functions=Map.update newVal fun_name f }
-    where newVal (FunInfo lide _ rt u) = Just (FunInfo lide pt rt u)
+updateFunc pt t@Table{name=fun_name, parent=m_parent} =
+    case m_parent of
+         Just parent@Table{functions=f} ->
+             let parent' = parent{ functions=Map.update newVal fun_name f }
+                 newVal (FunInfo lide _ rt u) = Just (FunInfo lide pt rt u)
+             in
+             t{ parent=(Just parent') }
+         Nothing -> error "We are not supposed to be at outermost scope"
 
 -- Scopes
 rawOpenScope :: Ide -> Table -> Table

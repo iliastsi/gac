@@ -23,6 +23,6 @@ main = do
     case unP parser (mkPState str (mkSrcLoc "Stdin" 1 1)) of
          POk _state ast -> do
              case unTcM (typeCheckDef ast) (mkTcState predefinedTable) of
-                  TcOk _ _     -> putStrLn "TypeChecked!!"
-                  TcFailed tcm -> printOutput tcm
+                  TcOk tcstate _ -> printOutput (getTcMessages tcstate)
+                  TcFailed tcm   -> printOutput tcm
          PFailed pm      -> printOutput pm
