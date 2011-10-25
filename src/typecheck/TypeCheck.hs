@@ -58,6 +58,21 @@ typeCheckDef (L loc (UDefFun lide [] lutype ludefs lustmt)) = do
        else return ()
     rawCloseScopeM
     return (L loc $ ADef (TDefFunE fname (L type_loc ftype) ladefs ltstmt) ftype)
+-- UDefFun
+typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
+    (L type_loc (AType ftype)) <- typeCheckType lutype
+    fname <- liftM (L (getLoc lide)) (addFuncM lide [] (AType ftype))
+    rawOpenScopeM (unLoc lide)
+    (par_types, L ploc (AParam tpar ptype)) <- typeCheckParam lupar
+    updateFuncM par_types
+    ladefs <- mapM typeCheckDef ludefs
+    (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
+    if (not does_ret) && ((AType ftype) /= (AType TTypeProc))
+       then tcNoRetErr (unLoc lide) (getLoc ltstmt)
+       else return ()
+    rawCloseScopeM
+    return (L loc $ ADef (TDefFun fname (L ploc tpar) (L type_loc ftype) ladefs ltstmt)
+                            (TTypeArray ptype ftype))
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -83,10 +98,12 @@ typeCheckParam lparams = do
 typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam)
 typeCheckParam' (L loc (UParam lide mode lutype)) ([], _) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
+    addVarM lide (AType ftype)
     return ([AType ftype], L loc $ AParam (TParTail lide mode (L type_loc ftype)) ftype)
 typeCheckParam' (L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     (L par_loc (AParam tparam par_types)) <- return laparam
+    addVarM lide (AType ftype)
     let atype_accum   = (AType ftype) : atypes
         laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
                                         (L par_loc tparam)) (TTypeArray ftype par_types)

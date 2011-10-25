@@ -19,7 +19,7 @@ module TcMonad (
     getNameM, getCurrDepthM,
     getFuncM, getFuncNameM, getFuncParamsM, getFuncRetTypeM,
     getVarM, getVarNameM, getVarTypeM,
-    addFuncM, addVarM,
+    addFuncM, addVarM, updateFuncM,
     rawOpenScopeM, rawCloseScopeM
   ) where
 
@@ -210,6 +210,13 @@ addVarM lide@(L loc ide) vt = do
              -- Here we don't re-insert the variable
              addRedefError ide loc (getLoc lprev)
              return "unknown"
+
+-- ---------------------------
+-- Update local function's parameters info
+updateFuncM :: [AType] -> TcM ()
+updateFuncM pt = do
+    t <- getTable
+    setTable (updateFunc pt t)
 
 -- ---------------------------
 -- Scopes

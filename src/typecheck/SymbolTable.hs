@@ -20,7 +20,7 @@ module SymbolTable (
     getVar, getVarName, getVarType, isVarLocal,
 
     -- ** Add to Table
-    addFunc, addVar,
+    addFunc, addVar, updateFunc,
 
     -- ** Scopes
     rawOpenScope, rawCloseScope
@@ -157,8 +157,8 @@ getFuncRetType Nothing = AType TTypeUnknown
 
 -- Get variables
 getVar :: Ide -> Table -> Maybe VarInfo
-getVar i v =
-    nested v (\Table{variables=v} -> Map.lookup i v)
+getVar i t =
+    nested t (\Table{variables=v} -> Map.lookup i v)
 
 getVarName :: Maybe VarInfo -> Ide
 getVarName (Just (VarInfo n _ vid)) = show n ++ "_" ++ show vid
@@ -180,6 +180,12 @@ addFunc i fun_info t@Table{functions=f} =
 addVar :: Ide -> VarInfo -> Table -> Table
 addVar i var_info t@Table{variables=v} =
     t{ variables=Map.insert i var_info v }
+
+-- Update local function
+updateFunc :: [AType] -> Table -> Table
+updateFunc pt t@Table{name=fun_name, functions=f} =
+    t{ functions=Map.update newVal fun_name f }
+    where newVal (FunInfo lide _ rt u) = Just (FunInfo lide pt rt u)
 
 -- Scopes
 rawOpenScope :: Ide -> Table -> Table
