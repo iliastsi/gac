@@ -136,20 +136,20 @@ funcdef :: { Located UDef }
                                     { LL $ let (L span (ITid i)) = $1 in UDefFun (sL span i) $2 $4 (reverse $5) $6 }
     | error                         {% srcParseFail "expected function decleration" }
 
-fpar :: { [Located UDef] }
+fpar :: { [Located UParam] }
     : '(' ')'                       { [] }
     | '(' error                     {% srcParseFail "unclosed `)'" }
     | '(' fparlist ')'              { reverse $2 }
     | '(' fparlist error            {% srcParseFail "unclosed `)'" }
     | error                         {% srcParseFail "expected function definition parameters" }
 
-fparlist :: { [Located UDef] }
+fparlist :: { [Located UParam] }
     : fpardef                       { [$1] }
     | fparlist ',' fpardef          { $3 : $1 }
 
-fpardef :: { Located UDef }
-    : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByVal $3 }
-    | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UDefPar (sL span i) ModeByRef $4 }
+fpardef :: { Located UParam }
+    : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByVal $3 }
+    | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByRef $4 }
     | ID error                      {% srcParseFail "missing `:'for type definition" }
     | error                         {% srcParseFail "expected parameter definition name" }
 

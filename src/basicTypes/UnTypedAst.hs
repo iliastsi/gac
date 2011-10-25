@@ -87,9 +87,15 @@ instance Show Mode where
 type LUDef = Located UDef
 
 data UDef
-    = UDefFun LIde [LUDef] LUType [LUDef] LUStmt
-    | UDefPar LIde Mode LUType
+    = UDefFun LIde [LUParam] LUType [LUDef] LUStmt
     | UDefVar LIde LUType
+  deriving Eq
+
+-- ---------------------------
+type LUParam = Located UParam
+
+data UParam
+    = UParam LIde Mode LUType
   deriving Eq
 
 -- ---------------------------
