@@ -13,5 +13,4 @@
         Report `not in scope' only once
 
 ** Fix in TypeCheck:
-        Problems when typechecking arrays
         Arrays have to be pashed as references

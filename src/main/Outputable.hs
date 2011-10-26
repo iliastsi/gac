@@ -8,9 +8,9 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
+    internalError
   ) where
 
-import SrcLoc
 import Bag
 import ErrUtils
 
@@ -31,3 +31,10 @@ printWarns = printMsgBag . fst
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =
     mapM_ (\msg -> putStrLn $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
+
+
+-- -------------------------------------------------------------------
+-- Internal Errors
+
+internalError :: String -> a
+internalError str = error ("My brain just exploded\n\t" ++ str ++ "\n")

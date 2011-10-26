@@ -36,6 +36,7 @@ import TcMonad
 import SrcLoc
 import SymbolTable
 import MonadUtils
+import Outputable (internalError)
 
 import Data.Int
 import Data.Word
@@ -92,7 +93,7 @@ tcNoRetErr ide loc = do
 -- TypeCheck UParam
 
 typeCheckParam :: [Located UParam] -> TcM ([AType], LAParam)
-typeCheckParam [] = error "in typeCheckParam"
+typeCheckParam [] = internalError "TypeCheck.typeCheckParam can't handle empty lists"
 typeCheckParam lparams = do
     let empty_lide  = L noSrcSpan "empty"
         empty_ltype = L noSrcSpan TTypeUnknown
@@ -343,12 +344,13 @@ typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
        else return ()
     if exprIsInt && varIsArray
        then do
+           (AType ptr_type) <- return $ getPointer (AType var_type)
            let lexpr' = L aeloc texpr
            case test expr_type TTypeInt of
                 Just Eq ->
-                    return (L loc $ AVariable (TVarArray lide' var_type lexpr') var_type)
+                    return (L loc $ AVariable (TVarArray lide' ptr_type lexpr') ptr_type)
                 Nothing ->
-                    error "in typeCheckVariable"
+                    internalError "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
            return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
 
@@ -357,6 +359,11 @@ typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
 atypeIsArray :: AType -> Bool
 atypeIsArray (AType (TTypePtr _)) = True
 atypeIsArray _ = False
+
+-- Take the pointed type of a TTypePtr
+getPointer :: AType -> AType
+getPointer (AType (TTypePtr p)) = (AType p)
+getPointer _ = internalError "TypeCheck.getPointer got unexpected input"
 
 -- ---------------------------
 -- Error when the array index expression is not of type of int
@@ -431,7 +438,7 @@ tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
        then return ()
        else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
-tcFunPar' ide _  _  _   = error "in tcFunPar'"
+tcFunPar' ide _  _  _   = internalError "TypeCheck.tcFunPar got unexpected input"
 
 -- ---------------------------
 -- Error when the function parameter's number is different from the prototype
