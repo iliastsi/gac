@@ -155,7 +155,7 @@ fpardef :: { Located UParam }
 
 type :: { Located UType }
     : datatype                      { $1 }
-    | datatype '[' ']'              { LL $ UTypeArray (0, unLoc $1) }
+    | datatype '[' ']'              { LL $ UTypePtr (unLoc $1) }
     | datatype '[' error            {% srcParseFail "expected `]'" }
     | error                         {% srcParseFail "unknown datatype" }
 
@@ -177,9 +177,9 @@ localdef :: { Located UDef }
     | vardef                        { $1 }
 
 vardef :: { Located UDef }
-    : ID ':' datatype ';'           { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
+    : ID ':' datatype ';'           { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) (sL wiredInSrcSpan 0) $3 }
     | ID ':' datatype '[' DIGIT ']' ';'
-                                    { LL $ let (L span (ITid i)) = $1; (ITdigit d) = unLoc $5 in UDefVar (sL span i) (sL (comb2 $3 $6) (UTypeArray (d, unLoc $3))) }
+                                    { LL $ let (L id_span (ITid i)) = $1; (L digit_span (ITdigit d)) = $5 in UDefVar (sL id_span i) (sL digit_span d) (sL (comb2 $3 $6) (UTypePtr (unLoc $3))) }
     | ID ':' datatype '[' DIGIT ']' error
                                     {% srcParseFail "missing `;'" }
     | ID ':' datatype '[' DIGIT error

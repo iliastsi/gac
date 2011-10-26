@@ -34,6 +34,7 @@ module SrcLoc (
     -- ** Constructing SrcSpan
     mkGeneralSrcSpan, mkSrcSpan,
     noSrcSpan,
+    wiredInSrcSpan,         -- Something wired into the compiler
     srcLocSpan,
     combineSrcSpans,
 
@@ -180,8 +181,9 @@ data SrcSpan
   deriving Eq
 
 -- | Built-in "bad" 'SrcSpan's for common sources of location uncertainty
-noSrcSpan :: SrcSpan
-noSrcSpan = UnhelpfulSpan "<no location info>"
+noSrcSpan, wiredInSrcSpan :: SrcSpan
+noSrcSpan      = UnhelpfulSpan "<no location info>"
+wiredInSrcSpan = UnhelpfulSpan "<wired into compilers>"
 
 -- | Create a "bad" 'SrcSpan' that has not location information
 mkGeneralSrcSpan :: String -> SrcSpan

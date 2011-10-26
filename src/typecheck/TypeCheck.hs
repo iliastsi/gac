@@ -74,10 +74,10 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
     return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
                             (TTypeFunc ptype ftype))
 -- UDefVar
-typeCheckDef (L loc (UDefVar lide lutype)) = do
+typeCheckDef (L loc (UDefVar lide lsize lutype)) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     addVarM lide (AType ftype)
-    return (L loc $ ADef (TDefVar lide (L type_loc ftype)) ftype)
+    return (L loc $ ADef (TDefVar lide lsize (L type_loc ftype)) ftype)
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -233,7 +233,7 @@ typeCheckExpr (L loc (UExprChar c)) = do
     return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))
 -- UExprString
 typeCheckExpr (L loc (UExprString s)) = do
-    return (L loc $ AExpr (TExprString s) (TTypePtr (length s) TTypeChar))
+    return (L loc $ AExpr (TExprString s) (TTypePtr TTypeChar))
 -- UExprVar
 typeCheckExpr (L loc (UExprVar v)) = do
     (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
@@ -355,7 +355,7 @@ typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
 -- ---------------------------
 -- Check if a given AType is of TTypePtr
 atypeIsArray :: AType -> Bool
-atypeIsArray (AType (TTypePtr _ _)) = True
+atypeIsArray (AType (TTypePtr _)) = True
 atypeIsArray _ = False
 
 -- ---------------------------
@@ -387,10 +387,10 @@ typeCheckType (L loc UTypeChar) =
 -- UTypeProc
 typeCheckType (L loc UTypeProc) =
     return (L loc $ AType TTypeProc)
--- UTypeArray
-typeCheckType (L loc (UTypeArray (l, utype))) = do
-    (L _ (AType ttype)) <- typeCheckType (L noSrcSpan utype)
-    return (L loc $ AType (TTypePtr l ttype))
+-- UTypePtr
+typeCheckType (L loc (UTypePtr utype)) = do
+    (L _ (AType ttype)) <- typeCheckType (L wiredInSrcSpan utype)
+    return (L loc $ AType (TTypePtr ttype))
 
 
 -- -------------------------------------------------------------------

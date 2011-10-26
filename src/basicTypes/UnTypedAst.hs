@@ -88,7 +88,7 @@ type LUDef = Located UDef
 
 data UDef
     = UDefFun LIde [LUParam] LUType [LUDef] LUStmt
-    | UDefVar LIde LUType
+    | UDefVar LIde (Located Int) LUType
   deriving Eq
 
 -- ---------------------------
@@ -182,7 +182,7 @@ data UType
     = UTypeInt
     | UTypeChar
     | UTypeProc
-    | UTypeArray (Int, UType)
+    | UTypePtr UType
     | UTypeUnknown -- for type checking
   deriving Eq
 

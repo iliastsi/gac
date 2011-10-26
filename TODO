@@ -15,3 +15,5 @@
 ** Fix in TypeCheck:
         Problems when typechecking arrays
         Arrays have to be pashed as references
+
+** Add `show' in chars and strings
