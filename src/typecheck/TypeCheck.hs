@@ -434,7 +434,7 @@ tcFunPar' :: Ide -> [LUExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
 tcFunPar' ide [] [] acc = return acc
 tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
     (L aeloc aexpr@(AExpr texpr ttype)) <- typeCheckExpr pexpr
-    if (AType ttype) == ptype
+    if (AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)
        then return ()
        else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)

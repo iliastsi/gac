@@ -123,7 +123,7 @@ instance Show MsgCode where
     show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
     show UnreachError         = "Unreachable code"
     show (RedefError ide)     = "Conflicting definitions for `" ++ ide ++ "'"
-    show (NoRetError ide)     = "Control reaches end of non-void function `" ++ ide ++ "'"
+    show (NoRetError ide)     = "Control reaches end of non-proc function `" ++ ide ++ "'"
     show UnknownError         = "Unknown Error :@"
 
 instance Show Message where
