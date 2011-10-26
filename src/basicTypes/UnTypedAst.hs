@@ -134,8 +134,8 @@ data UExpr
 
 instance Show UExpr where
     show (UExprInt i)    = show i
-    show (UExprChar c)   = [c]
-    show (UExprString s) = s
+    show (UExprChar c)   = show c
+    show (UExprString s) = show s
     show (UExprVar v)    = show v
     show (UExprFun f)    = show f
     show (UExprMinus e)  = "-" ++ show (unLoc e)
