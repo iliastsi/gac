@@ -95,11 +95,11 @@ tcNoRetErr ide loc = do
 typeCheckParam :: [Located UParam] -> TcM ([AType], LAParam)
 typeCheckParam [] = internalError "TypeCheck.typeCheckParam can't handle empty lists"
 typeCheckParam lparams = do
-    let empty_lide  = L noSrcSpan "empty"
-        empty_ltype = L noSrcSpan TTypeUnknown
+    let empty_lide  = L wiredInSrcSpan "empty"
+        empty_ltype = L wiredInSrcSpan TTypeUnknown
         empty_tpar  = TParTail empty_lide ModeByVal empty_ltype
         empty_apar  = AParam empty_tpar TTypeUnknown
-    foldrM typeCheckParam' ([], L noSrcSpan $ empty_apar) lparams
+    foldrM typeCheckParam' ([], L wiredInSrcSpan $ empty_apar) lparams
 
 typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam)
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) ([], _) = do

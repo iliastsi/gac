@@ -4,7 +4,8 @@
 
 ** Fix Parser:
         Express "this should be between spaces"
-        Write better error messages (and enable parsing to continue)
+        Write better error messages
+        Enable parsing to continue on errors
         Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt
