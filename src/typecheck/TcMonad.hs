@@ -145,11 +145,15 @@ getCurrDepthM = liftM getCurrDepth getTable
 -- Get functions
 getFuncM :: Located Ide -> TcM (Maybe FunInfo)
 getFuncM lide@(L _ ide) = do
-    mfi <- liftM (getFunc ide) getTable
-    case mfi of
+    t <- getTable
+    case getFunc ide t of
          Just fi -> return (Just fi)
          Nothing -> do
-             addScopeError lide ""
+             addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
+             -- add the function
+             u <- getUnique
+             let finfo = FunInfo lide [] (AType TTypeUnknown) u
+             setTable (addFunc ide finfo t)
              return Nothing
 
 getFuncNameM :: Maybe FunInfo -> TcM Ide
@@ -169,7 +173,9 @@ getVarM lide@(L _ ide) = do
     case mvi of
          Just vi -> return (Just vi)
          Nothing -> do
-             addScopeError lide ""
+             addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
+             -- add the variable
+             addVarM lide (AType TTypeUnknown)
              return Nothing
 
 getVarNameM :: Maybe VarInfo -> TcM Ide
