@@ -11,6 +11,3 @@
 
 ** Fix in TcMonad:
         Report `not in scope' only once
-
-** Fix in TypeCheck:
-        Arrays have to be passed as references

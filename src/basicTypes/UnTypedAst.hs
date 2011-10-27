@@ -21,6 +21,7 @@ data UAst
     | UAstC UCond
     | UAstV UVariable
     | UAstF UFuncCall
+    | UAstP UParam
 
 instance Show UAst where
     show (UAstS s) = show s
@@ -28,6 +29,8 @@ instance Show UAst where
     show (UAstC c) = show c
     show (UAstV v) = show v
     show (UAstF f) = show f
+    show (UAstP p) = show p
+
 
 -- -------------------------------------------------------------------
 -- This datatypes don't contain a type
@@ -97,6 +100,10 @@ type LUParam = Located UParam
 data UParam
     = UParam LIde Mode LUType
   deriving Eq
+
+instance Show UParam where
+    show (UParam i m t) =
+            (unLoc i) ++ " : " ++ show m ++ " " ++ show (unLoc t)
 
 -- ---------------------------
 type LUStmt = Located UStmt
@@ -185,6 +192,13 @@ data UType
     | UTypePtr UType
     | UTypeUnknown -- for type checking
   deriving Eq
+
+instance Show UType where
+    show UTypeInt     = "int"
+    show UTypeChar    = "byte"
+    show UTypeProc    = "proc"
+    show (UTypePtr t) = show t ++ " []"
+    show UTypeUnknown = "unknown"
 
 -- ---------------------------
 data UFuncCall = UFuncCall LIde [LUExpr]

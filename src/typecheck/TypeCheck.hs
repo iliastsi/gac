@@ -102,18 +102,31 @@ typeCheckParam lparams = do
     foldrM typeCheckParam' ([], L noSrcSpan $ empty_apar) lparams
 
 typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam)
-typeCheckParam' (L loc (UParam lide mode lutype)) ([], _) = do
+typeCheckParam' luparam@(L loc (UParam lide mode lutype)) ([], _) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     addVarM lide (AType ftype)
+    if atypeIsArray (AType ftype) && (mode /= ModeByRef)
+       then tcArrayParamErr luparam
+       else return ()
     return ([AType ftype], L loc $ AParam (TParTail lide mode (L type_loc ftype)) ftype)
-typeCheckParam' (L loc (UParam lide mode lutype)) (atypes, laparam) = do
+typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     (L par_loc (AParam tparam par_types)) <- return laparam
     addVarM lide (AType ftype)
+    if atypeIsArray (AType ftype) && (mode /= ModeByRef)
+       then tcArrayParamErr luparam
+       else return ()
     let atype_accum   = (AType ftype) : atypes
         laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
                                         (L par_loc tparam)) (TTypeFunc ftype par_types)
     return (atype_accum, laparam_accum)
+
+-- ---------------------------
+-- Error when passing an array as value
+tcArrayParamErr :: Located UParam -> TcM ()
+tcArrayParamErr (L loc uparam) =
+    addTypeError loc (UAstP uparam)
+        ("Array parameters has to be passed by reference")
 
 
 -- -------------------------------------------------------------------
