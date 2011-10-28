@@ -39,7 +39,9 @@ Executable gac
   Main-is: Main.hs
   Build-Tools: happy, alex
 
-  Build-Depends: base, array, containers
+  Build-Depends: base       >= 4,
+                 array      >= 0.3,
+                 containers >= 0.4
   if os(windows)
      Build-Depends: Win32
   else

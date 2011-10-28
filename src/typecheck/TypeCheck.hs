@@ -126,7 +126,7 @@ typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
 tcArrayParamErr :: Located UParam -> TcM ()
 tcArrayParamErr (L loc uparam) =
     addTypeError loc (UAstP uparam)
-        ("Array parameters has to be passed by reference")
+        ("Array parameters have to be passed by reference")
 
 
 -- -------------------------------------------------------------------
