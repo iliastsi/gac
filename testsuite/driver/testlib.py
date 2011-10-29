@@ -617,8 +617,7 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
     (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
     actual_stderr_file = qualify(name, 'comp.stderr')
 
-    if not compare_outputs('stderr', normalise_errmsg, normalise_whitespace, \
-                           expected_stderr_file, actual_stderr_file):
+    if not compare_outputs('stderr', expected_stderr_file, actual_stderr_file):
         return 'fail'
 
     # no problems found, this test passed
@@ -654,7 +653,7 @@ def simple_build( name, way, extra_hc_opts, should_fail, link ):
     rm_no_fail( errname )
     rm_no_fail( name )
     
-        srcname = add_alan_suffix(name)
+    srcname = add_alan_suffix(name)
 
     to_do = ''
     if link:
@@ -770,8 +769,7 @@ def check_stdout_ok( name ):
    actual_stdout_file   = qualify(name, 'run.stdout')
    (platform_specific, expected_stdout_file) = platform_wordsize_qualify(namebase, 'stdout')
 
-   return compare_outputs('stdout', norm, getTestOpts().extra_normaliser, \
-                          expected_stdout_file, actual_stdout_file)
+   return compare_outputs('stdout', expected_stdout_file, actual_stdout_file)
 
 def dump_stdout( name ):
    print "Stdout:"
@@ -786,8 +784,7 @@ def check_stderr_ok( name ):
    actual_stderr_file   = qualify(name, 'run.stderr')
    (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
 
-   return compare_outputs('stderr', norm, getTestOpts().extra_normaliser, \
-                          expected_stderr_file, actual_stderr_file)
+   return compare_outputs('stderr', expected_stderr_file, actual_stderr_file)
 
 def dump_stderr( name ):
    print "Stderr:"
@@ -807,19 +804,16 @@ def write_file(file, str):
 # Compare expected output to actual output, and optionally accept the
 # new output. Returns true if output matched or was accepted, false
 # otherwise.
-def compare_outputs( kind, normaliser, extra_normaliser,
-                     expected_file, actual_file ):
+def compare_outputs( kind, expected_file, actual_file ):
     if os.path.exists(expected_file):
         expected_raw = read_no_crs(expected_file)
-        expected_str = normaliser(expected_raw)
     else:
-        expected_str = ''
+        expected_raw = ''
         expected_file = ''
 
     actual_raw = read_no_crs(actual_file)
-    actual_str = normaliser(actual_raw)
 
-    if extra_normaliser(expected_str) != extra_normaliser(actual_str):
+    if expected_raw != actual_raw:
         print 'Actual ' + kind + ' output differs from expected:'
 
         if expected_file == '':
@@ -827,9 +821,9 @@ def compare_outputs( kind, normaliser, extra_normaliser,
 
         else:
             expected_normalised_file = expected_file + ".normalised"
-            write_file(expected_normalised_file, expected_str)
+            write_file(expected_normalised_file, expected_raw)
         actual_normalised_file = actual_file + ".normalised"
-        write_file(actual_normalised_file, actual_str)
+        write_file(actual_normalised_file, actual_raw)
 
         # Ignore whitespace when diffing. We should only get to this
         # point if there are non-whitespace differences
@@ -841,17 +835,8 @@ def compare_outputs( kind, normaliser, extra_normaliser,
         if r == 0:
             r = os.system( 'diff -u ' + expected_normalised_file + \
                                   ' ' + actual_normalised_file )
-
-        if config.accept:
-            if expected_file == '':
-                print '*** cannot accept new output: ' + kind + \
-                      ' file does not exist.'
-                return 0
-            else:
-                print 'Accepting new output.'
-                write_file(expected_file, actual_raw)
-                return 1
         return 0
+
     return 1
 
 def if_verbose( n, str ):

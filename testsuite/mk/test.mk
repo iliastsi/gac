@@ -3,7 +3,6 @@
 #
 # 	make		-- run all the tests in the current directory
 # 	make verbose	-- as make test, but up the verbosity
-# 	make accept	-- run the tests, accepting the current output
 #
 # The following variables may be set on the make command line:
 #
@@ -39,12 +38,12 @@ endif
 $(eval $(call get-gac-feature-bool,GacWithLlvmCodeGen,Have llvm code generator))
 ifeq "$(GacWithLlvmCodeGen)" "YES"
 ifneq "$(shell $(SHELL) -c 'llvmc --version | grep version' 2> /dev/null)" ""
-RUNTEST_OPTS += -e ghc_with_llvm=1
+RUNTEST_OPTS += -e gac_with_llvm=1
 else
-RUNTEST_OPTS += -e ghc_with_llvm=0
+RUNTEST_OPTS += -e gac_with_llvm=0
 endif
 else
-RUNTEST_OPTS += -e ghc_with_llvm=0
+RUNTEST_OPTS += -e gac_with_llvm=0
 endif
 
 ifeq "$(IN_TREE_COMPILER)" "YES"
@@ -80,12 +79,6 @@ endif
 
 RUNTEST_OPTS +=  \
 	$(EXTRA_RUNTEST_OPTS)
-
-ifeq "$(accept)" "YES"
-setaccept = -e config.accept=1
-else
-setaccept = 
-endif
 
 TESTS	     = 
 TEST	     = 

@@ -4,3 +4,4 @@ syntax: glob
 dist/*
 Parser.info
 *.swp
+*.pyc
