@@ -266,12 +266,6 @@ def if_compiler_ge( compiler, version, f ):
     else:
         return normal
 
-def namebase( nb ):
-   return lambda opts, nb=nb: _namebase(opts, nb)
-
-def _namebase( opts, nb ):
-    opts.with_namebase = nb
-
 # ---
 
 def if_tag( tag, f ):
@@ -609,10 +603,7 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
     # of whether we expected the compilation to fail or not (successful
     # compilations may generate warnings).
 
-    if getTestOpts().with_namebase == None:
-        namebase = name
-    else:
-        namebase = getTestOpts().with_namebase
+    namebase = name
 
     expected_stderr_file = version_qualify(namebase, 'stderr')
     actual_stderr_file = qualify(name, 'comp.stderr')
@@ -760,10 +751,7 @@ def simple_run( name, way, prog, args ):
 # Utils
 
 def check_stdout_ok( name ):
-   if getTestOpts().with_namebase == None:
-       namebase = name
-   else:
-       namebase = getTestOpts().with_namebase
+   namebase = name
 
    actual_stdout_file   = qualify(name, 'run.stdout')
    expected_stdout_file = version_qualify(namebase, 'stdout')
@@ -775,10 +763,7 @@ def dump_stdout( name ):
    print read_no_crs(qualify(name, 'run.stdout'))
 
 def check_stderr_ok( name ):
-   if getTestOpts().with_namebase == None:
-       namebase = name
-   else:
-       namebase = getTestOpts().with_namebase
+   namebase = name
 
    actual_stderr_file   = qualify(name, 'run.stderr')
    expected_stderr_file = version_qualify(namebase, 'stderr')
