@@ -37,8 +37,8 @@ source-repository head
 
 Executable gac
   Main-is: Main.hs
-  Build-Tools: happy, alex
-
+  Build-Tools:  happy   >= 1.18.6,
+                alex    >= 2.3.5
   Build-Depends: base       >= 4,
                  array      >= 0.3,
                  containers >= 0.4

@@ -1,0 +1,55 @@
+
+import os
+import re
+
+# Testsuite configuration setup for GHC
+#
+# This file is Python source
+#
+config.compiler_type         = 'gac'
+config.compiler              = 'gac'
+config.compiler_always_flags = []
+
+config.confdir               = '.'
+
+# By default, we test the 'normal' ways.
+# 'optasm' is added by mk/test.mk if the compiler has a native code gen,
+config.compile_ways	     = ['normal']
+config.run_ways		     = ['normal']
+
+# ways that are not enabled by default, but can always be invoked explicitly
+config.other_ways            = ['optasm',
+                                'llvm', 'optllvm']
+
+if (gac_with_native_codegen == 1):
+	config.compile_ways.append('optasm')
+	config.run_ways.append('optasm')
+
+config.unregisterised = (ghc_unregisterised == 1)
+
+if (gac_with_llvm == 1):
+        config.run_ways.append('optllvm')
+
+config.in_tree_compiler = in_tree_compiler
+
+config.way_flags = {
+	'normal'     : [],
+	'optasm'     : ['-O -fasm'],
+	'llvm'       : ['-fllvm'],
+	'optllvm'    : ['-O -fllvm'],
+	}
+
+# Useful classes of ways:
+
+def get_compiler_info():
+    # This should really not go through the shell
+    h = os.popen('"' + config.compiler + '" --info', 'r')
+    s = h.read()
+    s = re.sub('[\r\n]', '', s)
+    h.close()
+    compilerInfoDict = dict(eval(s))
+
+    v = compilerInfoDict["Project version"].split('-')
+    config.compiler_version = v[0]
+    config.compiler_maj_version = re.sub('^([0-9]+\.[0-9]+).*',r'\1', v[0])
+    config.compiler_tags = v[1:]
