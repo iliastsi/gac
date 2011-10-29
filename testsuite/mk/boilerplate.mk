@@ -36,11 +36,11 @@ $(call canonicalise,$1)
 endef
 
 define get-gac-field # $1 = result variable, $2 = field name
-$1 := $$(shell '$$(TEST_AC)' --info | grep '^ .("$2",' | tr -d '\r' | sed -e 's/.*", *"//' -e 's/")$$$$//')
+$1 := $$(shell '$$(TEST_AC)' --info | grep '^ *.("$2",' | tr -d '\r' | sed -e 's/.*", *"//' -e 's/")$$$$//')
 endef
 
 define get-gac-feature-bool # $1 = result variable, $2 = field name
-SHELL_RES := $$(shell '$$(TEST_AC)' --info | grep '^ .("$2",' | tr -d '\r' | sed -e 's/.*", *"//' -e 's/")$$$$//')
+SHELL_RES := $$(shell '$$(TEST_AC)' --info | grep '^ *.("$2",' | tr -d '\r' | sed -e 's/.*", *"//' -e 's/")$$$$//')
 $1 := $$(strip \
 	  $$(if $$(SHELL_RES), \
          $$(if $$(subst YES,,$$(SHELL_RES)), \

@@ -718,7 +718,6 @@ def simple_run( name, way, prog, args ):
 
     rm_no_fail(qualify(name,'run.stdout'))
     rm_no_fail(qualify(name,'run.stderr'))
-    rm_no_fail(qualify(name, 'hp'))
    
     if opts.no_stdin:
         stdin_comes_from = ''

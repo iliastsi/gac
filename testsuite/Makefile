@@ -22,3 +22,4 @@ endif
 
 clean distclean maintainer-clean:
 	$(MAKE) -C $(TOP)/timeout $@
+	$(RM) driver/*.pyc

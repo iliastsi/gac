@@ -26,6 +26,7 @@ if (gac_with_native_codegen == 1):
 	config.run_ways.append('optasm')
 
 if (gac_with_llvm == 1):
+	config.compile_ways.append('optllvm')
         config.run_ways.append('optllvm')
 
 config.in_tree_compiler = in_tree_compiler
