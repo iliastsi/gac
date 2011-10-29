@@ -31,14 +31,6 @@ class TestConfig:
         # File in which to save the times
         self.times_file = ''
 
-        # What platform are we running on?
-        self.platform = ''
-        self.os = ''
-        self.arch = ''
-
-        # What is the wordsize (in bits) of this platform?
-        self.wordsize = ''
-
         # Verbosity level
         self.verbose = 1
 

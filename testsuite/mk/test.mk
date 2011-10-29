@@ -8,7 +8,7 @@
 #
 #	TEST		-- specific test to run
 #	TESTS		-- specific tests to run (same as $TEST really)
-#	EXTRA_AC_OPTS	-- extra flags to send to the Haskell compiler
+#	EXTRA_AC_OPTS	-- extra flags to send to the Alan compiler
 #	EXTRA_RUNTEST_OPTS -- extra flags to give the test driver
 #	CONFIG		-- use a different configuration file
 #	COMPILER	-- select a configuration file from config/
@@ -62,10 +62,6 @@ RUNTEST_OPTS +=  \
 	-e 'config.confdir="$(CONFIGDIR)"' \
 	-e 'config.compiler="$(TEST_AC)"' \
 	-e 'config.compiler_always_flags.append("$(EXTRA_AC_OPTS)")' \
-	-e 'config.platform="$(TARGETPLATFORM)"' \
-	-e 'config.os="$(TargetOS_CPP)"' \
-	-e 'config.arch="$(TargetARCH_CPP)"' \
-	-e 'config.wordsize="$(WORDSIZE)"' \
 	-e 'default_testopts.cleanup="$(CLEANUP)"' \
 	-e 'config.timeout=int($(TIMEOUT)) or config.timeout' \
 	-e 'config.timeout_prog="$(TIMEOUT_PROGRAM)"' \
@@ -80,9 +76,9 @@ endif
 RUNTEST_OPTS +=  \
 	$(EXTRA_RUNTEST_OPTS)
 
-TESTS	     = 
-TEST	     = 
-WAY =
+TESTS	=
+TEST	=
+WAY 	=
 
 .PHONY: all boot test verbose accept fast
 
@@ -105,6 +101,3 @@ test: $(TIMEOUT_PROGRAM)
 		$(setaccept)
 
 verbose: test
-
-accept:
-	$(MAKE) accept=YES

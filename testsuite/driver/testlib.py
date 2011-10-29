@@ -614,7 +614,7 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
     else:
         namebase = getTestOpts().with_namebase
 
-    (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
+    expected_stderr_file = version_qualify(namebase, 'stderr')
     actual_stderr_file = qualify(name, 'comp.stderr')
 
     if not compare_outputs('stderr', expected_stderr_file, actual_stderr_file):
@@ -766,7 +766,7 @@ def check_stdout_ok( name ):
        namebase = getTestOpts().with_namebase
 
    actual_stdout_file   = qualify(name, 'run.stdout')
-   (platform_specific, expected_stdout_file) = platform_wordsize_qualify(namebase, 'stdout')
+   expected_stdout_file = version_qualify(namebase, 'stdout')
 
    return compare_outputs('stdout', expected_stdout_file, actual_stdout_file)
 
@@ -781,7 +781,7 @@ def check_stderr_ok( name ):
        namebase = getTestOpts().with_namebase
 
    actual_stderr_file   = qualify(name, 'run.stderr')
-   (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
+   expected_stderr_file = version_qualify(namebase, 'stderr')
 
    return compare_outputs('stderr', expected_stderr_file, actual_stderr_file)
 
@@ -904,19 +904,18 @@ def qualify( name, suff ):
 
 # Finding the sample output.  The filename is of the form
 #
-#   <test>.stdout[-<compiler>][-<version>][-ws-<wordsize>][-<platform>]
+#   <test>.stdout[-<compiler>][-<version>]
 #
 # and we pick the most specific version available.  The <version> is
 # the major version of the compiler (e.g. 6.8.2 would be "6.8").  For
 # more fine-grained control use if_compiler_lt().
 #
-def platform_wordsize_qualify( name, suff ):
+def version_qualify( name, suff ):
 
     basepath = qualify(name, suff)
 
     fns = [ lambda x: x + '-' + config.compiler_type,
-            lambda x: x + '-' + config.compiler_maj_version,
-            lambda x: x + '-ws-' + config.wordsize ]
+            lambda x: x + '-' + config.compiler_maj_version ]
 
     paths = [ basepath ]
     for fn in fns:
@@ -924,20 +923,15 @@ def platform_wordsize_qualify( name, suff ):
 
     paths.reverse()
 
-    plat_paths = map (lambda x: x + '-' + config.platform, paths)
 
     dir = glob.glob(basepath + '*')
     dir = map (lambda d: normalise_slashes_(d), dir)
 
-    for f in plat_paths:
-       if f in dir:
-            return (1,f)
-
     for f in paths:
        if f in dir:
-            return (0,f)
+            return f
 
-    return (0, basepath)
+    return basepath
 
 # Clean up prior to the test, so that we can't spuriously conclude
 # that it passed on the basis of old run outputs.
