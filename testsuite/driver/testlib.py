@@ -80,6 +80,40 @@ def skip( opts ):
 def expect_fail( opts ):
     opts.expect = 'fail';
 
+def reqlib( lib ):
+    return lambda opts, l=lib: _reqlib (opts, l )
+
+# Cache the results of looking to see if we have a library or not.
+# This makes quite a difference, especially on Windows.
+have_lib = {}
+
+def _reqlib( opts, lib ):
+    if have_lib.has_key(lib):
+        got_it = have_lib[lib]
+    else:
+        if have_subprocess:
+            # By preference we use subprocess, as the alternative uses
+            # /dev/null which mingw doesn't have.
+            p = subprocess.Popen([config.ghc_pkg, '--no-user-package-conf', 'describe', lib],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            # read from stdout and stderr to avoid blocking due to
+            # buffers filling
+            p.communicate()
+            r = p.wait()
+        else:
+            r = os.system(config.ghc_pkg + ' describe ' + lib
+                                         + ' > /dev/null 2> /dev/null')
+        got_it = r == 0
+        have_lib[lib] = got_it
+
+    if not got_it:
+        opts.expect = 'fail'
+
+def req_profiling( opts ):
+    if not config.have_profiling:
+        opts.expect = 'fail'
+
 def expect_broken( bug ):
     return lambda opts, b=bug: _expect_broken (opts, b )
 
@@ -182,6 +216,18 @@ def _extra_clean( opts, v ):
 
 # -----
 
+def skip_if_no_ghci(opts):
+  if not ('ghci' in config.run_ways):
+      opts.skip = 1
+
+# ----
+
+def skip_if_fast(opts):
+  if config.fast:
+      opts.skip = 1
+
+# -----
+
 def if_platform( plat, f ):
     if config.platform == plat:
         return f
@@ -238,6 +284,18 @@ def if_compiler_type( compiler, f ):
     else:
         return normal
 
+def if_compiler_profiled( f ):
+    if config.compiler_profiled:
+        return f
+    else:
+        return normal
+
+def unless_compiler_profiled( f ):
+    if config.compiler_profiled:
+        return normal
+    else:
+        return f
+
 def if_compiler_lt( compiler, version, f ):
     if config.compiler_type == compiler and \
        version_lt(config.compiler_version, version):
@@ -266,6 +324,12 @@ def if_compiler_ge( compiler, version, f ):
     else:
         return normal
 
+def namebase( nb ):
+   return lambda opts, nb=nb: _namebase(opts, nb)
+
+def _namebase( opts, nb ):
+    opts.with_namebase = nb
+
 # ---
 
 def if_tag( tag, f ):
@@ -285,6 +349,13 @@ def alone(opts):
     opts.alone = 1
 
 # ---
+def literate( opts ):
+    opts.literate = 1;
+
+def c_src( opts ):
+    opts.c_src = 1;
+
+# ----
 
 def pre_cmd( cmd ):
     return lambda opts, c=cmd: _pre_cmd(opts, cmd)
@@ -318,6 +389,16 @@ def _compile_cmd_prefix( opts, prefix ):
 
 # ----
 
+def normalise_slashes( opts ):
+    opts.extra_normaliser = normalise_slashes_
+
+def normalise_fun( fun ):
+    return lambda opts, f=fun: _normalise_fun(opts, f)
+
+def _normalise_fun( opts, f ):
+    opts.extra_normaliser = f
+
+# ----
 # Function for composing two opt-fns together
 
 def composes( fs ):
@@ -374,7 +455,7 @@ def runTest (opts, name, setup, func, args):
         test_common_work (name, opts, func, args)
 
 # name  :: String
-# setup :: TestOpts -> IO ()
+# setup :: TestOpts -> IO ()  
 def test (name, setup, func, args):
     global allTests
     global allTestNames
@@ -396,20 +477,21 @@ if config.use_threads:
             t.thread_pool.notify()
             t.thread_pool.release()
     
-def get_package_cache_timestamp():
-    return 0.0
 
 def test_common_work (name, opts, func, args):
     t.total_tests = t.total_tests+1
     setLocalTestOpts(opts)
 
-    package_conf_cache_file_start_timestamp = get_package_cache_timestamp()
-
     # All the ways we might run this test
-    if func == compile :
+    if func == compile or func == multimod_compile:
         all_ways = config.compile_ways
-    elif func == compile_and_run :
+    elif func == compile_and_run or func == multimod_compile_and_run:
         all_ways = config.run_ways
+    elif func == ghci_script:
+        if 'ghci' in config.run_ways:
+            all_ways = ['ghci']
+        else:
+            all_ways = []
     else:
         all_ways = ['normal']
 
@@ -429,6 +511,10 @@ def test_common_work (name, opts, func, args):
     # Which ways we are asked to skip
     do_ways = filter (ok_way,all_ways)
 
+    # In fast mode, we skip all but one way
+    if config.fast and len(do_ways) > 0:
+        do_ways = [do_ways[0]]
+
     # Run the required tests...
     for way in do_ways:
         do_test (name, way, func, args)
@@ -440,13 +526,11 @@ def test_common_work (name, opts, func, args):
     if getTestOpts().cleanup != '':
         clean(map (lambda suff: name + suff,
                   ['', '.exe', '.exe.manifest', '.genscript',
+                   '.stderr.normalised',        '.stdout.normalised',
                    '.run.stderr',               '.run.stdout',
+                   '.run.stderr.normalised',    '.run.stdout.normalised',
                    '.comp.stderr',              '.comp.stdout',
-                   '.interp.stderr',            '.interp.stdout',
-                   '.stats',
-                   '.hi', '.o', '.prof', '.exe.prof', '.hc',
-                   '_stub.h', '_stub.c', '_stub.o',
-                   '.hp', '.exe.hp', '.ps', '.aux', '.hcr', '.eventlog']))
+                   '.comp.stderr.normalised',   '.comp.stdout.normalised']))
 
         clean(getTestOpts().clean_files)
 
@@ -458,11 +542,6 @@ def test_common_work (name, opts, func, args):
                     framework_fail(name, 'cleaning', 'clean-command failed: ' + str(result))
         except e:
             framework_fail(name, 'cleaning', 'clean-command exception')
-
-    package_conf_cache_file_end_timestamp = get_package_cache_timestamp();
-
-    if package_conf_cache_file_start_timestamp != package_conf_cache_file_end_timestamp:
-        framework_fail(name, 'whole-test', 'Package cache timestamps do not match: ' + str(package_conf_cache_file_start_timestamp) + ' ' + str(package_conf_cache_file_end_timestamp))
 
 def clean(names):
     clean_full_paths(map (lambda name: in_testdir(name), names))
@@ -583,6 +662,26 @@ def run_command( name, way, cmd ):
     return simple_run( name, '', cmd, '' )
 
 # -----------------------------------------------------------------------------
+# GHCi tests
+
+def ghci_script( name, way, script ):
+    # filter out -fforce-recomp from compiler_always_flags, because we're
+    # actually testing the recompilation behaviour in the GHCi tests.
+    flags = filter(lambda f: f != '-fforce-recomp', config.compiler_always_flags)
+    flags.append(getTestOpts().extra_hc_opts)
+
+    # We pass HC and HC_OPTS as environment variables, so that the
+    # script can invoke the correct compiler by using ':! $HC $HC_OPTS'
+    cmd = "HC='" + config.compiler + "' " + \
+          "HC_OPTS='" + join(flags,' ') + "' " + \
+          "'" + config.compiler + "'" + \
+          ' --interactive -v0 -ignore-dot-ghci ' + \
+          join(flags,' ')
+
+    getTestOpts().stdin = script
+    return simple_run( name, way, cmd, getTestOpts().extra_run_opts )
+
+# -----------------------------------------------------------------------------
 # Compile-only tests
 
 def compile( name, way, extra_hc_opts ):
@@ -603,12 +702,16 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
     # of whether we expected the compilation to fail or not (successful
     # compilations may generate warnings).
 
-    namebase = name
+    if getTestOpts().with_namebase == None:
+        namebase = name
+    else:
+        namebase = getTestOpts().with_namebase
 
-    expected_stderr_file = version_qualify(namebase, 'stderr')
+    (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
     actual_stderr_file = qualify(name, 'comp.stderr')
 
-    if not compare_outputs('stderr', expected_stderr_file, actual_stderr_file):
+    if not compare_outputs('stderr', normalise_errmsg, normalise_whitespace, \
+                           expected_stderr_file, actual_stderr_file):
         return 'fail'
 
     # no problems found, this test passed
@@ -617,10 +720,11 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
 # -----------------------------------------------------------------------------
 # Compile-and-run tests
 
-def compile_and_run__( name, way, extra_hc_opts ):
+def compile_and_run__( name, way, extra_hc_opts, ):
     # print 'Compile and run, extra args = ', extra_hc_opts
     pretest_cleanup(name)
 
+    # compiled...
     result = simple_build( name, way, extra_hc_opts, 0, 1 )
     if result == 'fail':
         return result
@@ -709,13 +813,19 @@ def simple_run( name, way, prog, args ):
 
     rm_no_fail(qualify(name,'run.stdout'))
     rm_no_fail(qualify(name,'run.stderr'))
+    rm_no_fail(qualify(name, 'hp'))
+    rm_no_fail(qualify(name,'ps'))
+    rm_no_fail(qualify(name, 'prof'))
    
+    my_rts_flags = rts_flags(way)
+
     if opts.no_stdin:
         stdin_comes_from = ''
     else:
         stdin_comes_from = ' <' + use_stdin
     cmd = 'cd ' + getTestOpts().testdir + ' && ' \
 	    + prog + ' ' + args + ' '  \
+        + my_rts_flags + ' '       \
         + stdin_comes_from         \
         + ' >' + run_stdout        \
         + ' 2>' + run_stderr
@@ -733,6 +843,9 @@ def simple_run( name, way, prog, args ):
         dump_stderr(name)
         return 'fail'
 
+    check_hp = my_rts_flags.find("-h") != -1
+    check_prof = my_rts_flags.find("-p") != -1
+
     if not opts.ignore_output:
         if not check_stderr_ok(name):
             return 'fail'
@@ -746,29 +859,168 @@ def simple_run( name, way, prog, args ):
 
     return 'pass'
 
+def rts_flags(way):
+    if (way == ''):
+        return ''
+    else:
+        args = config.way_rts_flags[way]
 
+    if args == []:
+        return ''
+    else:
+        return '+RTS ' + join(args,' ') + ' -RTS'
+
+# -----------------------------------------------------------------------------
+# Run a program in the interpreter and check its output
+
+def interpreter_run( name, way, extra_hc_opts, compile_only ):
+    outname = add_suffix(name, 'interp.stdout')
+    errname = add_suffix(name, 'interp.stderr')
+    rm_no_fail(outname)
+    rm_no_fail(errname)
+    rm_no_fail(name)
+    
+    if getTestOpts().cmd_prefix == '':
+        cmd_prefix = ''
+    else:
+        cmd_prefix = getTestOpts().cmd_prefix + ' '
+
+    srcname = add_alan_suffix(name)
+        
+    scriptname = add_suffix(name, 'genscript')
+    qscriptname = in_testdir(scriptname)
+    rm_no_fail(qscriptname)
+
+    delimiter = '===== program output begins here\n'
+
+    script = open(qscriptname, 'w')
+    if not compile_only:
+        # set the prog name and command-line args to match the compiled
+        # environment.
+        script.write(':set prog ' + name + '\n')
+        script.write(':set args ' + getTestOpts().extra_run_opts + '\n')
+        # Add marker lines to the stdout and stderr output files, so we
+        # can separate GHCi's output from the program's.
+        script.write(':! echo ' + delimiter)
+        script.write(':! echo 1>&2 ' + delimiter)
+        # Set stdout to be line-buffered to match the compiled environment.
+        script.write('System.IO.hSetBuffering System.IO.stdout System.IO.LineBuffering\n')
+        # wrapping in GHC.TopHandler.runIO ensures we get the same output
+        # in the event of an exception as for the compiled program.
+        script.write('GHC.TopHandler.runIOFastExit Main.main Prelude.>> Prelude.return ()\n')
+    script.close()
+
+    # figure out what to use for stdin
+    if getTestOpts().stdin != '':
+        stdin_file = in_testdir(getTestOpts().stdin)
+    else:
+        stdin_file = qualify(name, 'stdin')
+
+    if os.path.exists(stdin_file):
+        stdin = open(stdin_file, 'r')
+        os.system('cat ' + stdin_file + ' >>' + qscriptname)
+        
+    script.close()
+
+    cmd = 'cd ' + getTestOpts().testdir + " && " + cmd_prefix + "'" \
+          + config.compiler + "' " \
+          + join(config.compiler_always_flags,' ') + ' ' \
+          + srcname + ' ' \
+          + join(config.way_flags[way],' ') + ' ' \
+          + extra_hc_opts + ' ' \
+          + getTestOpts().extra_hc_opts + ' ' \
+          + '<' + scriptname +  ' 1>' + outname + ' 2>' + errname
+
+    result = runCmd(cmd)
+
+    exit_code = result >> 8
+    signal    = result & 0xff
+
+    # split the stdout into compilation/program output
+    split_file(in_testdir(outname), delimiter,
+               qualify(name, 'comp.stdout'),
+               qualify(name, 'run.stdout'))
+    split_file(in_testdir(errname), delimiter,
+               qualify(name, 'comp.stderr'),
+               qualify(name, 'run.stderr'))
+
+    # check the exit code
+    if exit_code != getTestOpts().exit_code:
+        print 'Wrong exit code (expected', getTestOpts().exit_code, ', actual', exit_code, ')'
+        dump_stdout(name)
+        dump_stderr(name)
+        return 'fail'
+
+    # ToDo: if the sub-shell was killed by ^C, then exit
+
+    if getTestOpts().ignore_output or (check_stderr_ok(name) and
+                                       check_stdout_ok(name)):
+        return 'pass'
+    else:
+        return 'fail'
+
+
+def split_file(in_fn, delimiter, out1_fn, out2_fn):
+    infile = open(in_fn)
+    out1 = open(out1_fn, 'w')
+    out2 = open(out2_fn, 'w')
+
+    line = infile.readline()
+    line = re.sub('\r', '', line) # ignore Windows EOL
+    while (re.sub('^\s*','',line) != delimiter and line != ''):
+        out1.write(line)
+        line = infile.readline()
+	line = re.sub('\r', '', line)
+    out1.close()
+
+    line = infile.readline()
+    while (line != ''):
+        out2.write(line)
+        line = infile.readline()
+    out2.close()
+    
 # -----------------------------------------------------------------------------
 # Utils
 
 def check_stdout_ok( name ):
-   namebase = name
+   if getTestOpts().with_namebase == None:
+       namebase = name
+   else:
+       namebase = getTestOpts().with_namebase
 
    actual_stdout_file   = qualify(name, 'run.stdout')
-   expected_stdout_file = version_qualify(namebase, 'stdout')
+   (platform_specific, expected_stdout_file) = platform_wordsize_qualify(namebase, 'stdout')
 
-   return compare_outputs('stdout', expected_stdout_file, actual_stdout_file)
+   def norm(str):
+      if platform_specific:
+         return str
+      else:
+         return normalise_output(str)
+
+   return compare_outputs('stdout', norm, getTestOpts().extra_normaliser, \
+                          expected_stdout_file, actual_stdout_file)
 
 def dump_stdout( name ):
    print "Stdout:"
    print read_no_crs(qualify(name, 'run.stdout'))
 
 def check_stderr_ok( name ):
-   namebase = name
+   if getTestOpts().with_namebase == None:
+       namebase = name
+   else:
+       namebase = getTestOpts().with_namebase
 
    actual_stderr_file   = qualify(name, 'run.stderr')
-   expected_stderr_file = version_qualify(namebase, 'stderr')
+   (platform_specific, expected_stderr_file) = platform_wordsize_qualify(namebase, 'stderr')
 
-   return compare_outputs('stderr', expected_stderr_file, actual_stderr_file)
+   def norm(str):
+      if platform_specific:
+         return str
+      else:
+         return normalise_output(str)
+
+   return compare_outputs('stderr', norm, getTestOpts().extra_normaliser, \
+                          expected_stderr_file, actual_stderr_file)
 
 def dump_stderr( name ):
    print "Stderr:"
@@ -785,19 +1037,61 @@ def write_file(file, str):
     h.write(str)
     h.close
 
+def check_hp_ok(name):
+
+    # do not qualify for hp2ps because we should be in the right directory
+    hp2psCmd = "cd " + getTestOpts().testdir + " && '" + config.hp2ps + "' " + name
+
+    hp2psResult = runCmdExitCode(hp2psCmd)
+
+    actual_ps_file = qualify(name, 'ps')
+    
+    if(hp2psResult == 0):
+        if (os.path.exists(actual_ps_file)):
+            if gs_working:
+                gsResult = runCmdExitCode(genGSCmd(actual_ps_file))
+                if (gsResult == 0):
+                    return (True)
+                else:
+                    print "hp2ps output for " + name + "is not valid PostScript"
+            else: return (True) # assume postscript is valid without ghostscript
+        else: 
+            print "hp2ps did not generate PostScript for " + name
+            return (False) 
+    else:
+        print "hp2ps error when processing heap profile for " + name
+        return(False)
+
+def check_prof_ok(name):
+
+    prof_file = qualify(name,'prof')
+
+    if not os.path.exists(prof_file):
+        print prof_file + " does not exist"
+        return(False)
+
+    if os.path.getsize(qualify(name,'prof')) == 0:
+        print prof_file + " is empty"
+        return(False)
+
+    return(True)
+
 # Compare expected output to actual output, and optionally accept the
 # new output. Returns true if output matched or was accepted, false
 # otherwise.
-def compare_outputs( kind, expected_file, actual_file ):
+def compare_outputs( kind, normaliser, extra_normaliser,
+                     expected_file, actual_file ):
     if os.path.exists(expected_file):
         expected_raw = read_no_crs(expected_file)
+        expected_str = normaliser(expected_raw)
     else:
-        expected_raw = ''
+        expected_str = ''
         expected_file = ''
 
     actual_raw = read_no_crs(actual_file)
+    actual_str = normaliser(actual_raw)
 
-    if expected_raw != actual_raw:
+    if extra_normaliser(expected_str) != extra_normaliser(actual_str):
         print 'Actual ' + kind + ' output differs from expected:'
 
         if expected_file == '':
@@ -805,9 +1099,9 @@ def compare_outputs( kind, expected_file, actual_file ):
 
         else:
             expected_normalised_file = expected_file + ".normalised"
-            write_file(expected_normalised_file, expected_raw)
+            write_file(expected_normalised_file, expected_str)
         actual_normalised_file = actual_file + ".normalised"
-        write_file(actual_normalised_file, actual_raw)
+        write_file(actual_normalised_file, actual_str)
 
         # Ignore whitespace when diffing. We should only get to this
         # point if there are non-whitespace differences
@@ -819,13 +1113,65 @@ def compare_outputs( kind, expected_file, actual_file ):
         if r == 0:
             r = os.system( 'diff -u ' + expected_normalised_file + \
                                   ' ' + actual_normalised_file )
-        return 0
 
+        if config.accept:
+            if expected_file == '':
+                print '*** cannot accept new output: ' + kind + \
+                      ' file does not exist.'
+                return 0
+            else:
+                print 'Accepting new output.'
+                write_file(expected_file, actual_raw)
+                return 1
+        return 0
     return 1
+
+def normalise_whitespace( str ):
+    # Merge contiguous whitespace characters into a single space.
+    str = re.sub('[ \t\n]+', ' ', str)
+    return str
+
+def normalise_errmsg( str ):
+    # If somefile ends in ".exe" or ".exe:", zap ".exe" (for Windows)
+    #    the colon is there because it appears in error messages; this
+    #    hacky solution is used in place of more sophisticated filename
+    #    mangling
+    str = re.sub('([^\\s])\\.exe', '\\1', str)
+    # The inplace ghc's are called ghc-bin-stage[123] to avoid filename
+    # collisions, so we need to normalise that to just "ghc"
+    # (this is for the old build system, I think, so should be removable)
+    str = re.sub('ghc-bin-stage[123]', 'ghc', str)
+    # The inplace ghc's are called ghc-stage[123] to avoid filename
+    # collisions, so we need to normalise that to just "ghc"
+    str = re.sub('ghc-stage[123]', 'ghc', str)
+    # We sometimes see the name of the integer-gmp package on stderr,
+    # but this can change (either the implementation name or the
+    # version number), so we canonicalise it here
+    str = re.sub('integer-[a-z]+', 'integer-impl', str)
+    return str
+
+def normalise_slashes_( str ):
+    str = re.sub('\\\\', '/', str)
+    return str
+
+def normalise_output( str ):
+    # Remove a .exe extension (for Windows)
+    # This can occur in error messages generated by the program.
+    str = re.sub('([^\\s])\\.exe', '\\1', str)
+    return str
 
 def if_verbose( n, str ):
     if config.verbose >= n:
         print str
+
+# Guess flags suitable for the compiler.
+def guess_compiler_flags():
+   if config.compiler_type == 'ghc':
+       return ['-fforce-recomp', '-dcore-lint', '-no-user-package-conf']
+   elif config.compiler_type == 'nhc':
+       return ['-an-nhc-specific-flag']
+   else:
+        return []
 
 def rawSystem(cmd_and_args):
     # We prefer subprocess.call to os.spawnv as the latter
@@ -855,6 +1201,10 @@ def rawSystem(cmd_and_args):
 def runCmd( cmd ):
     if_verbose( 1, cmd )
     r = 0
+    if config.platform == 'i386-unknown-mingw32':
+	# On MinGW, we will always have timeout
+        assert config.timeout_prog!=''
+
     if config.timeout_prog != '':
         r = rawSystem([config.timeout_prog, str(config.timeout), cmd])
     else:
@@ -864,6 +1214,33 @@ def runCmd( cmd ):
 def runCmdExitCode( cmd ):
     return (runCmd(cmd) >> 8);
 
+
+# -----------------------------------------------------------------------------
+# checking if ghostscript is available for checking the output of hp2ps
+
+def genGSCmd(psfile):
+    return (config.gs + ' -dNODISPLAY -dBATCH -dQUIET -dNOPAUSE ' + psfile);
+
+def gsNotWorking():
+    global gs_working 
+    print "GhostScript not available for hp2ps tests"
+
+global gs_working
+gs_working = 0
+if config.have_profiling:
+  if config.gs != '':
+    resultGood = runCmdExitCode(genGSCmd(config.confdir + '/good.ps'));
+    if resultGood == 0:
+        resultBad = runCmdExitCode(genGSCmd(config.confdir + '/bad.ps'));
+        if resultBad != 0:
+            print "GhostScript available for hp2ps tests"
+            gs_working = 1;
+        else:
+            gsNotWorking();
+    else:
+        gsNotWorking();
+  else:
+    gsNotWorking();
 
 def rm_no_fail( file ):
    try:
@@ -889,18 +1266,19 @@ def qualify( name, suff ):
 
 # Finding the sample output.  The filename is of the form
 #
-#   <test>.stdout[-<compiler>][-<version>]
+#   <test>.stdout[-<compiler>][-<version>][-ws-<wordsize>][-<platform>]
 #
 # and we pick the most specific version available.  The <version> is
 # the major version of the compiler (e.g. 6.8.2 would be "6.8").  For
 # more fine-grained control use if_compiler_lt().
 #
-def version_qualify( name, suff ):
+def platform_wordsize_qualify( name, suff ):
 
     basepath = qualify(name, suff)
 
     fns = [ lambda x: x + '-' + config.compiler_type,
-            lambda x: x + '-' + config.compiler_maj_version ]
+            lambda x: x + '-' + config.compiler_maj_version,
+            lambda x: x + '-ws-' + config.wordsize ]
 
     paths = [ basepath ]
     for fn in fns:
@@ -908,15 +1286,20 @@ def version_qualify( name, suff ):
 
     paths.reverse()
 
+    plat_paths = map (lambda x: x + '-' + config.platform, paths)
 
     dir = glob.glob(basepath + '*')
     dir = map (lambda d: normalise_slashes_(d), dir)
 
+    for f in plat_paths:
+       if f in dir:
+            return (1,f)
+
     for f in paths:
        if f in dir:
-            return f
+            return (0,f)
 
-    return basepath
+    return (0, basepath)
 
 # Clean up prior to the test, so that we can't spuriously conclude
 # that it passed on the basis of old run outputs.

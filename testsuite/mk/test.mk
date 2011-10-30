@@ -3,6 +3,7 @@
 #
 # 	make		-- run all the tests in the current directory
 # 	make verbose	-- as make test, but up the verbosity
+# 	make accept	-- run the tests, accepting the current output
 #
 # The following variables may be set on the make command line:
 #
@@ -16,7 +17,7 @@
 #
 # -----------------------------------------------------------------------------
 
-# export the value of $MAKE for invocation in ghc-regress/driver/
+# export the value of $MAKE for invocation
 export MAKE
 
 RUNTESTS     = $(TOP)/driver/runtests.py
@@ -35,15 +36,23 @@ else
 RUNTEST_OPTS += -e gac_with_native_codegen=0
 endif
 
-$(eval $(call get-gac-feature-bool,GacWithLlvmCodeGen,Have llvm code generator))
-ifeq "$(GacWithLlvmCodeGen)" "YES"
+
 ifneq "$(shell $(SHELL) -c 'llvmc --version | grep version' 2> /dev/null)" ""
 RUNTEST_OPTS += -e gac_with_llvm=1
 else
 RUNTEST_OPTS += -e gac_with_llvm=0
 endif
+
+ifeq "$(WINDOWS)" "YES"
+RUNTEST_OPTS += -e windows=True
 else
-RUNTEST_OPTS += -e gac_with_llvm=0
+RUNTEST_OPTS += -e windows=False
+endif
+
+ifeq "$(DARWIN)" "YES"
+RUNTEST_OPTS += -e darwin=True
+else
+RUNTEST_OPTS += -e darwin=False
 endif
 
 ifeq "$(IN_TREE_COMPILER)" "YES"
@@ -62,6 +71,10 @@ RUNTEST_OPTS +=  \
 	-e 'config.confdir="$(CONFIGDIR)"' \
 	-e 'config.compiler="$(TEST_AC)"' \
 	-e 'config.compiler_always_flags.append("$(EXTRA_AC_OPTS)")' \
+	-e 'config.platform="$(TARGETPLATFORM)"' \
+	-e 'config.os="$(TargetOS_CPP)"' \
+	-e 'config.arch="$(TargetARCH_CPP)"' \
+	-e 'config.wordsize="$(WORDSIZE)"' \
 	-e 'default_testopts.cleanup="$(CLEANUP)"' \
 	-e 'config.timeout=int($(TIMEOUT)) or config.timeout' \
 	-e 'config.timeout_prog="$(TIMEOUT_PROGRAM)"' \
@@ -76,8 +89,20 @@ endif
 RUNTEST_OPTS +=  \
 	$(EXTRA_RUNTEST_OPTS)
 
+ifeq "$(fast)" "YES"
+setfast = -e config.fast=1
+else
+setfast = 
+endif
+
+ifeq "$(accept)" "YES"
+setaccept = -e config.accept=1
+else
+setaccept = 
+endif
+
 TESTS	=
-TEST	=
+TEST	= 
 WAY 	=
 
 .PHONY: all boot test verbose accept fast
@@ -98,6 +123,14 @@ test: $(TIMEOUT_PROGRAM)
 		$(patsubst %, --only=%, $(TESTS)) \
 		$(patsubst %, --way=%, $(WAY)) \
 		$(patsubst %, --skipway=%, $(SKIPWAY)) \
+		$(setfast) \
 		$(setaccept)
 
 verbose: test
+
+accept:
+	$(MAKE) accept=YES
+
+fast:
+	$(MAKE) fast=YES
+

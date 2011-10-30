@@ -38,3 +38,4 @@ endif
 
 clean distclean maintainer-clean:
 	$(RM) -rf install-inplace
+

@@ -35,6 +35,7 @@ endif
 $(call canonicalise,$1)
 endef
 
+
 define get-gac-field # $1 = result variable, $2 = field name
 $1 := $$(shell '$$(TEST_AC)' --info | grep '^ *.("$2",' | tr -d '\r' | sed -e 's/.*", *"//' -e 's/")$$$$//')
 endef
@@ -57,7 +58,6 @@ TEST_AC := $(abspath $(TOP)/../gac)
 
 ifneq "$(wildcard $(TEST_AC) $(TEST_AC).exe)" ""
 IN_TREE_COMPILER = YES
-
 else
 IN_TREE_COMPILER = NO
 TEST_AC := $(shell which gac)
@@ -67,8 +67,8 @@ else
 IN_TREE_COMPILER = NO
 # We want to support both "gac" and "/usr/bin/gac" as values of TEST_AC
 # passed in by the user, but
-#     which ghc          == /usr/bin/ghc
-#     which /usr/bin/ghc == /usr/bin/ghc
+#     which gac          == /usr/bin/gac
+#     which /usr/bin/gac == /usr/bin/gac
 # so we can just always 'which' it. We need to use 'override' in order
 # to override a value given on the commandline.
 override TEST_AC := $(shell which '$(TEST_AC)')
@@ -78,10 +78,12 @@ endif
 # containing spaces
 BIN_ROOT = $(shell dirname '$(TEST_AC)')
 
+
 $(eval $(call canonicaliseExecutable,TEST_AC))
 ifeq "$(shell test -x '$(TEST_AC)' && echo exists)" ""
 $(error Cannot find gac: $(TEST_AC))
 endif
+
 
 TOP_ABS := $(abspath $(TOP))
 $(eval $(call canonicalise,TOP_ABS))
@@ -92,3 +94,4 @@ PYTHON = python
 
 WINDOWS = NO
 DARWIN = NO
+

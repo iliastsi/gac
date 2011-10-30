@@ -25,14 +25,28 @@ class TestConfig:
         # Run these tests only (run all tests if empty)
         self.only = []
 
+        # Accept new output which differs from the sample?
+        self.accept = 0
+
         # File in which to save the summary
         self.output_summary = ''
 
         # File in which to save the times
         self.times_file = ''
 
+        # What platform are we running on?
+        self.platform = ''
+        self.os = ''
+        self.arch = ''
+
+        # What is the wordsize (in bits) of this platform?
+        self.wordsize = ''
+
         # Verbosity level
         self.verbose = 1
+
+        # run the "fast" version of the test suite
+        self.fast = 0
 
         # Compiler type (ghc, hugs, nhc, etc.)
         self.compiler_type = ''
@@ -60,6 +74,10 @@ class TestConfig:
 
         # Lists of flags for each way
         self.way_flags = {}
+        self.way_rts_flags = {}
+
+        # Do we have profiling support?
+        self.have_profiling = False
 
         # Do we have shared libraries?
         self.have_shared_libs = False
@@ -113,6 +131,10 @@ def getTestRun():
 
 class TestOptions:
    def __init__(self):
+
+       # if not None then we look for namebase.stderr etc rather than
+       # using the test name
+       self.with_namebase = None;
 
        # skip this test?
        self.skip = 0;
@@ -171,6 +193,9 @@ class TestOptions:
 
        # Prefix to put on the command before compiling it
        self.compile_cmd_prefix = ''
+
+       # Extra output normalisation
+       self.extra_normaliser = lambda x: x
 
        # The directory the test is in
        self.testdir = '.'

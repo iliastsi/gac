@@ -22,6 +22,10 @@ from testglobals import *
 # value.
 os.environ['TERM'] = 'vt100'
 
+if sys.platform == "cygwin":
+    cygwin = True
+else:
+    cygwin = False
 
 global config
 config = getConfig() # get it from testglobals
@@ -46,7 +50,7 @@ for opt,arg in opts:
         execfile(arg)
 
     # -e is a string to execute from the command line.  For example:
-    # testframe -e 'config.compiler=gac-0.9'
+    # testframe -e 'config.compiler=ghc-5.04'
     if opt == '-e':
         exec arg
 
@@ -103,27 +107,45 @@ if config.use_threads == 1:
         config.use_threads = 0
 
 # Try to use UTF8
-# Try and find a utf8 locale to use
-# First see if we already have a UTF8 locale
-h = os.popen('locale | grep LC_CTYPE | grep -i utf', 'r')
-v = h.read()
-h.close()
-if v == '':
-    # We don't, so now see if 'locale -a' works
-    h = os.popen('locale -a', 'r')
+if windows:
+    import ctypes
+    if cygwin:
+        # Is this actually right? Which calling convention does it use?
+        # As of the time of writing, ctypes.windll doesn't exist in the
+        # cygwin python, anyway.
+        mydll = ctypes.cdll
+    else:
+        mydll = ctypes.windll
+
+    # This actually leaves the terminal in codepage 65001 (UTF8) even
+    # after python terminates. We ought really remember the old codepage
+    # and set it back.
+    if mydll.kernel32.SetConsoleCP(65001) == 0:
+        raise Exception("Failure calling SetConsoleCP(65001)")
+    if mydll.kernel32.SetConsoleOutputCP(65001) == 0:
+        raise Exception("Failure calling SetConsoleOutputCP(65001)")
+else:
+    # Try and find a utf8 locale to use
+    # First see if we already have a UTF8 locale
+    h = os.popen('locale | grep LC_CTYPE | grep -i utf', 'r')
     v = h.read()
     h.close()
-    if v != '':
-        # If it does then use the first utf8 locale that is available
-        h = os.popen('locale -a | grep -i "utf8\|utf-8" 2>/dev/null', 'r')
-        v = h.readline().strip()
+    if v == '':
+        # We don't, so now see if 'locale -a' works
+        h = os.popen('locale -a', 'r')
+        v = h.read()
         h.close()
         if v != '':
-            os.environ['LC_ALL'] = v
-            print "setting LC_ALL to", v
-        else:
-            print 'WARNING: No UTF8 locale found.'
-            print 'You may get some spurious test failures.'
+            # If it does then use the first utf8 locale that is available
+            h = os.popen('locale -a | grep -i "utf8\|utf-8" 2>/dev/null', 'r')
+            v = h.readline().strip()
+            h.close()
+            if v != '':
+                os.environ['LC_ALL'] = v
+                print "setting LC_ALL to", v
+            else:
+                print 'WARNING: No UTF8 locale found.'
+                print 'You may get some spurious test failures.'
 
 # This has to come after arg parsing as the args can change the compiler
 get_compiler_info()
@@ -131,6 +153,31 @@ get_compiler_info()
 # Can't import this earlier as we need to know if threading will be
 # enabled or not
 from testlib import *
+
+# On Windows we need to set $PATH to include the paths to all the DLLs
+# in order for the dynamic library tests to work.
+if windows or darwin:
+    pkginfo = getStdout([config.ghc_pkg, 'dump'])
+    topdir = re.sub('\\\\','/',getStdout([config.compiler, '--print-libdir'])).rstrip()
+    for line in pkginfo.split('\n'):
+        if line.startswith('library-dirs:'):
+            path = line.rstrip()
+            path = re.sub('^library-dirs: ', '', path)
+            path = re.sub('\\$topdir', topdir, path)
+            if path.startswith('"'):
+                path = re.sub('^"(.*)"$', '\\1', path)
+                path = re.sub('\\\\(.)', '\\1', path)
+            if windows:
+                if cygwin:
+                    # On cygwin we can't put "c:\foo" in $PATH, as : is a
+                    # field separator. So convert to /cygdrive/c/foo instead.
+                    # Other pythons use ; as the separator, so no problem.
+                    path = re.sub('([a-zA-Z]):', '/cygdrive/\\1', path)
+                    path = re.sub('\\\\', '/', path)
+                os.environ['PATH'] = os.pathsep.join([path, os.environ.get("PATH", "")])
+            else:
+                # darwin
+                os.environ['DYLD_LIBRARY_PATH'] = os.pathsep.join([path, os.environ.get("DYLD_LIBRARY_PATH", "")])
 
 global testopts_local
 testopts_local.x = TestOptions()
@@ -145,7 +192,7 @@ if config.use_threads:
 
 # if timeout == -1 then we try to calculate a sensible value
 if config.timeout == -1:
-    config.timeout = 300
+    config.timeout = int(read_no_crs(config.top + '/timeout/calibrate.out'))
 
 print 'Timeout is ' + str(config.timeout)
 
@@ -161,7 +208,11 @@ print 'Found', len(t_files), '.T files...'
 
 t = getTestRun()
 
-t.start_time = chop(os.popen('date').read())
+# Avoid cmd.exe built-in 'date' command on Windows
+if not windows:
+    t.start_time = chop(os.popen('date').read())
+else:
+    t.start_time = 'now'
 
 print 'Beginning test run at', t.start_time
 

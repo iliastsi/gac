@@ -2,23 +2,24 @@
 import os
 import re
 
-# Testsuite configuration setup for GHC
+# Testsuite configuration setup for GAC
 #
 # This file is Python source
 #
 config.compiler_type         = 'gac'
 config.compiler              = 'gac'
-config.compiler_always_flags = []
+config.compiler_always_flags = ['']
 
 config.confdir               = '.'
 
-# By default, we test the 'normal' ways.
+# By default, we test the 'normal', 'opt' and 'hpc' ways.
 # 'optasm' is added by mk/test.mk if the compiler has a native code gen,
+# 'prof'   is added by mk/test.mk if the profiling way is enabled.
 config.compile_ways	     = ['normal']
 config.run_ways		     = ['normal']
 
 # ways that are not enabled by default, but can always be invoked explicitly
-config.other_ways            = ['optasm',
+config.other_ways            = ['asm','optasm',
                                 'llvm', 'optllvm']
 
 if (gac_with_native_codegen == 1):
@@ -33,12 +34,12 @@ config.in_tree_compiler = in_tree_compiler
 
 config.way_flags = {
 	'normal'     : [],
+	'asm'        : ['-fasm'],
 	'optasm'     : ['-O -fasm'],
 	'llvm'       : ['-fllvm'],
 	'optllvm'    : ['-O -fllvm'],
 	}
 
-# Useful classes of ways:
 
 def get_compiler_info():
     # This should really not go through the shell
@@ -52,3 +53,4 @@ def get_compiler_info():
     config.compiler_version = v[0]
     config.compiler_maj_version = re.sub('^([0-9]+\.[0-9]+).*',r'\1', v[0])
     config.compiler_tags = v[1:]
+
