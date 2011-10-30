@@ -14,6 +14,8 @@ module Outputable (
 import Bag
 import ErrUtils
 
+import System.IO (hPutStrLn, stderr)
+
 
 -- -------------------------------------------------------------------
 -- Print Messages
@@ -30,7 +32,7 @@ printWarns = printMsgBag . fst
 
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =
-    mapM_ (\msg -> putStrLn $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
+    mapM_ (\msg -> hPutStrLn stderr $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
 
 
 -- -------------------------------------------------------------------

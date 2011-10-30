@@ -8,21 +8,56 @@
 
 module Main(main) where
 
-import System.IO()
-import Lexer (ParseResult(..), mkPState, unP)
+import Lexer (ParseResult(..), mkPState, unP, PState, getPMessages)
 import Parser (parser)
-import SrcLoc (mkSrcLoc)
+import SrcLoc (mkSrcLoc, Located)
 import Outputable
-import TcMonad
-import SymbolTable
-import TypeCheck
+import TcMonad (TcResult(..), mkTcState, unTcM, TcState, getTcMessages)
+import SymbolTable (predefinedTable)
+import TypeCheck (typeCheckDef)
+import ErrUtils (errorsFound, unionMessages)
+import UnTypedAst (UDef)
+import TypedAst (ADef)
+
+import System.Exit (exitSuccess, exitFailure)
+
+
+parse :: String -> IO (PState, Located UDef)
+parse buf = do
+    case unP parser (mkPState buf (mkSrcLoc "Stdin" 1 1)) of
+         PFailed msg       -> do
+             printOutput msg
+             exitFailure
+         POk p_state luast -> do
+             return (p_state, luast)
+
+typeCheck :: (Located UDef) -> IO (TcState, Located ADef)
+typeCheck luast = do
+    case unTcM (typeCheckDef luast) (mkTcState predefinedTable) of
+         TcFailed msg       -> do
+             printOutput msg
+             exitFailure
+         TcOk tc_state ltast -> do
+             return (tc_state, ltast)
 
 main :: IO ()
 main = do
     str <- getContents
-    case unP parser (mkPState str (mkSrcLoc "Stdin" 1 1)) of
-         POk _state ast -> do
-             case unTcM (typeCheckDef ast) (mkTcState predefinedTable) of
-                  TcOk tcstate _ -> printOutput (getTcMessages tcstate)
-                  TcFailed tcm   -> printOutput tcm
-         PFailed pm      -> printOutput pm
+    (p_state, luast) <- parse str
+    let p_messages = getPMessages p_state
+    if errorsFound p_messages
+       then do
+           printOutput p_messages
+           exitFailure
+       else do
+           return ()
+    (tc_state, _) <- typeCheck luast   
+    let tc_messages = unionMessages p_messages (getTcMessages tc_state)
+    if errorsFound tc_messages
+       then do
+           printOutput tc_messages
+           exitFailure
+       else do
+           return ()
+    printOutput tc_messages
+    exitSuccess

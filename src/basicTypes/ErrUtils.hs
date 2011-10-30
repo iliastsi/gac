@@ -14,7 +14,7 @@ module ErrUtils (
 
     ErrMsg, WarnMsg,
     ErrorMessages, WarningMessages,
-    Messages, errorsFound, emptyMessages,
+    Messages, errorsFound, emptyMessages, unionMessages,
     mkErrMsg, mkWarnMsg,
 
     sortMessages,
@@ -84,6 +84,9 @@ emptyMessages = (emptyBag, emptyBag)
 errorsFound :: Messages -> Bool
 errorsFound (warns, errs) = not (isEmptyBag errs)
 
+unionMessages :: Messages -> Messages -> Messages
+unionMessages (w1, e1) (w2, e2) =
+    (w1 `unionBags` w2, e1 `unionBags` e2)
 
 -- -------------------------------------------------------------------
 -- Sort a list of messages by descending SrcSpan order
