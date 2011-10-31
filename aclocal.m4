@@ -376,7 +376,14 @@ dnl at least Happy version 1.14.  If there's no installed Happy, we look
 dnl for a happy source tree and point the build system at that instead.
 dnl
 AC_DEFUN([FPTOOLS_HAPPY],
-[AC_PATH_PROG(HappyCmd,happy,)
+[AC_ARG_WITH([happy],
+  [AS_HELP_STRING([--with-happy=ARG],
+    [Use ARG as the path to happy [default=autodetect]])],
+  [HappyCmd="$withval"],
+  [])
+AS_IF([test "x$HappyCmd" != "x"],
+  [],
+  [AC_PATH_PROG(HappyCmd,happy,)])
 # Happy is passed to Cabal, so we need a native path
 if test "x$HostPlatform"  = "xi386-unknown-mingw32" && \
    test "${OSTYPE}"      != "msys"                  && \
@@ -408,8 +415,14 @@ dnl Check for Alex and version.  If we're building GHC, then we need
 dnl at least Alex version 2.0.1.
 dnl
 AC_DEFUN([FPTOOLS_ALEX],
-[
-AC_PATH_PROG(AlexCmd,alex,)
+[AC_ARG_WITH([alex],
+  [AS_HELP_STRING([--with-alex=ARG],
+    [Use ARG as the path to alex [default=autodetect]])],
+  [AlexCmd="$withval"],
+  [])
+AS_IF([test "x$AlexCmd" != "x"],
+  [],
+  [AC_PATH_PROG(AlexCmd,alex,)])
 # Alex is passed to Cabal, so we need a native path
 if test "x$HostPlatform"  = "xi386-unknown-mingw32" && \
    test "${OSTYPE}"      != "msys"                  && \
