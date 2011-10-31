@@ -605,8 +605,6 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 LIBRARY_gac_VERSION
-LIBRARY_Cabal_VERSION
-LIBRARY_base_VERSION
 LdIsGNULd
 LdXFlag
 LeadingUnderscore
@@ -6718,19 +6716,13 @@ LdIsGNULd=`echo $fp_cv_gnu_ld | sed 'y/yesno/YESNO/'`
 
 
 
-
-LIBRARY_base_VERSION=`grep -i "^version:" libraries/base/base.cabal | sed "s/.* //"`
-
-
-
-LIBRARY_Cabal_VERSION=`grep -i "^version:" libraries/Cabal/Cabal.cabal | sed "s/.* //"`
-
-
+#LIBRARY_VERSION(math)
+#LIBRARY_VERSION(stdio)
 LIBRARY_gac_VERSION="$ProjectVersion"
 
 
-if grep '	' src/ghc.cabal.in 2>&1 >/dev/null; then
-   as_fn_error $? "src/ghc.cabal.in contains tab characters; please remove them" "$LINENO" 5
+if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
+   as_fn_error $? "src/gac.cabal.in contains tab characters; please remove them" "$LINENO" 5
 fi
 
 ac_config_files="$ac_config_files Makefile src/gac.cabal src/Makefile"

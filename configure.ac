@@ -449,13 +449,13 @@ dnl ** check for ld, whether it has an -x option, and if it is GNU ld
 FP_PROG_LD_X
 FP_PROG_LD_IS_GNU
 
-LIBRARY_VERSION(base)
-LIBRARY_VERSION(Cabal)
+#LIBRARY_VERSION(math)
+#LIBRARY_VERSION(stdio)
 LIBRARY_gac_VERSION="$ProjectVersion"
 AC_SUBST(LIBRARY_gac_VERSION)
 
-if grep '	' src/ghc.cabal.in 2>&1 >/dev/null; then
-   AC_MSG_ERROR([src/ghc.cabal.in contains tab characters; please remove them])
+if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
+   AC_MSG_ERROR([src/gac.cabal.in contains tab characters; please remove them])
 fi
 
 AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile])
