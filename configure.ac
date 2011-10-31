@@ -371,7 +371,12 @@ FPTOOLS_HAPPY
 
 dnl ** set happy flags
 AC_ARG_VAR([YFLAGS], [Happy metacompiler flags])
-YFLAGS="-i -a -g" 
+if test x"$ac_cv_env_YFLAGS_set" != x
+then
+        YFLAGS=$ac_cv_env_YFLAGS_value
+else
+        YFLAGS="-i -a -g" 
+fi
 AC_SUBST([YFLAGS])
 
 dnl ** check for installed alex binary + version
@@ -379,7 +384,12 @@ FPTOOLS_ALEX
 
 dnl ** set alex flags
 AC_ARG_VAR([LFLAGS], [Alex metacompiler flags])
-LFLAGS="--ghc"
+if test x"$ac_cv_env_LFLAGS_set" != x
+then
+        LFLAGS=$ac_cv_env_LFLAGS_value
+else
+        LFLAGS="--ghc" 
+fi
 AC_SUBST([LFLAGS])
 
 dnl --------------------------------------------------
