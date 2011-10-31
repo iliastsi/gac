@@ -370,23 +370,17 @@ dnl ** check for installed happy binary + version
 FPTOOLS_HAPPY
 
 dnl ** set happy flags
-AC_ARG_WITH([happy-flags],
-  [AS_HELP_STRING([--with-happy-flags=ARG],
-    [Use ARG as happy flags, defaults to -i -a -g])],
-  [HappyFlags="$withval"],
-  [HappyFlags="-i -a -g"])
-AC_SUBST([HappyFlags])
+AC_ARG_VAR([YFLAGS], [Happy metacompiler flags])
+YFLAGS="-i -a -g" 
+AC_SUBST([YFLAGS])
 
 dnl ** check for installed alex binary + version
 FPTOOLS_ALEX
 
 dnl ** set alex flags
-AC_ARG_WITH([alex-flags],
-  [AS_HELP_STRING([--with-alex-flags=ARG],
-    [Use ARG as alex flags, defaults to --ghc])],
-  [AlexFlags="$withval"],
-  [AlexFlags="--ghc"])
-AC_SUBST([AlexFlags])
+AC_ARG_VAR([LFLAGS], [Alex metacompiler flags])
+LFLAGS="--ghc"
+AC_SUBST([LFLAGS])
 
 dnl --------------------------------------------------
 dnl ### program checking section ends here ###
