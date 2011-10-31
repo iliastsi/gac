@@ -369,8 +369,24 @@ FP_PROG_GHC_PKG
 dnl ** check for installed happy binary + version
 FPTOOLS_HAPPY
 
+dnl ** set happy flags
+AC_ARG_WITH([happy-flags],
+  [AS_HELP_STRING([--with-happy-flags],
+    [happy flags, defaults to -i -a -g])],
+    [HappyFlags="$withval"],
+    [HappyFlags="-i -a -g"])
+AC_SUBST([HappyFlags])
+
 dnl ** check for installed alex binary + version
 FPTOOLS_ALEX
+
+dnl ** set alex flags
+AC_ARG_WITH([alex-flags],
+  [AS_HELP_STRING([--with-alex-flags],
+    [alex flags, defaults to --ghc])],
+    [AlexFlags="$withval"],
+    [AlexFlags="--ghc"])
+AC_SUBST([AlexFlags])
 
 dnl --------------------------------------------------
 dnl ### program checking section ends here ###
