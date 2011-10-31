@@ -458,7 +458,7 @@ if grep '	' src/ghc.cabal.in 2>&1 >/dev/null; then
    AC_MSG_ERROR([src/ghc.cabal.in contains tab characters; please remove them])
 fi
 
-AC_CONFIG_FILES([Makefile src/gac.cabal])
+AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile])
 AC_OUTPUT
 
 # We get caught by

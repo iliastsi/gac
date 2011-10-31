@@ -121,7 +121,7 @@ instance Show Severity where
 
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
-    show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
+    show (ParseError buf)     = "Parse error on input `" ++ buf ++ "'"
     show (ScopeError ide)     = "Not in scope `" ++ ide ++ "'"
     show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
     show UnreachError         = "Unreachable code"

@@ -1,7 +1,7 @@
-Name: gac
-Version: 0.4
+Name: @PACKAGE_TARNAME@
+Version: @PACKAGE_VERSION@
 License: MIT
-License-File: LICENSE
+License-File: ../LICENSE
 Author:  Ilias Tsitsimpis
 Maintainer: iliastsi@hotmail.com
 Synopsis: Alan Compiler written in Haskell
@@ -13,22 +13,6 @@ Category: Development
 Build-Type: Custom
 Cabal-Version: >= 1.6
 Tested-With: GHC
-
-Extra-Source-Files:
-    Makefile
-    INSTALL
-    README
-    HACKING
-    TODO
-    docs/*.pdf
-    docs/*.html
-    docs/alex-html/*.html
-    docs/alex-html/*.css
-    docs/happy/*.html
-    docs/happy/*.css
-    testsuite/*.alan
-
-Extra-Tmp-Files: src/parser/Parser.info
 
 source-repository head
     type:     mercurial
@@ -50,12 +34,11 @@ Executable gac
   GHC-Options: -Wall -Wwarn -w -O
 
   Hs-Source-Dirs:
-        src
-        src/parser
-        src/basicTypes
-        src/utils
-        src/typecheck
-        src/main
+        parser
+        basicTypes
+        utils
+        typecheck
+        main
   Other-Modules:
         Parser
         Lexer

@@ -7,14 +7,12 @@ This distribution can be installed in a location of your choosing.
 To set the ball rolling, run the configure script.
 eg. to set up the package for installing in directory <my-dir>, use
 
-        make PREFIX=<my-dir> config
+        ./configure --prefix=<my-dir>
 
-The default installation directory is $(HOME)/.cabal/bin
-(ie PREFIX is set to $(HOME)/.cabal).
+The default installation directory is /usr/local
 
-The configure script is using cabal configuration which will figure out
-what platform you're running on, and a couple of other interesting pieces
-of trivia.
+The configure script will figure out what platform you're
+running on, and a couple of other interesting pieces of trivia.
 
 Now run:
 

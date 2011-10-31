@@ -1,0 +1,41 @@
+# -----------------------------------------------------------------------------
+#
+# (c) 2011 Tsitsimpis Ilias
+#
+# This file is part of the GAC build system.
+#
+# To understand how the build system works and how to modify it, see HACKING
+#
+# -----------------------------------------------------------------------------
+
+GHC = @GHC@
+BUILDDIR = ../dist
+PREFIX = @prefix@
+HAPPY  = @HappyCmd@
+ALEX   = @AlexCmd@
+LFLAGS = @LFLAGS@
+YFLAGS = @YFLAGS@
+
+.PHONY: all build config clean install
+
+all: build
+
+build: config Setup
+	./Setup build --builddir=$(BUILDDIR)
+
+Setup:
+	$(GHC) Setup
+
+config: $(BUILDDIR)/setup-config
+
+$(BUILDDIR)/setup-config: Setup
+	./Setup configure --builddir=$(BUILDDIR) --prefix=$(PREFIX) \
+		--with-ghc="$(GHC)" --with-alex="$(ALEX)" --with-happy="$(HAPPY)" \
+		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
+
+clean: Setup
+	./Setup clean --builddir=$(BUILDDIR)
+	$(RM) Setup.hi Setup.o Setup
+
+install: build Setup
+	./Setup install --builddir=$(BUILDDIR)
