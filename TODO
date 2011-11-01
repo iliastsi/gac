@@ -14,4 +14,4 @@
         Use LIBRARY_VERSION when we introduce our libraries
 
 ** Fix in Makefile.in
-        Add a better implementation of dist target
+        Add distcheck

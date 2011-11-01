@@ -27,10 +27,12 @@ install:
 dist:
 	@echo "Cleaning all the generated files.."
 	$(MAKE) maintainer-clean
-	@echo "Copying files.."
 	$(RM) -r $(ARCHIVE)
+	$(RM) $(ARCHIVE).tar.gz
+	@echo "Copying files.."
 	mkdir $(ARCHIVE)
-	cp -r $(DIST_FILES) $(ARCHIVE)
+	$(TAR) cf - --exclude=$(ARCHIVE) --exclude-vcs * | \
+		(cd $(ARCHIVE) && tar xf -)
 	@echo "Generating archive.."
 	$(TAR) zcf $(ARCHIVE).tar.gz $(ARCHIVE)
 	@echo "Clean temp files.."
@@ -48,9 +50,3 @@ maintainer-clean: distclean
 
 test:
 	@echo "Coming soon.."
-
-
-# Files and Directories to be included in archive
-DIST_FILES = 	aclocal.m4 config.guess config.sub configure configure.ac \
-		docs HACKING INSTALL install-sh LICENSE Makefile.in \
-		README src testsuite TODO
