@@ -8,15 +8,33 @@
 #
 # -----------------------------------------------------------------------------
 
-PREFIX = @prefix@
 
-.PHONY: all install clean distclean maintainer-clean test
+PREFIX  = @prefix@
+TAR     = @TarCmd@
+
+VERSION = @PACKAGE_VERSION@
+PACKAGE = @PACKAGE_TARNAME@
+ARCHIVE = $(PACKAGE)-$(VERSION)
+
+.PHONY: all install dist clean distclean maintainer-clean test
 
 all:
 	$(MAKE) -C src $@
 
 install:
 	$(MAKE) -C src $@
+
+dist:
+	@echo "Cleaning all the generated files.."
+	$(MAKE) maintainer-clean
+	@echo "Copying files.."
+	$(RM) -r $(ARCHIVE)
+	mkdir $(ARCHIVE)
+	cp -r $(DIST_FILES) $(ARCHIVE)
+	@echo "Generating archive.."
+	$(TAR) zcf $(ARCHIVE).tar.gz $(ARCHIVE)
+	@echo "Clean temp files.."
+	$(RM) -r $(ARCHIVE)
 
 clean:
 	$(MAKE) -C src $@
@@ -30,3 +48,9 @@ maintainer-clean: distclean
 
 test:
 	@echo "Coming soon.."
+
+
+# Files and Directories to be included in archive
+DIST_FILES = 	aclocal.m4 config.guess config.sub configure configure.ac \
+		docs HACKING INSTALL install-sh LICENSE Makefile.in \
+		README src testsuite TODO

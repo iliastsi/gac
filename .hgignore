@@ -1,6 +1,15 @@
 # use global syntax
 syntax: glob
 
+
+# default building dir
 dist/*
 Parser.info
+
+# vim swap files
 *.swp
+
+# autoconf generated files
+autom4te.cache/*
+config.log
+config.status
