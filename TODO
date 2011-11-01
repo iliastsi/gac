@@ -12,6 +12,3 @@
 
 ** Fix in configure.ac
         Use LIBRARY_VERSION when we introduce our libraries
-
-** Fix in Makefile.in
-        Add distcheck
