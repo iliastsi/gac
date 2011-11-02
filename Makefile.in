@@ -58,7 +58,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) Makefile src/Makefile src/config.h src/gac.cabal
+	$(RM) Makefile src/Makefile src/config.h src/gac.cabal src/gacautoconf.h
 	$(RM) config.log config.status
 
 .PHONY: maintainer-clean

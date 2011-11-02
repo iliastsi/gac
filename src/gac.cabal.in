@@ -33,27 +33,33 @@ Executable gac
 
   GHC-Options: -Wall -Wwarn -w -O
 
+  Extensions: CPP
+  Include-Dirs: .
+
   Hs-Source-Dirs:
-        parser
         basicTypes
-        utils
-        typecheck
+        codeGen
         main
+        parser
+        typecheck
+        utils
   Other-Modules:
-        Parser
-        Lexer
-        ----------
         ErrUtils
         SrcLoc
         TypedAst
         UnTypedAst
         ----------
-        Bag
-        MonadUtils
-        Util
+        Platform
+        ----------
+        Outputable
+        ----------
+        Parser
+        Lexer
         ----------
         SymbolTable
         TcMonad
         TypeCheck
         ----------
-        Outputable
+        Bag
+        MonadUtils
+        Util

@@ -1,0 +1,10 @@
+#ifndef GACAUTOCONF_H
+#define GACAUTOCONF_H
+
+/* Target Architecture */
+#define @TargetArch_CPP@_TARGET_ARCH 1
+
+/* Target Operating System */
+#define @TargetOS_CPP@_TARGET_OS 1
+
+#endif

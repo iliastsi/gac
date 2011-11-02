@@ -16,16 +16,17 @@ ALEX   = @AlexCmd@
 LFLAGS = @LFLAGS@
 YFLAGS = @YFLAGS@
 
-.PHONY: all build config clean install
-
+.PHONY: all
 all: build
 
+.PHONY: build
 build: config Setup
 	./Setup build --builddir=$(BUILDDIR)
 
 Setup:
 	$(GHC) Setup
 
+.PHONY: config
 config: $(BUILDDIR)/setup-config
 
 $(BUILDDIR)/setup-config: Setup
@@ -33,9 +34,11 @@ $(BUILDDIR)/setup-config: Setup
 		--with-ghc="$(GHC)" --with-alex="$(ALEX)" --with-happy="$(HAPPY)" \
 		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
 
+.PHONY: clean
 clean: Setup
 	./Setup clean --builddir=$(BUILDDIR)
 	$(RM) Setup.hi Setup.o Setup
 
+.PHONY: install
 install: build Setup
 	./Setup install --builddir=$(BUILDDIR)
