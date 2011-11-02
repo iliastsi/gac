@@ -1,3 +1,3 @@
 module Outputable where
 
-internalError :: String -> a
+panic :: String -> a

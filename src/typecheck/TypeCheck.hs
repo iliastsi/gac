@@ -36,7 +36,7 @@ import TcMonad
 import SrcLoc
 import SymbolTable
 import MonadUtils
-import Outputable (internalError)
+import Outputable (panic)
 
 import Data.Int
 import Data.Word
@@ -93,7 +93,7 @@ tcNoRetErr ide loc = do
 -- TypeCheck UParam
 
 typeCheckParam :: [Located UParam] -> TcM ([AType], LAParam)
-typeCheckParam [] = internalError "TypeCheck.typeCheckParam can't handle empty lists"
+typeCheckParam [] = panic "TypeCheck.typeCheckParam can't handle empty lists"
 typeCheckParam lparams = do
     let empty_lide  = L wiredInSrcSpan "empty"
         empty_ltype = L wiredInSrcSpan TTypeUnknown
@@ -363,7 +363,7 @@ typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
                 Just Eq ->
                     return (L loc $ AVariable (TVarArray lide' ptr_type lexpr') ptr_type)
                 Nothing ->
-                    internalError "test in TypeCheck.typeCheckVariable had to return Eq"
+                    panic "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
            return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
 
@@ -376,7 +376,7 @@ atypeIsArray _ = False
 -- Take the pointed type of a TTypePtr
 getPointer :: AType -> AType
 getPointer (AType (TTypePtr p)) = (AType p)
-getPointer _ = internalError "TypeCheck.getPointer got unexpected input"
+getPointer _ = panic "TypeCheck.getPointer got unexpected input"
 
 -- ---------------------------
 -- Error when the array index expression is not of type of int
@@ -451,7 +451,7 @@ tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
        then return ()
        else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
-tcFunPar' ide _  _  _   = internalError "TypeCheck.tcFunPar got unexpected input"
+tcFunPar' ide _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
 
 -- ---------------------------
 -- Error when the function parameter's number is different from the prototype

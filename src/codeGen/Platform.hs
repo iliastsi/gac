@@ -12,7 +12,8 @@ module Platform (
     OS(..),
 
     defaultTargetPlatform,
-    osElfTarget
+    osElfTarget,
+    defaultTmpDir
   ) where
 
 #include "gacautoconf.h"
@@ -61,3 +62,10 @@ defaultTargetOS :: OS
 defaultTargetOS
     | TARGET_OS == "linux"  = OSLinux
     | otherwise             = OSUnknown
+
+-- | Default TEMPDIR depending on platform
+defaultTmpDir :: String
+defaultTmpDir
+    | TARGET_PLATFORM == "i386-unknown-cygwin32" = /C/TEMP
+    | TARGET_PLATFORM == "i386-unknown-mingw32"  = /C/TEMP
+    | otherwise                                  = /tmp

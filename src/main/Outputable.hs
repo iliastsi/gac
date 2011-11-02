@@ -8,7 +8,7 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
-    internalError
+    panic
   ) where
 
 import Bag
@@ -38,5 +38,5 @@ printMsgBag msgBag =
 -- -------------------------------------------------------------------
 -- Internal Errors
 
-internalError :: String -> a
-internalError str = error ("My brain just exploded\n\t" ++ str ++ "\n")
+panic :: String -> a
+panic str = error ("My brain just exploded\n\t" ++ str ++ "\n")

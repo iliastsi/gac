@@ -29,7 +29,7 @@ module SymbolTable (
 import TypedAst (AType(..), TType(..))
 import UnTypedAst (Ide)
 import SrcLoc
-import Outputable (internalError)
+import Outputable (panic)
 
 import qualified Data.Map as Map
 
@@ -188,7 +188,7 @@ updateFunc pt t@Table{name=fun_name, parent=m_parent} =
                  newVal (FunInfo lide _ rt u) = Just (FunInfo lide pt rt u)
              in
              t{ parent=(Just parent') }
-         Nothing -> internalError "SymbolTable.updateFunc is not supposed to be at outermost scope"
+         Nothing -> panic "SymbolTable.updateFunc is not supposed to be at outermost scope"
 
 -- Scopes
 rawOpenScope :: Ide -> Table -> Table
@@ -199,4 +199,4 @@ rawCloseScope :: Table -> Table
 rawCloseScope Table{parent=p} =
     case p of
          Just t  -> t
-         Nothing -> internalError "SymbolTable.rawCloseScope cannot close outermost scope"
+         Nothing -> panic "SymbolTable.rawCloseScope cannot close outermost scope"
