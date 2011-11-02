@@ -51,18 +51,13 @@ defaultTargetPlatform
 
 -- | Move the evil TARGET_ARCH #ifdefs into Haskell land
 defaultTargetArch :: Arch
-#if     i386_TARGET_ARCH
-defaultTargetArch   = ArchX86
-#elif   x86_64_TARGET_ARCH
-defaultTargetArch   = ArchX86_64
-#else
-#error "Platform.buildArch: undefined"
-#endif
+defaultTargetArch
+    | TARGET_ARCH == "i386"     = ArchX86
+    | TARGET_ARCH == "x86_64"   = ArchX86_64
+    | otherwise                 = error "Platform.buildArch: undefined"
 
 -- | Move the evil TARGET_OS #ifdefs into Haskell land
 defaultTargetOS :: OS
-#if     linux_TARGET_OS
-defaultTargetOS = OSLinux
-#else
-defaultTargetOS = OSUnknown
-#endif
+defaultTargetOS
+    | TARGET_OS == "linux"  = OSLinux
+    | otherwise             = OSUnknown
