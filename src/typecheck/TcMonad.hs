@@ -26,7 +26,7 @@ module TcMonad (
 import SrcLoc
 import SymbolTable
 import ErrUtils
-import UnTypedAst (UAst, Ide)
+import UnTypedAst (Ide)
 import TypedAst (AType(..), TType(..))
 
 import Control.Monad
@@ -68,7 +68,7 @@ failSpanMsgTcM :: SrcSpan -> String -> TcM a
 failSpanMsgTcM loc msg = TcM $ \s@(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg loc UnknownError msg) ms)
 
-failExprMsgTcM :: SrcSpan -> UAst -> String -> TcM a
+failExprMsgTcM :: SrcSpan -> String -> String -> TcM a
 failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg loc (TypeError expr) msg) ms)
 
@@ -94,12 +94,12 @@ mkTcState t =
         unique      = 1
     }
 
-addTypeWarning :: SrcSpan -> UAst -> String -> TcM ()
+addTypeWarning :: SrcSpan -> String -> String -> TcM ()
 addTypeWarning loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addWarning (mkWarnMsg loc (TypeError expr) msg) msgs) } ()
 
-addTypeError :: SrcSpan -> UAst -> String -> TcM ()
+addTypeError :: SrcSpan -> String -> String -> TcM ()
 addTypeError loc expr msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (TypeError expr) msg) msgs) } ()

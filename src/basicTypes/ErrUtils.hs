@@ -25,7 +25,6 @@ module ErrUtils (
 import Bag
 import SrcLoc
 import Util
-import UnTypedAst (UAst, Ide)
 
 
 -- -------------------------------------------------------------------
@@ -34,11 +33,11 @@ import UnTypedAst (UAst, Ide)
 
 data MsgCode
   = ParseError String
-  | TypeError UAst
-  | ScopeError Ide
+  | TypeError  String
+  | ScopeError String
   | UnreachError        -- unreachable code
-  | RedefError Ide      -- function/variable redefinition
-  | NoRetError Ide      -- missing return statement
+  | RedefError String   -- function/variable redefinition
+  | NoRetError String   -- missing return statement
   | UnknownError
 
 data Severity
@@ -123,7 +122,7 @@ instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
     show (ParseError buf)     = "Parse error on input `" ++ buf ++ "'"
     show (ScopeError ide)     = "Not in scope `" ++ ide ++ "'"
-    show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
+    show (TypeError expr)      = "Type error at `" ++ expr ++ "'"
     show UnreachError         = "Unreachable code"
     show (RedefError ide)     = "Conflicting definitions for `" ++ ide ++ "'"
     show (NoRetError ide)     = "Control reaches end of non-proc function `" ++ ide ++ "'"
