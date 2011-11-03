@@ -25,9 +25,11 @@ module Util (
     sortLe, sortWith,
 
     -- * Comparisons
-    isEqual, thenCmp
+    isEqual, thenCmp,
+    removeSpaces
   ) where
 
+import Data.Char (isSpace)
 
 infixr 9 `thenCmp`
 
@@ -255,3 +257,6 @@ thenCmp :: Ordering -> Ordering -> Ordering
 {-# INLINE thenCmp #-}
 thenCmp EQ       ordering = ordering
 thenCmp ordering _        = ordering
+
+removeSpaces :: String -> String
+removeSpaces = reverse . dropWhile isSpace . reverse . dropWhile isSpace

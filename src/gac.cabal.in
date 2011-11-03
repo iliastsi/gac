@@ -51,6 +51,7 @@ Executable gac
         ----------
         Platform
         ----------
+        CmdLineParser
         Outputable
         ----------
         Parser
