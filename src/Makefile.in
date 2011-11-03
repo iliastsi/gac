@@ -23,8 +23,8 @@ all: build
 build: config Setup
 	./Setup build --builddir=$(BUILDDIR)
 
-Setup:
-	$(GHC) Setup
+Setup: Setup.hs
+	$(GHC) -o Setup Setup.hs
 
 .PHONY: config
 config: $(BUILDDIR)/setup-config

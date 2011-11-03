@@ -113,10 +113,10 @@ addWarning warn (warns, errs) =
 -- Instance declartions
 
 instance Show Severity where
-    show SevInfo    = "info"
-    show SevWarning = "warning"
-    show SevError   = "error"
-    show SevFatal   = "fatal error"
+    show SevInfo    = "Info"
+    show SevWarning = "Warning"
+    show SevError   = "Error"
+    show SevFatal   = "Fatal Error"
 
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"

@@ -371,8 +371,8 @@ AC_SUBST(GreenCardVersion)
 ])
 
 dnl
-dnl Check for Happy and version.  If we're building GHC, then we need
-dnl at least Happy version 1.14.  If there's no installed Happy, we look
+dnl Check for Happy and version.  If we're building GAC, then we need
+dnl at least Happy version 1.18.  If there's no installed Happy, we look
 dnl for a happy source tree and point the build system at that instead.
 dnl
 AC_DEFUN([FPTOOLS_HAPPY],
@@ -404,15 +404,15 @@ else
 fi;
 changequote([, ])dnl
 ])
-FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.16],
-  [AC_MSG_ERROR([Happy version 1.16 or later is required to compile GAC.])])[]
+FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.18],
+  [AC_MSG_ERROR([Happy version 1.18 or later is required to compile GAC.])])[]
 HappyVersion=$fptools_cv_happy_version;
 AC_SUBST(HappyVersion)
 ])
 
 dnl
-dnl Check for Alex and version.  If we're building GHC, then we need
-dnl at least Alex version 2.0.1.
+dnl Check for Alex and version.  If we're building GAC, then we need
+dnl at least Alex version 2.3.5.
 dnl
 AC_DEFUN([FPTOOLS_ALEX],
 [AC_ARG_WITH([alex],
@@ -442,8 +442,8 @@ else
 fi;
 changequote([, ])dnl
 ])
-FP_COMPARE_VERSIONS([$fptools_cv_alex_version],[-lt],[2.1.0],
-  [AC_MSG_ERROR([Alex version 2.1.0 or later is required to compile GAC.])])[]
+FP_COMPARE_VERSIONS([$fptools_cv_alex_version],[-lt],[2.3.5],
+  [AC_MSG_ERROR([Alex version 2.3.5 or later is required to compile GAC.])])[]
 AlexVersion=$fptools_cv_alex_version;
 AC_SUBST(AlexVersion)
 ])
