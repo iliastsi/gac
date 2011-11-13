@@ -62,5 +62,6 @@ Executable gac
         TypeCheck
         ----------
         Bag
+        Maybes
         MonadUtils
         Util
