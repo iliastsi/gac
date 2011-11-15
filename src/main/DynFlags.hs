@@ -33,6 +33,8 @@ data DynFlag
     | Opt_WarnUnusedVariable
     | Opt_WarnUnitialized
     | Opt_WarnTypeLimits
+    | Opt_WarnWarningsDeprecations
+    | Opt_WarnDeprecatedFlags
 
     -- optimisation opts
     | Opt_CSE
@@ -52,6 +54,9 @@ data DynFlag
     | Opt_KeepLlvmFiles
 
   deriving (Eq, Show)
+
+data ExtensionFlag
+    = Opt_ForwardDecls
 
 -- | Contains not only a collection of 'DynFlag's but also a plethora of
 -- information relating to the compilation of a single file or GHC session
@@ -93,7 +98,12 @@ data DynFlags = DynFlags {
     dirsToClean         :: (Map FilePath FilePath),
 
     -- gac dynamic flags
-    flags               :: [DynFlag]
+    flags               :: [DynFlag],
+    -- Don't change this without updating extensionFlags:
+    extensions          :: [OnOff ExtensionFlag],
+    -- extensionFlags should always be equal to
+    --      flattenExtensionFlags extensions
+    extensionFlags      :: [ExtensionFlag]
   }
 
 -- | The target code type of the compilation (if any)
@@ -177,7 +187,9 @@ defaultDynFlags =
         filesToClean        = panic "defaultDynFlags: No filesToClean",
         dirsToClean         = panic "defaultDynFlags: No dirsToClean",
 
-        flags               = defaultFlags
+        flags               = defaultFlags,
+        extensions          = [],
+        extensionFlags      = flattenExtensionFlags []
     }
 
 {-
@@ -195,6 +207,14 @@ data OnOff a
     = On  a
     | Off a
 
+-- OnOffs accumulate in reverse order, so we use folr in order to
+-- process them in the right order
+flattenExtensionFlags :: [OnOff ExtensionFlag] -> [Extension Flag]
+flattenExtensionFlags = foldr f defaultExtensionFlags
+    where f (On f)  flags = f : delete f flags
+          f (Off f) flags =     delete f flags
+          defaultExtensionFlags = []
+
 -- | Test whether a 'DynFlag' is set
 dopt :: DynFlag -> DynFlags -> Bool
 dopt f dflags = f `elem` (flags dflags)
@@ -206,6 +226,24 @@ dopt_set dfs f = dfs { flags = f : flags dfs }
 -- | Unset a 'DynFlag'
 dopt_unset :: DynFlags -> DynFlag -> DynFlags
 dopt_unset dfs f = dfs{ flags = filter (/= f) (flags dfs) }
+
+-- | Test whether a 'ExtensionFlag' is set
+xopt :: ExtensionFlag -> DynFlag -> Bool
+xopt f dflags = f `elem` extensionFlags dflags
+
+-- | Set a 'ExtensionFlag'
+xopt_set :: DynFlags -> ExtensionFlag -> DynFlag
+xopt_set dfs f =
+    let onoffs = On f : extensions dfs
+    in dfs { extensions = onoffs,
+             extensionFlags = flattenExtensionFlags onoffs }
+
+-- | Unset a 'ExtensionFlag'
+xopt_unset :: DynFlags -> ExtensionFlag -> DynFlags
+xopt_unset dfs f =
+    let onoffs = Off f : extensions dfs
+    in dfs { extensions = onoffs,
+             extensionFlags = flattenExtensionFlags onoffs }
 
 -- | Retrive the options corresponding to a particular @opt_*@ filed in the correct order
 getOpts :: DynFlags             -- ^ 'DynFlags' to retrieve the options from
@@ -294,11 +332,10 @@ allFlags = map ('-':) $
         [ flagName flag | flag <- dynamic_flags, ok (flagOptKind flag) ] ++
         map ("fno-"++) flags ++
         map ("f"++) flags ++
-        map ("f"++) flags'
+        map ("X"++) supportedExtensions
     where ok (PrefixPred _ _) = False
           ok _ = True
           flags  = [ name | (name, _, _) <- fFlags ]
-          flags' = [ name | (name, _, _) <- fLangFlags
 
 -- ---------------------------
 -- The main flags themselves
@@ -367,6 +404,9 @@ dynamic_flags =
   , Flag "W"        (NoArg (mapM_ setDynFlag    minusWOpts))
   , Flag "Werror"   (NoArg (setDynFlag          Opt_WarnIsError))
   , Flag "Wwarn"    (NoArg (unSetDynFlag        Opt_WarnIsError))
+  , Flag "Wall"     (NoArg (mapM_ setDynFlag    minusWallOpts))
+  , Flag "Wnot"     (NoArg (do { mapM_ unSetDynFlag minusWallOpts
+                               ; deprecated "Use -w instead" }))
   , Flag "w"        (NoArg (mapM_ unSetDynFlag minuswRemovesOpts))
 
     ---- Optimisation flags ----
@@ -382,6 +422,8 @@ dynamic_flags =
   ]
   ++ map (mkFlag turnOn  "f"    setDynFlag  ) fFlags
   ++ map (mkFlag turnOff "fno-" unSetDynFlag) fFlags
+  ++ map (mkFlag turnOn  "X"    setExtensionFlag  ) xFlags
+  ++ map (mkFlag turnOff "XNo"  unSetExtensionFlag) xFlags
 
 type TurnOnFlag = Bool  -- True  <=> we are turning the flag on
                         -- False <=> we are turning the flag off
@@ -402,6 +444,13 @@ mkFlag :: TurnOnFlag        -- ^ True <=> it should be turned on
 mkFlag turn_on flagPrefix f (name, flag, extra_action) =
     Flag (flagPrefix ++ name) (NoArg (f flag >> extra_action turn_on))
 
+deprecatedForExtension :: String -> TurnOnFlag -> DynP ()
+deprecatedForExtension lang turn_on =
+    deprecate ("use -X" ++ flag ++ " instead")
+  where
+    flag | turn_on   = lang
+         | otherwise = "No"++lang
+
 useInstead :: String -> TurnOnFlag -> DynP ()
 useInstead flag turn_on =
     deprecate ("Use -f" ++ no ++ flag ++ " instead")
@@ -420,7 +469,157 @@ fFlags = [
   ( "warn-unused-variable",         Opt_WarnUnusedVariable, nop),
   ( "warn-uninitialized",           Opt_WarnUnitialized, nop),
   ( "warn-type-limits",             Opt_WarnTypeLimits, nop),
+  ( "warn-warnings-deprecations",   Opt_WarnWarnignsDeprecation, nop),
+  ( "warn-deprecations",            Opt_WarnWarningsDeprecation, nop),
+  ( "warn_deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
+  ( "warn-deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
   ( "cse",                          Opt_CSE, nop),
   ( "force-recomp",                 Opt_ForceRecomp, nop),
-  ( "regs-graph",                   OptRegsGraph, nop)
+  ( "regs-graph",                   Opt_RegsGraph, nop)
   ]
+
+supportedExtensions :: [String]
+supportedExtensions = [ name' | (name, _, _) <- xFlags, name' <- [name, "No"++name] ]
+
+-- | These -X<blah> flags can all be reversed with -XNo<blah>
+xFlags :: [FlagSpec ExtensionFlag]
+xFlags = [
+  ( "ForwardDeclarations",          Opt_ForwardDecls, nop)
+  ]
+
+defaultFlags :: [DynFlag]
+defaultFlag =
+    [ Opt_AutoLinkPackage ]
+    ++ [f | (ns,f) <- optLevelFlags, 0 `elem` ns]
+            -- The default -O0 options
+    ++ standarWarnings
+
+impliedFlags :: [(ExtensionFlag, TurnOnFlag, ExtensionFlag)]
+impliedFlags = []
+
+optLevelFlags :: [([Int], DynFlag)]
+optLevelFlags =
+    [ ([1,2],       Opt_CSE)
+    , ([2],         Opt_RegsGraph)
+    ]
+
+standarWarnings :: [DynFlag]
+standarWarnings =
+    [ Opt_WarnWarningsDeprecations
+    , Opt_WarnDeprecatedFlags
+    ]
+
+minusWOpts :: [DynFlag]
+minusWOpts =
+    standarWarnings ++
+    [ Opt_WarnUnreachableCode
+    , Opt_WarnUnusedParameter
+    , Opt_WarnUnusedVariable
+    , Opt_WarnUnitialized
+    ]
+
+minusWallOpts :: [DynFlag]
+minusWallOpts = minusWOpts ++
+    [ Opt_WarnUnusedFunction
+    , Opt_WarnUnusedResult
+    , Opt_WarnTypeLimits
+    ]
+
+-- minuswRemovesOpts should be every warning option
+minuswRemovesOpts :: [DynFlag]
+minuswRemovesOpts = minusWallOpts
+
+
+-- -------------------------------------------------------------------
+-- DynFlags constructors
+
+type DynP = EwM (CmdLineP DynFlags)
+
+upd :: (DynFlags -> DynFlags) -> DynP ()
+upd f = liftEwM (do { dfs <- getCmdLineState
+                    ; putCmdLineState $! (f dfs) })
+
+-- ---------------------------
+-- Constructor functions for OptKind
+noArg :: (DynFlags -> DynFlags) -> OptKind (CmdLineP DynFlags)
+noArg fn = NoArg (upd fn)
+
+noArgDF :: (DynFlags -> DynFlags) -> String -> OptKind (CmdLineP DynFlags)
+noArgDF fn deprec = NoArg (upd fn >> deprecate deprec)
+
+hasArg :: (String -> DynFlags -> DynFlags) -> OptKind (CmdLineP DynFlags)
+hasArg fn = HasArg (upd . fn)
+
+hasArgDF :: (String -> DynFlags -> DynFlags) -> String -> OptKind (CmdLineP DynFlags)
+hasArgDF fn deprec = HasArg (\s -> do { upd (fn s)
+                                      ; deprecate deprec })
+
+intSuffix :: (Int -> DynFlags -> DynFlags) -> OptKind (CmdLineP DynFlags)
+intSuffix fn = IntSuffix (\n -> upd (fn n))
+
+setDumpFlag :: DynFlag -> OptKind (CmdLineP DynFlags)
+setDumpFlag dump_flag = NoArg (setDumpFlag' dump_flag)
+
+-- ---------------------------
+setDynFlag, unSetDynFlag :: DynFlag -> DynP ()
+setDynFlag   f = upd (\dfs -> dopt_set dfs f)
+unsetDynFlag f = upd (\dfs -> dopt_unset dfs f)
+
+-- ---------------------------
+setExtensionFlag, unSetExtensionFlag :: ExtensionFlag -> DynP ()
+setExtensionFlag f = do
+    upd (\dfs -> xopt_set dfs f)
+    sequence_ deps
+  where
+    deps = [ if turn_on then setExtensionFlag   d
+                        else unSetExtensionFlag d
+           | (f', turn_on, d) <- impliedFlags, f' == f ]
+        -- When you set f, set the ones it implies
+        -- NB: use setExtensionFlag recursively, in case the implied flags
+        --     implies further flags
+
+unSetExtensionFlag f = upd (\dfs -> xopt_unset dfs f)
+    -- When you un-set f, however, we  don't un-set the things it implies
+
+-- ---------------------------
+setDumpFlag' :: DynFlag -> DynP ()
+setDumpFlag' dump_flag = do
+    setDynFlag dump_flag
+    forceRecompile
+
+forceRecompile :: DynP ()
+-- Whenever we -ddump, force recompilation (by switching off the
+-- recompilation checker), else you don't see the dump!
+forceRecompile = do
+    dfs <- liftEwM getCmdLineState
+    setDynFlag Opt_ForceRecomp
+
+setVerbosity :: Maybe Int -> DynP ()
+setVerbosity mb_n = upd (\dfs -> dfs{ verbosity = mb_n `orElse` 3 })
+
+-- if we're linking a binary, then only targets that produce object
+-- code are allowed (requests for other target types are ignored).
+setTarget :: AlcTarget -> DynP ()
+setTarget l = upd set
+  where
+    set dfs
+      | gacLink dfs /= LinkBinary || isObjectTarget l = dfs{ alcTarget = l }
+      | otherwise = dfs
+
+-- Changes the target only if we're compiling object code. This is
+-- used by -fasm and -fllvm, which switch from one to the other, but
+-- not from bytecode to object-code
+setObjTarget :: AlcTarget -> DynP ()
+setObjTarget l = upd set
+  where
+    set dfs
+      | isObjectTarget (alcTarget dfs) = dfs { alcTarget = l }
+      | otherwise = dfs
+
+setOptLevel :: Int -> DynFlags -> DynFlags
+setOptLevel n dflags =
+    updOptLevel n dflags
+
+
+-- -------------------------------------------------------------------
+-- Paths & Libraries
