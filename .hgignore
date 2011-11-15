@@ -16,4 +16,4 @@ config.status
 Makefile
 config.h
 gac.cabal
-gacautoconf.h
+versions.h

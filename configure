@@ -6725,7 +6725,7 @@ if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
    as_fn_error $? "src/gac.cabal.in contains tab characters; please remove them" "$LINENO" 5
 fi
 
-ac_config_files="$ac_config_files Makefile src/gac.cabal src/Makefile src/gacautoconf.h"
+ac_config_files="$ac_config_files Makefile src/gac.cabal src/Makefile src/versions.h"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7434,7 +7434,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/gac.cabal") CONFIG_FILES="$CONFIG_FILES src/gac.cabal" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/gacautoconf.h") CONFIG_FILES="$CONFIG_FILES src/gacautoconf.h" ;;
+    "src/versions.h") CONFIG_FILES="$CONFIG_FILES src/versions.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

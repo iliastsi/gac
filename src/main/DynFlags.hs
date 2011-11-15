@@ -68,14 +68,12 @@ data DynFlags = DynFlags {
     optLevel            :: Int,         -- ^ Optimisation level
 
     targetPlatform      :: Platform,    -- ^ The platform we're compiling for. Used by the NCG
-    importPaths         :: [FilePath],
 
     -- paths etc
     objectDir           :: Maybe String,
     objectSuf           :: String,
     outputFile          :: Maybe String,
 
-    includePaths        :: [String],
     libraryPaths        :: [String],
     tmpDir              :: String,
 
@@ -162,13 +160,11 @@ defaultDynFlags =
         optLevel            = 0,
 
         targetPlatform      = defaultTargetPlatform,
-        importPaths         = ["."],
 
         objectDir           = Nothing,
         objectSuf           = "o",
 
         outputFile          = Nothing,
-        includePaths        = [],
         libraryPaths        = [],
         tmpDir              = defaultTmpDir,
 
@@ -386,10 +382,6 @@ dynamic_flags =
                                    ; deprecate "Use -fno-force-recomp instead" }))
   , Flag "recomp"       (NoArg (do { setDynFlag Opt_ForceRecomp
                                    ; deprecate "Use -fforce-recomp-instead" }))
-
-    ---- Include/Import Paths ----
-  , Flag "I"    (Prefix addIncludePath)
-  , Flag "i"    (OptPrefix addImportPath)
 
     ---- Debugging ----
   , Flag "ddump-asm"        (setDumpFlag Opt_D_dump_asm)
@@ -623,3 +615,7 @@ setOptLevel n dflags =
 
 -- -------------------------------------------------------------------
 -- Paths & Libraries
+
+addLibraryPath :: FilePath -> DynP ()
+addLibraryPath p =
+    upd (\s -> s{libraryPaths = libraryPaths s ++ splitPathList p})

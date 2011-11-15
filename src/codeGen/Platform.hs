@@ -16,7 +16,7 @@ module Platform (
     defaultTmpDir
   ) where
 
-#include "gacautoconf.h"
+#include "versions.h"
 
 
 -- | Contains enough information for the native code generator to emit
@@ -52,20 +52,25 @@ defaultTargetPlatform
 
 -- | Move the evil TARGET_ARCH #ifdefs into Haskell land
 defaultTargetArch :: Arch
-defaultTargetArch
-    | TARGET_ARCH == "i386"     = ArchX86
-    | TARGET_ARCH == "x86_64"   = ArchX86_64
-    | otherwise                 = error "Platform.buildArch: undefined"
+#if     i386_TARGET_ARCH
+defaultTargetArch = ArchX86
+#elif   x86_64_TARGET_ARCH
+defaultTargetArch = ArchX86_64
+#else
+#error "Platform.buildArch: undefined"
+#endif
 
 -- | Move the evil TARGET_OS #ifdefs into Haskell land
 defaultTargetOS :: OS
-defaultTargetOS
-    | TARGET_OS == "linux"  = OSLinux
-    | otherwise             = OSUnknown
+#if     linux_TARGET_OS
+defaultTargetOS = OSLinux
+#else
+defaultTargetOS = OSUnknown
+#endif
 
 -- | Default TEMPDIR depending on platform
 defaultTmpDir :: String
 defaultTmpDir
-    | TARGET_PLATFORM == "i386-unknown-cygwin32" = /C/TEMP
-    | TARGET_PLATFORM == "i386-unknown-mingw32"  = /C/TEMP
-    | otherwise                                  = /tmp
+    | TARGET_PLATFORM == "i386-unknown-cygwin32" = "/C/TEMP"
+    | TARGET_PLATFORM == "i386-unknown-mingw32"  = "/C/TEMP"
+    | otherwise                                  = "/tmp"

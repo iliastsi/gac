@@ -1,13 +1,16 @@
-#ifndef GACAUTOCONF_H
-#define GACAUTOCONF_H
+#ifndef VERSIONS_H
+#define VERSIONS_H
 
 /* Target Architecture */
 #define TARGET_ARCH "@TargetArch_CPP@"
+#define @TargetArch_CPP@_TARGET_ARCH 1
 
 /* Target Operating System */
 #define TARGET_OS "@TargetOS_CPP@"
+#define @TargetOS_CPP@_TARGET_OS 1
 
 /* Target Platform */
 #define TARGET_PLATFORM "@TargetPlatform_CPP@"
+#define @TargetPlatform_CPP@_TARGET_PLATFORM 1
 
 #endif
