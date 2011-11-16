@@ -46,9 +46,9 @@ distcheck: dist
 	@echo "Configuring the dist package.."
 	(cd $(ARCHIVE) && ./configure)
 	@echo "Compiling the dist package.."
-	make -C $(ARCHIVE)
+	$(MAKE) -C $(ARCHIVE)
 	@echo "Testing the dist package.."
-	make -C $(ARCHIVE) test
+	$(MAKE) -C $(ARCHIVE) test
 	@echo "Cleaning temp files.."
 	$(RM) -r $(ARCHIVE)
 
