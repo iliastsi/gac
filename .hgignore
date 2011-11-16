@@ -1,19 +1,18 @@
-# use global syntax
-syntax: glob
-
+syntax: regexp
 
 # default building dir
-dist/*
-Parser.info
+^dist/
 
-# vim swap files
-*.swp
+# vim swap and backup files
+\.swp$
+~$
 
 # autoconf generated files
-autom4te.cache/*
-config.log
-config.status
-Makefile
-config.h
-gac.cabal
-versions.h
+^autom4te\.cache/
+^config\.log$
+^config\.status$
+^Makefile$
+^src/Makefile$
+^src/config\.h$
+^src/gac\.cabal$
+^src/versions\.h$
