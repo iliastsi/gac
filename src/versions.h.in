@@ -1,6 +1,18 @@
 #ifndef VERSIONS_H
 #define VERSIONS_H
 
+/* Project Name */
+#define PROJECT_NAME "@ProjectName@"
+
+/* Project Version */
+#define PROJECT_VERSION "@ProjectVersion@"
+
+/* Build Platform */
+#define BUILD_PLATFORM "@BuildPlatform@"
+
+/* Host Platform */
+#define HOST_PLATFORM "@HostPlatform@"
+
 /* Target Architecture */
 #define TARGET_ARCH "@TargetArch_CPP@"
 #define @TargetArch_CPP@_TARGET_ARCH 1

@@ -21,6 +21,9 @@ module Util (
     isSingleton, singleton,
     notNull,
 
+    -- * List operations controlled by another list
+    split,
+
     -- * Sorting
     sortLe, sortWith,
 
@@ -157,6 +160,17 @@ isSingleton _   = False
 notNull :: [a] -> Bool
 notNull [] = False
 notNull _  = True
+
+
+-- -------------------------------------------------------------------
+-- List operations controlled by another list
+
+split :: Char -> String -> [String]
+split c s =
+    case rest of
+         []     -> [chunk]
+         _:rest -> chunk : split c rest
+    where (chunk, rest) = break (==c) s
 
 
 -- -------------------------------------------------------------------

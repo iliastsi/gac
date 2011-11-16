@@ -25,7 +25,8 @@ Executable gac
 
   Build-Depends: base       >= 4,
                  array      >= 0.3,
-                 containers >= 0.4
+                 containers >= 0.4,
+                 filepath   >= 1.2
   if os(windows)
      Build-Depends: Win32
   else
@@ -52,6 +53,7 @@ Executable gac
         Platform
         ----------
         CmdLineParser
+        DynFlags
         Outputable
         ----------
         Parser

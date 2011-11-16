@@ -10,7 +10,55 @@
 --------------------------------------------------------------------------------
 
 module DynFlags (
+    -- * Dynamic flags and associated configuration types
+    DynFlag(..),
+    ExtensionFlag(..),
+    dopt,
+    dopt_set,
+    dopt_unset,
+    xopt,
+    xopt_set,
+    xopt_unset,
+    DynFlags(..),
+    AlcTarget(..), isObjectTarget, defaultObjectTarget,
+    GacLink(..), isNoLink,
+    Option(..), showOpt,
+    fFlags, xFlags,
+
+    -- ** Manipulating DynFlags
+    defaultDynFlags,        -- DynFlags
+    initDynFlags,           -- DynFlags -> IO DynFlags
+
+    getOpts,                -- DynFlags -> (DynFlags -> [a]) -> [a]
+    getVerbFlag,
+    updOptLevel,
+    setTmpDir,
+
+    -- ** Parsing DynFlags
+    parseDynamicFlags,
+    allFlags,
+
+    supportedExtensions,
+
+    -- ** Compiler configuration suitable for display to the user
+    Printable(..),
+    compilerInfo
   ) where
+
+#include "versions.h"
+
+import Platform
+import CmdLineParser
+import Outputable   (panic)
+import Util
+import Maybes       (orElse)
+import SrcLoc
+
+import Data.Char
+import Data.List
+import Data.Map (Map)
+import qualified Data.Map as Map
+import System.FilePath
 
 
 -- -------------------------------------------------------------------
@@ -52,11 +100,11 @@ data DynFlag
     | Opt_KeepSFiles
     | Opt_KeepTmpFiles
     | Opt_KeepLlvmFiles
-
   deriving (Eq, Show)
 
 data ExtensionFlag
     = Opt_ForwardDecls
+  deriving (Eq, Show)
 
 -- | Contains not only a collection of 'DynFlag's but also a plethora of
 -- information relating to the compilation of a single file or GHC session
@@ -90,6 +138,9 @@ data DynFlags = DynFlags {
     pgm_l               :: (String,[Option]),
     pgm_lo              :: (String,[Option]),   -- LLVM: opt llvm optimiser
     pgm_lc              :: (String,[Option]),   -- LLVM: llc static compiler
+
+    -- Package flags
+    topDir              :: FilePath,    -- filled in by SysTools
 
     -- Temporary files
     filesToClean        :: [FilePath],
@@ -128,6 +179,7 @@ data GacLink
     = NoLink        -- ^ Don't link at all
     | LinkBinary    -- ^ Link object code into a binary
     | LinkDynLib    -- ^ Link objects into a dynamic lib (DSO on ELF platforms)
+  deriving (Eq, Show)
 
 isNoLink :: GacLink -> Bool
 isNoLink NoLink = True
@@ -145,7 +197,7 @@ defaultObjectTarget = AlcLlvm
 initDynFlags :: DynFlags -> DynFlags
 initDynFlags dflags =
     dflags{
-        filesToClean    = []
+        filesToClean    = [],
         dirsToClean     = Map.empty
     }
 
@@ -174,6 +226,7 @@ defaultDynFlags =
         opt_lc              = [],
 
         -- initSysTools fills all these in
+        topDir              = panic "defaultDynFlags: No topDir",
         pgm_a               = panic "defaultDynFlags: No pgm_a",
         pgm_l               = panic "defaultDynFlags: No pgm_l",
         pgm_lo              = panic "defaultDynFlags: No pgm_lo",
@@ -205,7 +258,7 @@ data OnOff a
 
 -- OnOffs accumulate in reverse order, so we use folr in order to
 -- process them in the right order
-flattenExtensionFlags :: [OnOff ExtensionFlag] -> [Extension Flag]
+flattenExtensionFlags :: [OnOff ExtensionFlag] -> [ExtensionFlag]
 flattenExtensionFlags = foldr f defaultExtensionFlags
     where f (On f)  flags = f : delete f flags
           f (Off f) flags =     delete f flags
@@ -224,11 +277,11 @@ dopt_unset :: DynFlags -> DynFlag -> DynFlags
 dopt_unset dfs f = dfs{ flags = filter (/= f) (flags dfs) }
 
 -- | Test whether a 'ExtensionFlag' is set
-xopt :: ExtensionFlag -> DynFlag -> Bool
+xopt :: ExtensionFlag -> DynFlags -> Bool
 xopt f dflags = f `elem` extensionFlags dflags
 
 -- | Set a 'ExtensionFlag'
-xopt_set :: DynFlags -> ExtensionFlag -> DynFlag
+xopt_set :: DynFlags -> ExtensionFlag -> DynFlags
 xopt_set dfs f =
     let onoffs = On f : extensions dfs
     in dfs { extensions = onoffs,
@@ -251,15 +304,16 @@ getOpts dflags opts = reverse (opts dflags)
 -- | Get the verbosity flag for the current verbosity level. This is fed to
 -- other tools, so GAC-specific verbosity flags like @-ddump-most@ are not included
 getVerbFlag :: DynFlags -> String
-getVerFlag dflags
+getVerbFlag dflags
     | verbosity dflags >= 3 = "-v"
     | otherwise = ""
 
-setObjectDir, setObjectSuf, addOptl
+setObjectDir, setOutputDir, setObjectSuf, addOptl
     :: String -> DynFlags -> DynFlags
 setOutputFile
     :: Maybe String -> DynFlags -> DynFlags
 setObjectDir        f d = d{ objectDir = Just f }
+setOutputDir = setObjectDir
 setObjectSuf        f d = d{ objectSuf = f}
 addOptl             f d = d{ opt_l = f : opt_l d }
 setOutputFile       f d = d{ outputFile = f }
@@ -358,7 +412,7 @@ dynamic_flags =
 
     ---- Libraries ----
   , Flag "L"    (Prefix    addLibraryPath)
-  , FLag "l"    (AnySuffix (upd . addOptl))
+  , Flag "l"    (AnySuffix (upd . addOptl))
 
     ---- Output Redirection ----
   , Flag "odir"         (hasArg setObjectDir)
@@ -368,8 +422,8 @@ dynamic_flags =
   , Flag "outputdir"    (hasArg setOutputDir)
 
     ---- Keeping temporary files ----
-  , Flag "keep-s-file"      (NoArg (setDynFlag Opt_KeepSFile))
-  , Flag "keep-s-files"     (NoArg (setDynFlag Opt_KeepSFile))
+  , Flag "keep-s-file"      (NoArg (setDynFlag Opt_KeepSFiles))
+  , Flag "keep-s-files"     (NoArg (setDynFlag Opt_KeepSFiles))
   , Flag "keep-llvm-file"   (NoArg (setDynFlag Opt_KeepLlvmFiles))
   , Flag "keep-llvm-files"  (NoArg (setDynFlag Opt_KeepLlvmFiles))
   , Flag "keep-tmp-files"   (NoArg (setDynFlag Opt_KeepTmpFiles))
@@ -398,7 +452,7 @@ dynamic_flags =
   , Flag "Wwarn"    (NoArg (unSetDynFlag        Opt_WarnIsError))
   , Flag "Wall"     (NoArg (mapM_ setDynFlag    minusWallOpts))
   , Flag "Wnot"     (NoArg (do { mapM_ unSetDynFlag minusWallOpts
-                               ; deprecated "Use -w instead" }))
+                               ; deprecate "Use -w instead" }))
   , Flag "w"        (NoArg (mapM_ unSetDynFlag minuswRemovesOpts))
 
     ---- Optimisation flags ----
@@ -409,7 +463,7 @@ dynamic_flags =
     ---- Compiler flags ----
   , Flag "fasm"         (NoArg (setObjTarget AlcAsm))
   , Flag "fllvm"        (NoArg (setObjTarget AlcLlvm))
-  , Flag "fno-code"     (NoArg (do upd $ -> d{ gacLink=NoLink }
+  , Flag "fno-code"     (NoArg (do upd $ \d -> d{ gacLink=NoLink }
                                    setTarget AlcNothing))
   ]
   ++ map (mkFlag turnOn  "f"    setDynFlag  ) fFlags
@@ -461,8 +515,8 @@ fFlags = [
   ( "warn-unused-variable",         Opt_WarnUnusedVariable, nop),
   ( "warn-uninitialized",           Opt_WarnUnitialized, nop),
   ( "warn-type-limits",             Opt_WarnTypeLimits, nop),
-  ( "warn-warnings-deprecations",   Opt_WarnWarnignsDeprecation, nop),
-  ( "warn-deprecations",            Opt_WarnWarningsDeprecation, nop),
+  ( "warn-warnings-deprecations",   Opt_WarnWarningsDeprecations, nop),
+  ( "warn-deprecations",            Opt_WarnWarningsDeprecations, nop),
   ( "warn_deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
   ( "warn-deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
   ( "cse",                          Opt_CSE, nop),
@@ -480,8 +534,8 @@ xFlags = [
   ]
 
 defaultFlags :: [DynFlag]
-defaultFlag =
-    [ Opt_AutoLinkPackage ]
+defaultFlags =
+    [ Opt_AutoLinkPackages ]
     ++ [f | (ns,f) <- optLevelFlags, 0 `elem` ns]
             -- The default -O0 options
     ++ standarWarnings
@@ -555,7 +609,7 @@ setDumpFlag dump_flag = NoArg (setDumpFlag' dump_flag)
 -- ---------------------------
 setDynFlag, unSetDynFlag :: DynFlag -> DynP ()
 setDynFlag   f = upd (\dfs -> dopt_set dfs f)
-unsetDynFlag f = upd (\dfs -> dopt_unset dfs f)
+unSetDynFlag f = upd (\dfs -> dopt_unset dfs f)
 
 -- ---------------------------
 setExtensionFlag, unSetExtensionFlag :: ExtensionFlag -> DynP ()
@@ -619,3 +673,83 @@ setOptLevel n dflags =
 addLibraryPath :: FilePath -> DynP ()
 addLibraryPath p =
     upd (\s -> s{libraryPaths = libraryPaths s ++ splitPathList p})
+
+#ifndef mingw32_TARGET_OS
+split_marker :: Char
+split_marker = ':'  -- not configurable (ToDo)
+#endif
+
+splitPathList :: String -> [String]
+splitPathList s = filter notNull (splitUp s)
+                -- empty paths are ignored: there might be a trailing
+                -- ':' in the initial list, for example. Empty paths can
+                -- cause confusion when they are translated into -I options
+                -- for passing to gcc.
+  where
+#ifndef mingw32_TARGET_OS
+    splitUp xs = split split_marker xs
+#else
+     -- Windows: 'hybrid' support for DOS-style paths in directory lists.
+     --
+     -- That is, if "foo:bar:baz" is used, this interpreted as
+     -- consisting of three entries, 'foo', 'bar', 'baz'.
+     -- However, with "c:/foo:c:\\foo;x:/bar", this is interpreted
+     -- as 3 elts, "c:/foo", "c:\\foo", "x:/bar"
+     --
+     -- Notice that no attempt is made to fully replace the 'standard'
+     -- split marker ':' with the Windows / DOS one, ';'. The reason being
+     -- that this will cause too much breakage for users & ':' will
+     -- work fine even with DOS paths, if you're not insisting on being silly.
+     -- So, use either.
+    splitUp [] = []
+    splitUp (x:':':div:xs) | div `elem` dir_markers
+                           = ((x:':':div:p): splitUp rs)
+                           where
+                              (p,rs) = findNextPath xs
+          -- we used to check for existence of the path here, but that
+          -- required the IO monad to be threaded through the command-line
+          -- parser which is quite inconvenient. The
+    splitUp xs = cons p (splitUp rs)
+               where
+                  (p,rs) = findNextPath xs
+                  cons "" xs = xs
+                  cons x  xs = x:xs
+    -- will be called either when we've consumed nought or the
+    -- "<Drive>:/" part of a DOS path, so splitting is just a Q of
+    -- finding the next split marker.
+    findNextPath xs =
+        case break (`elem` split_markers) xs of
+             (p, _:ds) -> (p, ds)
+             (p, xs)   -> (p, xs)
+    split_markers :: [Char]
+    split_markers = [':', ';']
+    dir_markers :: [Char]
+    dir_markers = ['/', '\\']
+#endif
+
+
+-- -------------------------------------------------------------------
+-- tmpDir, where we store temporary files.
+
+setTmpDir :: FilePath -> DynFlags -> DynFlags
+setTmpDir dir dflags = dflags{ tmpDir = normalise dir }
+
+
+-- -------------------------------------------------------------------
+-- Compiler Info
+
+data Printable
+    = String String
+    | FromDynFlags (DynFlags -> String)
+
+compilerInfo :: [(String, Printable)]
+compilerInfo =
+    [("Project name",               String PROJECT_NAME)
+    ,("Project version",            String PROJECT_VERSION)
+    ,("Build platform",             String BUILD_PLATFORM)
+    ,("Host platform",              String HOST_PLATFORM)
+    ,("Target platform",            String TARGET_PLATFORM)
+    ,("Have native code generator", String "NO")
+    ,("Have llvmcode generator",    String "NO")
+    ,("LibDir",                     FromDynFlags topDir)
+    ]
