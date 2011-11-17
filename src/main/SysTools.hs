@@ -41,8 +41,25 @@ module SysTools (
   ) where
 
 import DynFlags
+import Outputable (panic)
+import SrcLoc
+import ErrUtils
 
+import Exception
+import Data.IORef
+import Control.Monad
 import System.Exit
+import System.Enviroment
+import System.Filepath
+import System.IO
+import System.IO.Error as IO
+import System.Directory
+import Data.Char
+import Data.List
+import qualified Data.Map as map
+import qualified System.Posix.Internals
+import System.Process (runInteractiveProcess, getProcessExitCode)
+import Control.Concurrent
 
 
 -- -------------------------------------------------------------------
@@ -196,3 +213,241 @@ newTempName dflags extn = do
 -- return our temporary directory within tmp_dir, creating one if we
 -- don't have one yet
 getTempDir :: DynFlags -> IO FilePath
+getTempDir dflags@(DynFlags{tmpDir=tmp_dir}) = do
+    let ref = dirsToClean dflags
+    mapping <- readIORef ref
+    case Map.lookup tmp_dir mapping of
+         Nothing -> do
+             x <- getProcessID
+             let prefix = tmp_dir </> "gac" ++ show x ++ "_"
+                 mkTempDir :: Integer -> IO FilePath
+                 mkTempDir x =
+                     let dirname = prefix ++ show x
+                     in do
+                         createDirectory dirname
+                         let mapping' = Map.insert tmp_dir dirname mapping
+                         writeIORef ref mapping'
+                         return dirname
+                      `IO.catch` \e ->
+                          if isAlreadyExistsError e
+                             then mkTempDir (x+1)
+                             else ioError e
+             mkTempDir 0
+         Just d -> return d
+
+addFilesToClean :: DynFlags -> [FilePath] -> IO ()
+-- May include wildcards
+addFilesToClean dflags files = mapM_ (consIORef (filesToClean dflags)) files
+
+removeTmpDirs :: DynFlags -> [FilePath] -> IO ()
+removeTmpDirs dflags ds =
+    traceCmd dflags "Deleting temp dirs"
+            ("Deleting: " ++ unwords ds)
+            (mapM_ (removeWith dflags removeDirectory) ds)
+
+removeTmpFiles :: DynFlags -> [FilePath] -> IO ()
+removeTmpFiles dflags fs =
+    traceCmd dflags "Deleting temp files"
+            ("Deleting: " ++ unwords deletees)
+            (mapM_ (removeWith dflags removeFile) deletees)
+
+removeWith :: DynFlags -> (FilePath -> IO ()) -> FilePath -> IO ()
+removewith dflags remover f = remover f
+
+
+-- -------------------------------------------------------------------
+-- Running an external program
+
+runSomething :: DynFlags
+             -> String      -- For -v message
+             -> String      -- Command name (possibly a full path)
+             -> [Option]    -- Arguments
+             -> IO ()
+runSomething dflags phase_name pgm args =
+    runSomethingFiltered dflags id phase_name pgm args Nothing
+
+runSomethingFiltered
+  :: DynFlags -> (String->String) -> String -> String -> [Option]
+  -> Maybe [(String,String)] -> IO ()
+runSomethingFiltered dflags filter_fn phase_name pgm args mb_env = do
+    let real_args = filter noNull (map showOpt args)
+    traceCmd dflags phase_name (unwords (pgm:real_args)) $ do
+        (exit_code, doesn'tExist) <-
+            IO.catch (do
+                rc <- builderMainLoop dflags filter_fn pgm real_args mb_env
+                case rc of
+                     ExitSuccess{} -> return (rc, False)
+                     ExitFailure n
+                       -- rawSystem returns (ExitFailure 127) if the exec failed for any
+                       -- reason (eq. the program doesn't exist). This is the only clue
+                       -- we have, but we need to report something to the user because in
+                       -- the case of a missing program there will otherwise be no output
+                       -- at all.
+                      | n == 127  -> return (rc, True)
+                      | otherwise -> return (rc, False))
+                          -- Should 'rawSystem' generate an IO exception indicating that
+                          -- 'pgm' couldn't be run rather than a funky return code, catch
+                          -- this here (the win32 version does this, but it doesn't hurt
+                          -- to test for this in general.)
+                        (\ err ->
+                            if IO.isDoesNotExistError err
+                               then return (ExitFailure 1, True)
+                               else IO.ioError err)
+    case (doesn'tExist, exit_code) of
+         (True, _)        -> putStrLn ("Could not execute: " ++ pgm)
+         (_, ExitSuccess) -> return ()
+         _                -> putStrLn ("Phase `" ++ phase_name ++"' failed with exit code " ++ exit_code)
+
+builderMainLoop :: DynFlags -> (String -> String) -> FilePath
+                -> [String] -> Maybe [(String, String)]
+                -> IO ExitCode
+builderMainLoop dflags filter_fn pgm real_args mb_env = do
+    chan <- neChan
+    (hStdIn, hStdOut, hStdErr, hProcess) <- runInteractiveProcess pgm real_args Nothing mb_env
+    -- and run al oop piping the output from the compiler to the log_action in DynFlags
+    hSetBuffering hStdOut LineBuffering
+    hSetBuffering hStdErr LineBuffering
+    _ <- forkIO (readerProc chan hStdOut filter_fn)
+    _ <- forkIO (readerProc chan hStdErr filter_fn)
+    -- we don't want to finish until w streams have been completed
+    -- (stdout and stderr)
+    -- nor until 1 exit code has been retrieved.
+    rc <- loop chan hProcess (2::Integer) (1::Integer) ExitSucess
+    -- after that, we're done here.
+    hClose hStdIn
+    hClose hStdOut
+    hClose hStdErr
+    return rc
+    where
+        -- status starts at zero, and increments each time either
+        -- a reader process gets EOF, or the build proc exits. We wait
+        -- for all of these to happen (status==3).
+        -- ToDo: we should really have a contingency plan in case any of
+        -- the threads dies, such as a timeout.
+        loop _    _        0 0 exitcode = return exitcode
+        loop chan hProcess t p exitcode = do
+            mb_code <- if p > 0
+                          then getProcessExitCode hProcess
+                          else return Nothing
+            case mb_code of
+                 Just code -> loop chan hProcess t (p-1) code
+                 Nothing
+                   | t > 0 -> do
+                       msg <- readChan chan
+                       case msg of
+                            BuildMsg msg -> do
+                                log_action dflags SevInfo noSrcSpan msg
+                                loop chan hProcess t p exitcode
+                            BuildError loc msg -> do
+                                log_action dflags SevError (mkSrcSpan loc loc) msg
+                                loop chan hProcess t p exitcode
+                            EOF ->
+                                loop chan hProcess (t-1) p exitcode
+                   | otherwise -> loop chan hProcess t p exitcode
+
+readerProc :: Chan BuildMessage -> Handle -> (String -> String) -> IO ()
+readerProc chan hdl filter_fn =
+    (do str <- hGetContents hdl
+        loop (linesPlatform (filter_fn str)) Nothing)
+    `finaly`
+        writeChan chan EOF
+        -- ToDo: check errors more carefully
+        -- ToDo: in the future, the filter should be implemented as
+        -- a stream transformer.
+     where
+        loop []     Nothing     = return ()
+        loop []     (Just err)  = writeChan chan err
+        loop (l:ls) (in_err)    =
+            case in_err of
+                 Just err@(BuildError srcLoc msg)
+                   | leading_whitespace l -> do
+                       loop ls (Just (BuildError srcLoc (msg ++ l)))
+                   | otherwise -> do
+                       writeChan chan err
+                       checkError l ls
+                 Nothing -> do
+                     checkError l ls
+                 _ -> panic "readerProc/loop"
+        checkError l ls =
+            case parseError l of
+                 Nothing -> do
+                     writeChan chan (BuildMsg l)
+                     loop ls Nothing
+                 Just (file, lineNum, colNum, msg) -> do
+                     let srcLoc = mkSrcLoc file lineNum colNum
+                     loop ls (Just (BuildError scrLoc msg))
+        leading_whitespace [] = False
+        leading_whitespace (x:_) = isSpace x
+
+parseError :: String -> Maybe (String, Int, Int, String)
+parseError s0 =
+    case breakColon s0 of
+         Just (filename, s1) ->
+             case breakIntColo s1 of
+                  Just (lineNum, s2) ->
+                      case breakIntColon s2 of
+                           Just (columnNum, s3) ->
+                               Just (filename, lineNum, columnNum, s3)
+                           Nothing ->
+                               Just (filename, lineNum, 0, s2)
+                  Nothing -> Nothing
+         Nothing -> Nothing
+
+breakColon :: String -> Maybe (String, String)
+breakColon xs =
+    case break (':' ==) xs of
+         (ys, _:zs) -> Just (ys, zs)
+         _ -> Nothing
+
+breakIntColon :: String -> Maybe (Int, String)
+breakIntColon xs =
+    case break (':' ==) xs of
+         (ys, _:zs)
+          | not (null ys) && all isAscii ys && all isDigit ys ->
+              Just (read ys, zs)
+         _ -> Nothing
+
+data BuildMessage
+    = BuildMsg      !Sting
+    | BuildError    !SrcLoc !String
+    | EOF
+
+traceCmd :: DynFlags -> String -> String -> IO () -> IO ()
+-- a) trace the command (at two levels of verbosity)
+-- b) don't do it at all if dry-run is set
+traceCmd dflags phase_name cmd_line action = do
+    let verb = verbosity dflags
+    hFlush stderr
+
+    -- Test for -n flag
+    unless (dopt Opt_DryRun dflags) action
+
+
+-- -------------------------------------------------------------------
+-- Support code
+
+getBaseDir :: IO (Maybe String)
+-- Assuming we are running gac, accessed by path $(stuff)/bin/gac,
+-- return the path $(stuff)/lib.
+getBaseDir = do
+    return $ Just "../../lib"
+
+getProcessID :: IO Int
+getProcessID = System.Posix.Internals.c_getpid >>= return . fromIntegral
+
+-- Divvy up text stram into lines, taking platform dependent
+-- line termination into accound.
+linesPlatform :: String -> [String]
+#if !defined(mingw32_HOST_OS)
+linesPlatform ls = lines ls
+#else
+linesPlatform "" = []
+linesPlatform xs =
+    case lineBreak xs of
+         (as,xs1) -> as : linesPlatform xs1
+    where
+        lineBreak "" = ("","")
+        lineBreak ('\r':'\r':xs) = ([],xs)
+        lineBreak ('\n':xs) = ([],xs)
+        lineBreak (x:xs) = let (as,bs) = lineBreak xs in (x:as,bs)
+#endif

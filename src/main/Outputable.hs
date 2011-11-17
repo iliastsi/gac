@@ -8,6 +8,7 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
+    printMessages,
     progName,
     panic
   ) where
@@ -21,17 +22,24 @@ import System.IO (hPutStrLn, stderr)
 
 
 -- -------------------------------------------------------------------
+-- Print Output
+
+printOutput :: String -> IO ()
+printOutput = putStrLn
+
+printErrs :: String -> IO ()
+printErrs = hPutStrLn stderr
+
+printWarns :: String -> IO ()
+printWarns = hPutStrLn stderr
+
+
+-- -------------------------------------------------------------------
 -- Print Messages
 
-printOutput :: Messages -> IO ()
-printOutput (warns, errs) = printMsgBag output
+printMessages :: Messages -> IO ()
+printMessages (warns, errs) = printMsgBag output
     where output = warns `unionBags` errs
-
-printErrs :: Messages -> IO ()
-printErrs = printMsgBag . snd
-
-printWarns :: Messages -> IO ()
-printWarns = printMsgBag . fst
 
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =

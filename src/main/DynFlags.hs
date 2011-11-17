@@ -53,6 +53,7 @@ import Outputable   (panic)
 import Util
 import Maybes       (orElse)
 import SrcLoc
+import ErrUtils
 
 import Data.IORef
 import Data.Char
@@ -152,6 +153,9 @@ data DynFlags = DynFlags {
     -- extensionFlags should always be equal to
     --      flattenExtensionFlags extensions
     extensionFlags      :: [ExtensionFlag]
+
+    -- | Message output action: use "ErrUtils" instead of this if you can
+    log_action          :: Severity -> SrcSpan -> String -> IO ()
   }
 
 -- | The target code type of the compilation (if any)
@@ -240,6 +244,15 @@ defaultDynFlags =
         flags               = defaultFlags,
         extensions          = [],
         extensionFlags      = flattenExtensionFlags []
+
+        log_action = \severity srcSpan msg ->
+                        case severity of
+                             SevOuput -> printOutput msg
+                             SevInfo  -> printErrs msg
+                             SevFatal -> printErrs msg
+                             _        -> do
+                                 hPutChar stderr '\n'
+                                 printErrs (L srcSpan msg)
     }
 
 {-

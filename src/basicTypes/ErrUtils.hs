@@ -42,6 +42,7 @@ data MsgCode
 
 data Severity
   = SevInfo
+  | SevOutput
   | SevWarning
   | SevError
   | SevFatal
