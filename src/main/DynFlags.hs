@@ -54,6 +54,7 @@ import Util
 import Maybes       (orElse)
 import SrcLoc
 
+import Data.IORef
 import Data.Char
 import Data.List
 import Data.Map (Map)
@@ -141,8 +142,8 @@ data DynFlags = DynFlags {
     topDir              :: FilePath,    -- filled in by SysTools
 
     -- Temporary files
-    filesToClean        :: [FilePath],
-    dirsToClean         :: (Map FilePath FilePath),
+    filesToClean        :: IORef [FilePath],
+    dirsToClean         :: IORef (Map FilePath FilePath),
 
     -- gac dynamic flags
     flags               :: [DynFlag],
@@ -192,11 +193,13 @@ defaultObjectTarget :: AlcTarget
 defaultObjectTarget = AlcLlvm
 
 -- | Partially initialize a new 'DynFlags' value
-initDynFlags :: DynFlags -> DynFlags
-initDynFlags dflags =
+initDynFlags :: DynFlags -> IO DynFlags
+initDynFlags dflags = do
+    refFilesToClean <- newIORef []
+    refDirsToClean <- newIORef Map.empty
     dflags{
-        filesToClean    = [],
-        dirsToClean     = Map.empty
+        filesToClean    = refFilesToClean,
+        dirsToClean     = refDirsToClean
     }
 
 -- | The normal 'DynFlags'. Note that they is not suitable for use in this form
