@@ -8,8 +8,11 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
+    progName,
     panic
   ) where
+
+#include "versions.h"
 
 import Bag
 import ErrUtils
@@ -33,6 +36,13 @@ printWarns = printMsgBag . fst
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =
     mapM_ (\msg -> hPutStrLn stderr $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
+
+
+-- -------------------------------------------------------------------
+-- The name of the program
+
+progName :: String
+progName = PROG_NAME
 
 
 -- -------------------------------------------------------------------

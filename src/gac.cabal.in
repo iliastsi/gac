@@ -54,6 +54,7 @@ Executable gac
         ----------
         CmdLineParser
         DynFlags
+        ModeFlags
         Outputable
         ----------
         Parser

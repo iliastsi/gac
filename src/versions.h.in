@@ -4,6 +4,9 @@
 /* Project Name */
 #define PROJECT_NAME "@ProjectName@"
 
+/* Program Name */
+#define PROG_NAME "@PACKAGE_TARNAME@"
+
 /* Project Version */
 #define PROJECT_VERSION "@ProjectVersion@"
 
