@@ -49,7 +49,7 @@ module DynFlags (
 
 import Platform
 import CmdLineParser
-import Outputable   (panic)
+import Outputable
 import Util
 import Maybes       (orElse)
 import SrcLoc
@@ -61,6 +61,7 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import System.FilePath
+import System.IO
 
 
 -- -------------------------------------------------------------------
@@ -138,6 +139,7 @@ data DynFlags = DynFlags {
     pgm_l               :: (String,[Option]),
     pgm_lo              :: (String,[Option]),   -- LLVM: opt llvm optimiser
     pgm_lc              :: (String,[Option]),   -- LLVM: llc static compiler
+    pgm_T               :: String,
 
     -- Package flags
     topDir              :: FilePath,    -- filled in by SysTools
@@ -152,7 +154,7 @@ data DynFlags = DynFlags {
     extensions          :: [OnOff ExtensionFlag],
     -- extensionFlags should always be equal to
     --      flattenExtensionFlags extensions
-    extensionFlags      :: [ExtensionFlag]
+    extensionFlags      :: [ExtensionFlag],
 
     -- | Message output action: use "ErrUtils" instead of this if you can
     log_action          :: Severity -> SrcSpan -> String -> IO ()
@@ -201,7 +203,7 @@ initDynFlags :: DynFlags -> IO DynFlags
 initDynFlags dflags = do
     refFilesToClean <- newIORef []
     refDirsToClean <- newIORef Map.empty
-    dflags{
+    return dflags{
         filesToClean    = refFilesToClean,
         dirsToClean     = refDirsToClean
     }
@@ -236,6 +238,7 @@ defaultDynFlags =
         pgm_l               = panic "defaultDynFlags: No pgm_l",
         pgm_lo              = panic "defaultDynFlags: No pgm_lo",
         pgm_lc              = panic "defaultDynFlags: No pgm_lc",
+        pgm_T               = panic "defaultDynFlags: No pgm_T",
         -- end of initSynTools values
  
         filesToClean        = panic "defaultDynFlags: No filesToClean",
@@ -243,16 +246,16 @@ defaultDynFlags =
 
         flags               = defaultFlags,
         extensions          = [],
-        extensionFlags      = flattenExtensionFlags []
+        extensionFlags      = flattenExtensionFlags [],
 
         log_action = \severity srcSpan msg ->
                         case severity of
-                             SevOuput -> printOutput msg
+                             SevOutput -> printOutput msg
                              SevInfo  -> printErrs msg
                              SevFatal -> printErrs msg
                              _        -> do
                                  hPutChar stderr '\n'
-                                 printErrs (L srcSpan msg)
+                                 printErrs msg
     }
 
 {-

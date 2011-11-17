@@ -29,10 +29,14 @@ module Util (
 
     -- * Comparisons
     isEqual, thenCmp,
-    removeSpaces
+    removeSpaces,
+
+    -- * IO-ish utilities
+    consIORef
   ) where
 
 import Data.Char (isSpace)
+import Data.IORef
 
 infixr 9 `thenCmp`
 
@@ -274,3 +278,11 @@ thenCmp ordering _        = ordering
 
 removeSpaces :: String -> String
 removeSpaces = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+
+-- -------------------------------------------------------------------
+-- IO-ish utilities
+
+consIORef :: IORef [a] -> a -> IO ()
+consIORef var x = do
+    atomicModifyIORef var (\xs -> (x:xs,()))

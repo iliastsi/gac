@@ -44,19 +44,20 @@ import DynFlags
 import Outputable (panic)
 import SrcLoc
 import ErrUtils
+import Util
 
-import Exception
 import Data.IORef
 import Control.Monad
+import Control.Exception
 import System.Exit
-import System.Enviroment
-import System.Filepath
+import System.Environment
+import System.FilePath
 import System.IO
 import System.IO.Error as IO
 import System.Directory
 import Data.Char
 import Data.List
-import qualified Data.Map as map
+import qualified Data.Map as Map
 import qualified System.Posix.Internals
 import System.Process (runInteractiveProcess, getProcessExitCode)
 import Control.Concurrent
@@ -72,7 +73,7 @@ initSysTools :: Maybe String    -- Maybe TopDir path (without the '-B' prefix)
 initSysTools mbMinusB dflags0 = do
     top_dir <- findTopDir mbMinusB
     tmpdir <- getTemporaryDirectory
-    let dflags1 = setTmpDir tempdir dflags0
+    let dflags1 = setTmpDir tmpdir dflags0
     -- TODO: actually figure out this program locations
     let gcc_prog   = "gcc"
         touch_path = "touch"
@@ -83,9 +84,10 @@ initSysTools mbMinusB dflags0 = do
     return dflags1
         { topDir  = top_dir
         , pgm_a   = (as_prog,[])
-        , pgm_s   = (ld_prog,[])
+        , pgm_l   = (ld_prog,[])
         , pgm_lo  = (lo_prog,[])
         , pgm_lc  = (lc_prog,[])
+        , pgm_T   = touch_path
         }
 
 -- returns a Unix-format path (relying on getBaseDir to do so too)
@@ -109,8 +111,8 @@ getGccEnv :: [Option] -> IO (Maybe [(String,String)])
 getGccEnv opts =
     if null b_dirs
        then return Nothing
-       else do env <- getEnviroment
-               return (Just (map magle_path env))
+       else do env <- getEnvironment
+               return (Just (map mangle_path env))
     where
         (b_dirs, _) = partitionWith get_b_opt opts
 
@@ -135,7 +137,7 @@ runLlvmOpt dflags args = do
 
 runLlvmLlc :: DynFlags -> [Option] -> IO ()
 runLlvmLlc dflags args = do
-    let (p,args) = pgm_lc dflags
+    let (p,args0) = pgm_lc dflags
     runSomething dflags "LLVM Compiler" p (args0++args)
 
 runLink :: DynFlags -> [Option] -> IO ()
@@ -149,14 +151,13 @@ touch :: DynFlags -> String -> String -> IO ()
 touch dflags purpose arg =
     runSomething dflags purpose (pgm_T dflags) [FileOption "" arg]
 
-copy :: DnFlags -> String -> FilePath -> FilePath -> IO ()
+copy :: DynFlags -> String -> FilePath -> FilePath -> IO ()
 copy dflags purpose from to =
     copyWithHeader dflags purpose Nothing from to
 
 copyWithHeader :: DynFlags -> String -> Maybe String -> FilePath -> FilePath
                -> IO ()
 copyWithHeader dflags purpose maybe_header from to = do
-    showPass dflags purpose
     hout <- openBinaryFile to   WriteMode
     hin  <- openBinaryFile from ReadMode
     ls <- hGetContents hin  -- inefficient, but it'll do for no. ToDo: speed up
@@ -170,7 +171,7 @@ copyWithHeader dflags purpose maybe_header from to = do
 -- Managing temporary files
 
 cleanTempDirs :: DynFlags -> IO ()
-cleantempDirs dflags =
+cleanTempDirs dflags =
     unless (dopt Opt_KeepTmpFiles dflags)
         $ do let ref = dirsToClean dflags
              ds <- readIORef ref
@@ -187,7 +188,7 @@ cleanTempFiles dflags =
 
 cleanTempFilesExcept :: DynFlags -> [FilePath] -> IO ()
 cleanTempFilesExcept dflags dont_delete =
-    unless (dopt Opt_keepTmpFiles dflags)
+    unless (dopt Opt_KeepTmpFiles dflags)
         $ do let ref = filesToClean dflags
              files <- readIORef ref
              let (to_keep, to_delete) = partition (`elem` dont_delete) files
@@ -195,7 +196,7 @@ cleanTempFilesExcept dflags dont_delete =
              writeIORef ref to_keep
 
 -- find a temporary name that doesn't already exist
-newTempName :: DynFlags -> Suffix -> IO FilePath
+newTempName :: DynFlags -> String -> IO FilePath
 newTempName dflags extn = do
     d <- getTempDir dflags
     x <- getProcessID
@@ -205,7 +206,7 @@ newTempName dflags extn = do
     findTempName prefix x = do
         let filename = (prefix ++ show x) <.> extn
         b <- doesFileExist filename
-        if b then findTempName preofix (x+1)
+        if b then findTempName prefix (x+1)
              else do --clean it up later
                      consIORef (filesToClean dflags) filename
                      return filename
@@ -250,9 +251,12 @@ removeTmpFiles dflags fs =
     traceCmd dflags "Deleting temp files"
             ("Deleting: " ++ unwords deletees)
             (mapM_ (removeWith dflags removeFile) deletees)
+    where
+        (non_deletees, deletees) = partition isAlanUserSrcFilename fs
+        isAlanUserSrcFilename str = (drop 1 $ takeExtension str) == "alan"
 
 removeWith :: DynFlags -> (FilePath -> IO ()) -> FilePath -> IO ()
-removewith dflags remover f = remover f
+removeWith dflags remover f = remover f
 
 
 -- -------------------------------------------------------------------
@@ -270,39 +274,39 @@ runSomethingFiltered
   :: DynFlags -> (String->String) -> String -> String -> [Option]
   -> Maybe [(String,String)] -> IO ()
 runSomethingFiltered dflags filter_fn phase_name pgm args mb_env = do
-    let real_args = filter noNull (map showOpt args)
+    let real_args = filter notNull (map showOpt args)
     traceCmd dflags phase_name (unwords (pgm:real_args)) $ do
-        (exit_code, doesn'tExist) <-
-            IO.catch (do
-                rc <- builderMainLoop dflags filter_fn pgm real_args mb_env
-                case rc of
-                     ExitSuccess{} -> return (rc, False)
-                     ExitFailure n
-                       -- rawSystem returns (ExitFailure 127) if the exec failed for any
-                       -- reason (eq. the program doesn't exist). This is the only clue
-                       -- we have, but we need to report something to the user because in
-                       -- the case of a missing program there will otherwise be no output
-                       -- at all.
-                      | n == 127  -> return (rc, True)
-                      | otherwise -> return (rc, False))
-                          -- Should 'rawSystem' generate an IO exception indicating that
-                          -- 'pgm' couldn't be run rather than a funky return code, catch
-                          -- this here (the win32 version does this, but it doesn't hurt
-                          -- to test for this in general.)
-                        (\ err ->
-                            if IO.isDoesNotExistError err
-                               then return (ExitFailure 1, True)
-                               else IO.ioError err)
+    (exit_code, doesn'tExist) <-
+        IO.catch (do
+            rc <- builderMainLoop dflags filter_fn pgm real_args mb_env
+            case rc of
+                 ExitSuccess{} -> return (rc, False)
+                 ExitFailure n
+                   -- rawSystem returns (ExitFailure 127) if the exec failed for any
+                   -- reason (eq. the program doesn't exist). This is the only clue
+                   -- we have, but we need to report something to the user because in
+                   -- the case of a missing program there will otherwise be no output
+                   -- at all.
+                  | n == 127  -> return (rc, True)
+                  | otherwise -> return (rc, False))
+                      -- Should 'rawSystem' generate an IO exception indicating that
+                      -- 'pgm' couldn't be run rather than a funky return code, catch
+                      -- this here (the win32 version does this, but it doesn't hurt
+                      -- to test for this in general.)
+                    (\ err ->
+                        if IO.isDoesNotExistError err
+                           then return (ExitFailure 1, True)
+                           else IO.ioError err)
     case (doesn'tExist, exit_code) of
          (True, _)        -> putStrLn ("Could not execute: " ++ pgm)
          (_, ExitSuccess) -> return ()
-         _                -> putStrLn ("Phase `" ++ phase_name ++"' failed with exit code " ++ exit_code)
+         _                -> putStrLn ("Phase `" ++ phase_name ++"' failed with exit code " ++ show exit_code)
 
 builderMainLoop :: DynFlags -> (String -> String) -> FilePath
                 -> [String] -> Maybe [(String, String)]
                 -> IO ExitCode
 builderMainLoop dflags filter_fn pgm real_args mb_env = do
-    chan <- neChan
+    chan <- newChan
     (hStdIn, hStdOut, hStdErr, hProcess) <- runInteractiveProcess pgm real_args Nothing mb_env
     -- and run al oop piping the output from the compiler to the log_action in DynFlags
     hSetBuffering hStdOut LineBuffering
@@ -312,7 +316,7 @@ builderMainLoop dflags filter_fn pgm real_args mb_env = do
     -- we don't want to finish until w streams have been completed
     -- (stdout and stderr)
     -- nor until 1 exit code has been retrieved.
-    rc <- loop chan hProcess (2::Integer) (1::Integer) ExitSucess
+    rc <- loop chan hProcess (2::Integer) (1::Integer) ExitSuccess
     -- after that, we're done here.
     hClose hStdIn
     hClose hStdOut
@@ -349,7 +353,7 @@ readerProc :: Chan BuildMessage -> Handle -> (String -> String) -> IO ()
 readerProc chan hdl filter_fn =
     (do str <- hGetContents hdl
         loop (linesPlatform (filter_fn str)) Nothing)
-    `finaly`
+    `finally`
         writeChan chan EOF
         -- ToDo: check errors more carefully
         -- ToDo: in the future, the filter should be implemented as
@@ -375,7 +379,7 @@ readerProc chan hdl filter_fn =
                      loop ls Nothing
                  Just (file, lineNum, colNum, msg) -> do
                      let srcLoc = mkSrcLoc file lineNum colNum
-                     loop ls (Just (BuildError scrLoc msg))
+                     loop ls (Just (BuildError srcLoc msg))
         leading_whitespace [] = False
         leading_whitespace (x:_) = isSpace x
 
@@ -383,7 +387,7 @@ parseError :: String -> Maybe (String, Int, Int, String)
 parseError s0 =
     case breakColon s0 of
          Just (filename, s1) ->
-             case breakIntColo s1 of
+             case breakIntColon s1 of
                   Just (lineNum, s2) ->
                       case breakIntColon s2 of
                            Just (columnNum, s3) ->
@@ -408,7 +412,7 @@ breakIntColon xs =
          _ -> Nothing
 
 data BuildMessage
-    = BuildMsg      !Sting
+    = BuildMsg      !String
     | BuildError    !SrcLoc !String
     | EOF
 

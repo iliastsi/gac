@@ -26,7 +26,9 @@ Executable gac
   Build-Depends: base       >= 4,
                  array      >= 0.3,
                  containers >= 0.4,
-                 filepath   >= 1.2
+                 filepath   >= 1.2,
+                 process    >= 1.0,
+                 directory  >= 1.1
   if os(windows)
      Build-Depends: Win32
   else
