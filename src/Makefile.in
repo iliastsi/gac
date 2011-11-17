@@ -8,8 +8,8 @@
 #
 # -----------------------------------------------------------------------------
 
-PREFIX   = @prefix@
-BUILDDIR = @abs_top_builddir@/dist
+prefix   = @prefix@
+builddir = @abs_top_builddir@/dist
 
 GHC    = @GHC@
 HAPPY  = @HappyCmd@
@@ -22,16 +22,16 @@ all: build
 
 .PHONY: build
 build: config Setup
-	./Setup build --builddir=$(BUILDDIR)
+	./Setup build --builddir=$(builddir)
 
 Setup: Setup.hs
 	$(GHC) -o Setup Setup.hs
 
 .PHONY: config
-config: $(BUILDDIR)/setup-config
+config: $(builddir)/setup-config
 
-$(BUILDDIR)/setup-config: Setup
-	./Setup configure --builddir=$(BUILDDIR) --prefix=$(PREFIX) \
+$(builddir)/setup-config: Setup
+	./Setup configure --builddir=$(builddir) --prefix=$(prefix) \
 		--with-ghc="$(GHC)" --with-alex="$(ALEX)" --with-happy="$(HAPPY)" \
 		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
 
@@ -40,5 +40,5 @@ clean:
 	@test -e Setup && $(MAKE) clean-force || echo "Nothing to clean here.."
 # We use clean-force only if Setup exists
 clean-force: Setup
-	./Setup clean --builddir=$(BUILDDIR)
+	./Setup clean --builddir=$(builddir)
 	$(RM) Setup.hi Setup.o Setup

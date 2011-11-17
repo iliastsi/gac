@@ -8,21 +8,40 @@
 #
 # -----------------------------------------------------------------------------
 
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+builddir    = @abs_top_builddir@/dist
+bindir      = @bindir@
+datarootdir = @datarootdir@
+docdir      = @docdir@
+libdir      = @libdir@
+mandir      = @mandir@
 
-PREFIX  = @prefix@
-TAR     = @TarCmd@
+TAR          = @TarCmd@
+INSTALL      = @INSTALL@
+INSTALL_PROG = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
 
-VERSION = @PACKAGE_VERSION@
-PACKAGE = @PACKAGE_TARNAME@
-ARCHIVE = $(PACKAGE)-$(VERSION)
+PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+ARCHIVE = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
 .PHONY: all
 all:
 	$(MAKE) -C src $@
 
 .PHONY: install
-install:
-	$(MAKE) -C src $@
+install: all
+	$(INSTALL_PROG) -D $(builddir)/build/gac/gac $(bindir)/gac
+	$(INSTALL_DATA) -D LICENSE $(docdir)/LICENSE
+	$(INSTALL_DATA) -D docs/alan2011.pdf $(docdir)/alan2011.pdf
+	$(INSTALL_DATA) -D docs/man_page/gac.1.gz $(mandir)/man1/gac.1.gz
+
+.PHONY: uninstall
+uninstall:
+	$(RM) $(bindir)/gac
+	$(RM) -r $(docdir)
+	$(RM) $(mandir)/man1/gac.1.gz
 
 .PHONY: dist
 dist:
