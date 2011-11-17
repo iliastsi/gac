@@ -125,8 +125,6 @@ data DynFlags = DynFlags {
     libraryPaths        :: [String],
     tmpDir              :: String,
 
-    gacUsagePath        :: FilePath,    -- Filled in by SysTools
-
     -- options for particular phases
     opt_a               :: [String],
     opt_l               :: [String],
