@@ -26,7 +26,7 @@ parse :: String -> IO (PState, Located UDef)
 parse buf = do
     case unP parser (mkPState buf (mkSrcLoc "Stdin" 1 1)) of
          PFailed msg       -> do
-             printOutput msg
+             printMessages msg
              exitFailure
          POk p_state luast -> do
              return (p_state, luast)
@@ -35,7 +35,7 @@ typeCheck :: (Located UDef) -> IO (TcState, Located ADef)
 typeCheck luast = do
     case unTcM (typeCheckDef luast) (mkTcState predefinedTable) of
          TcFailed msg       -> do
-             printOutput msg
+             printMessages msg
              exitFailure
          TcOk tc_state ltast -> do
              return (tc_state, ltast)
@@ -47,7 +47,7 @@ main = do
     let p_messages = getPMessages p_state
     if errorsFound p_messages
        then do
-           printOutput p_messages
+           printMessages p_messages
            exitFailure
        else do
            return ()
@@ -55,9 +55,9 @@ main = do
     let tc_messages = unionMessages p_messages (getTcMessages tc_state)
     if errorsFound tc_messages
        then do
-           printOutput tc_messages
+           printMessages tc_messages
            exitFailure
        else do
            return ()
-    printOutput tc_messages
+    printMessages tc_messages
     exitSuccess
