@@ -8,9 +8,10 @@
 #
 # -----------------------------------------------------------------------------
 
-GHC = @GHC@
-BUILDDIR = ../dist
-PREFIX = @prefix@
+PREFIX   = @prefix@
+BUILDDIR = @abs_top_builddir@/dist
+
+GHC    = @GHC@
 HAPPY  = @HappyCmd@
 ALEX   = @AlexCmd@
 LFLAGS = @LFLAGS@
@@ -41,8 +42,3 @@ clean:
 clean-force: Setup
 	./Setup clean --builddir=$(BUILDDIR)
 	$(RM) Setup.hi Setup.o Setup
-
-
-.PHONY: install
-install: build Setup
-	./Setup install --builddir=$(BUILDDIR)
