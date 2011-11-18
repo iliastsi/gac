@@ -2,6 +2,9 @@ syntax: regexp
 
 # default building dir
 ^dist/
+^src/Setup$
+^src/Setup.o$
+^src/Setup.hi$
 
 # vim swap and backup files
 \.swp$
