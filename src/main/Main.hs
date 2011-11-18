@@ -99,9 +99,11 @@ main' dflags0 args = do
 -- Right now handle only one file
 main'' :: DynFlags -> [String] -> [String] -> IO ()
 main'' dflags0 srcs objs = do
-    handle <- openFile (head srcs) ReadMode
+    let source = head srcs
+    handle <- openFile source ReadMode
     contents <- hGetContents handle
-    (p_state, luast) <- parse dflags0 contents
+    (p_state, luast) <- parse dflags0 source contents
+    hClose handle
     let p_messages = getPMessages p_state
     if errorsFound p_messages
        then do
@@ -123,9 +125,9 @@ main'' dflags0 srcs objs = do
 -- -------------------------------------------------------------------
 -- Parse and Typecheck
 
-parse :: DynFlags -> String -> IO (PState, Located UDef)
-parse dflags buf = do
-    case unP parser (mkPState dflags buf (mkSrcLoc "Stdin" 1 1)) of
+parse :: DynFlags -> String -> String -> IO (PState, Located UDef)
+parse dflags filename buf = do
+    case unP parser (mkPState dflags buf (mkSrcLoc filename 1 1)) of
          PFailed msg       -> do
              printMessages msg
              exitFailure
