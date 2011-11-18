@@ -88,12 +88,12 @@ main' dflags0 args = do
              printLocWarns dynamicFlagWarnings
              let normal_fileish_paths = map (normalise . unLoc) fileish_args
                  (srcs, objs)         = partition_args normal_fileish_paths [] []
-             if (not $ null objs) && (length srcs /= 1)
+             if (null objs) && (length srcs == 1)
                 then do
+                    main'' dflags1 srcs objs
+                else do
                     printErrs ["You must specify one alan source file"]
                     exitFailure
-                else do
-                    main'' dflags1 srcs objs
 
 -- ---------------------------
 -- Right now handle only one file
@@ -148,7 +148,7 @@ typeCheck luast = do
 partition_args :: [String] -> [String] -> [String]
                -> ([String], [String])
 partition_args [] srcs objs = (reverse srcs, reverse objs)
-parttionn_args (arg:args) srcs objs
+partition_args (arg:args) srcs objs
   | looks_like_an_input arg = partition_args args (arg:srcs) objs
   | otherwise               = partition_args args srcs (arg:objs)
 
