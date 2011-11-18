@@ -250,12 +250,12 @@ defaultDynFlags =
 
         log_action = \severity srcSpan msg ->
                         case severity of
-                             SevOutput -> printOutput msg
-                             SevInfo  -> printErrs msg
-                             SevFatal -> printErrs msg
+                             SevOutput -> printOutput [msg]
+                             SevInfo  -> printErrs [msg]
+                             SevFatal -> printErrs [msg]
                              _        -> do
                                  hPutChar stderr '\n'
-                                 printErrs msg
+                                 printLocErrs [(L srcSpan msg)]
     }
 
 {-

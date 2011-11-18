@@ -9,7 +9,8 @@
 module ModeFlags (
     -- * Mode flags and associated configuration types
     Mode(..),
-    PreStartupMode(..), PostStartupMode(..),
+    PreStartupMode(..), PostStartupMode,
+    PreLoadMode(..), PostLoadMode(..),
 
     -- ** Parsing ModeFlags
     parseModeFlags,
@@ -71,18 +72,25 @@ isShowGacUsageMode (Left ShowGacUsage) = True
 isShowGacUsageMode _ = False
 
 -- ---------------------------
-data PostStartupMode
+type PostStartupMode = Either PreLoadMode PostLoadMode
+
+data PreLoadMode
     = ShowInfo                                -- gac --info
     | PrintWithDynFlags (DynFlags -> String)  -- gac --print-foo
 
 showInfoMode :: Mode
-showInfoMode     = mkPostStartupMode ShowInfo
+showInfoMode     = mkPreLoadMode ShowInfo
 
 printWithDynFlagsMode :: (DynFlags -> String) -> Mode
-printWithDynFlagsMode f = mkPostStartupMode (PrintWithDynFlags f)
+printWithDynFlagsMode f = mkPreLoadMode (PrintWithDynFlags f)
 
-mkPostStartupMode :: PostStartupMode -> Mode
-mkPostStartupMode = Right
+mkPreLoadMode :: PreLoadMode -> Mode
+mkPreLoadMode = Right . Left
+
+data PostLoadMode = PostLoadMode
+
+mkPostLoadMode :: Mode
+mkPostLoadMode = Right $ Right PostLoadMode
 
 
 -- -------------------------------------------------------------------
@@ -90,7 +98,7 @@ mkPostStartupMode = Right
 
 parseModeFlags :: [Located String]
                -> Either [Located String]
-                    (Maybe Mode,
+                    (Mode,
                      [Located String],
                      [Located String])
 parseModeFlags args =
@@ -98,8 +106,8 @@ parseModeFlags args =
             runCmdLine (processArgs mode_flags args)
                        (Nothing, [], [])
         mode = case mModeFlag of
-                    Nothing     -> Nothing
-                    Just (m, _) -> Just m
+                    Nothing     -> mkPostLoadMode
+                    Just (m, _) -> m
         errs = errs1 ++ map (mkGeneralLocated "on the commandline") errs2
     in
     if null errs

@@ -8,6 +8,7 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
+    printLocErrs, printLocWarns,
     printMessages,
     progName,
     panic
@@ -17,6 +18,7 @@ module Outputable (
 
 import Bag
 import ErrUtils
+import SrcLoc
 
 import System.IO (hPutStrLn, stderr)
 
@@ -24,14 +26,21 @@ import System.IO (hPutStrLn, stderr)
 -- -------------------------------------------------------------------
 -- Print Output
 
-printOutput :: String -> IO ()
-printOutput = putStrLn
+printOutput :: [String] -> IO ()
+printOutput = mapM_ putStrLn
 
-printErrs :: String -> IO ()
-printErrs = hPutStrLn stderr
+printErrs :: [String] -> IO ()
+printErrs = mapM_ (hPutStrLn stderr)
 
-printWarns :: String -> IO ()
-printWarns = hPutStrLn stderr
+printWarns :: [String] -> IO ()
+printWarns = printErrs
+
+printLocErrs :: [Located String] -> IO ()
+printLocErrs =
+    mapM_ (\(L loc msg) -> hPutStrLn stderr (show loc ++ " " ++ msg))
+
+printLocWarns :: [Located String] -> IO ()
+printLocWarns = printLocErrs
 
 
 -- -------------------------------------------------------------------
