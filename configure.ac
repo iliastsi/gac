@@ -13,7 +13,7 @@ dnl
 # see what flags are available. (Better yet, read the documentation!)
 #
 
-AC_INIT([The Glorious Alan Compilation System], [0.5.0], [iliastsi@hotmail.com], [gac])
+AC_INIT([The Glorious Alan Compilation System], [0.5], [iliastsi@hotmail.com], [gac])
 
 # Set this to YES for a released version, otherwise NO
 : ${RELEASE=YES}
