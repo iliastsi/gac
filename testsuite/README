@@ -3,3 +3,7 @@ For testsuite documentation, please see:
 
     http://hackage.haskell.org/trac/ghc/wiki/Building/RunningTests
 
+
+In order to run testsuite you have to install gac using:
+    - the default prefix (so which can locate gac)
+    - `../install' as prefix
