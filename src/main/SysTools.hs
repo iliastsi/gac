@@ -8,10 +8,8 @@
 -- Gac needs various support files (library packages etc), plus
 -- various auxiliary programs (cp, gcc, etc). It starts by finding topdir,
 -- the root of GAC's support files
---      - we start by finding the location of ghc binary, which is
---              $topdir/bin/<something>
---        where <something> may be "gac", or similar
---      - we strip off the "bin/<something>" to leave $topdir.
+--      - right now gac always has a shell wrapper that passes a -B<dir> option
+--
 --
 -- SysTools.initSysProgs figures out exactly where all the auxiliary programs
 -- are, and initialises mutable variables to make it easy to call them.
@@ -97,7 +95,9 @@ findTopDir (Just minusb) = return (normalise minusb)
 findTopDir Nothing = do
     maybe_exec_dir <- getBaseDir
     case maybe_exec_dir of
-         Nothing  -> panic "SysTools.findTopDir cannot find top dir"
+         Nothing  -> do
+             putStrLn "InstallationError: missing -B<dir> option"
+             exitFailure
          Just dir -> return dir
 
 
@@ -433,8 +433,7 @@ traceCmd dflags phase_name cmd_line action = do
 getBaseDir :: IO (Maybe String)
 -- Assuming we are running gac, accessed by path $(stuff)/bin/gac,
 -- return the path $(stuff)/lib.
-getBaseDir = do
-    return $ Just "../../lib"
+getBaseDir = return Nothing
 
 getProcessID :: IO Int
 getProcessID = System.Posix.Internals.c_getpid >>= return . fromIntegral

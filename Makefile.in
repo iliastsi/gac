@@ -14,7 +14,7 @@ builddir    = @abs_top_builddir@/dist
 bindir      = @bindir@
 datarootdir = @datarootdir@
 docdir      = @docdir@
-libdir      = @libdir@
+libdir      = @libdir@/${PACKAGE_TARNAME}
 mandir      = @mandir@
 
 TAR          = @TarCmd@
@@ -32,17 +32,26 @@ all:
 
 .PHONY: install
 install: all
-	$(INSTALL_PROG) -D $(builddir)/build/gac/gac $(bindir)/gac
+	@echo "#!/bin/sh"                                        >  gac_shell
+	@echo "exedir=\"$(libdir)/lib\""                         >> gac_shell
+	@echo "executablename=\"$$""exedir/$(PACKAGE_TARNAME)\"" >> gac_shell
+	@echo "topdir=\"$(libdir)\""                             >> gac_shell
+	@echo "exec \"$$""executablename\" -B\"$$""topdir\" $$""{1+\"$$""@\"}" >> gac_shell
+	$(INSTALL_PROG) -D gac_shell $(bindir)/$(PACKAGE_TARNAME)
+	$(RM) gac_shell
+	$(INSTALL_PROG) -D $(builddir)/build/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME) \
+			$(libdir)/lib/$(PACKAGE_TARNAME)
 	$(INSTALL_DATA) -D LICENSE $(docdir)/LICENSE
 	$(INSTALL_DATA) -D README  $(docdir)/README
 	$(INSTALL_DATA) -D docs/alan2011.pdf $(docdir)/alan2011.pdf
-	$(INSTALL_DATA) -D docs/man_page/gac.1.gz $(mandir)/man1/gac.1.gz
+	$(INSTALL_DATA) -D docs/man_page/gac.1.gz $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
 
 .PHONY: uninstall
 uninstall:
-	$(RM) $(bindir)/gac
+	$(RM) $(bindir)/$(PACKAGE_TARNAME)
+	$(RM) -r $(libdir)
 	$(RM) -r $(docdir)
-	$(RM) $(mandir)/man1/gac.1.gz
+	$(RM) $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
 
 .PHONY: dist
 dist:
