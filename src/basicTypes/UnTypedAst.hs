@@ -16,13 +16,15 @@ module UnTypedAst (
     UCond(..), UVariable(..), UType(..), UFuncCall(..),
 
     -- * Dump UnTypedAst
-    dumpUnTypedAst
+    UAst, dumpUnTypedAst
   ) where
 
 import SrcLoc
 
 
 -- ---------------------------
+type UAst = UDef
+
 dumpUnTypedAst :: UDef -> String
 dumpUnTypedAst = dumpUDef 0
 

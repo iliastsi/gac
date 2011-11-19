@@ -25,6 +25,9 @@ import Foreign.Ptr
 import Control.Monad
 
 
+type TAst = TDef
+
+-- ---------------------------
 type LTDef a = Located (TDef a)
 
 data TDef a where

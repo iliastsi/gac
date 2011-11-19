@@ -18,7 +18,7 @@ import TcMonad (TcResult(..), mkTcState, unTcM, TcState, getTcMessages)
 import SymbolTable (predefinedTable)
 import TypeCheck (typeCheckDef)
 import ErrUtils (errorsFound, unionMessages)
-import UnTypedAst (UDef)
+import UnTypedAst (UAst)
 import TypedAst (ADef)
 import DynFlags
 import ModeFlags
@@ -125,7 +125,7 @@ main'' dflags0 srcs objs = do
 -- -------------------------------------------------------------------
 -- Parse and Typecheck
 
-parse :: DynFlags -> String -> String -> IO (PState, Located UDef)
+parse :: DynFlags -> String -> String -> IO (PState, Located UAst)
 parse dflags filename buf = do
     case unP parser (mkPState dflags buf (mkSrcLoc filename 1 1)) of
          PFailed msg       -> do
@@ -134,7 +134,7 @@ parse dflags filename buf = do
          POk p_state luast -> do
              return (p_state, luast)
 
-typeCheck :: (Located UDef) -> IO (TcState, Located ADef)
+typeCheck :: (Located UAst) -> IO (TcState, Located ADef)
 typeCheck luast = do
     case unTcM (typeCheckDef luast) (mkTcState predefinedTable) of
          TcFailed msg       -> do
