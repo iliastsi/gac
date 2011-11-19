@@ -37,6 +37,7 @@ module Lexer (
 
 import SrcLoc
 import ErrUtils
+import DynFlags
 
 import Data.Char
 
@@ -261,6 +262,7 @@ data ParseResult a
 
 data PState = PState { 
     buffer	        :: String,
+    dflags          :: DynFlags,
     messages        :: Messages,
     last_loc        :: SrcSpan, -- pos of previous token
     last_tok        :: !String, -- string of the previous token
@@ -357,10 +359,11 @@ alexGetChar (AI loc (x:xs) _) = Just (x, AI (advanceSrcLoc loc x) xs x)
 
 -- create a parse state
 --
-mkPState :: String -> SrcLoc -> PState
-mkPState buf loc =
+mkPState :: DynFlags -> String -> SrcLoc -> PState
+mkPState flags buf loc =
   PState {
     buffer          = buf,
+    dflags          = flags,
     messages        = emptyMessages,
     last_loc        = mkSrcSpan loc loc,
     last_tok        = "",

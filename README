@@ -29,7 +29,7 @@ tested. You will alse need Alex [2] and Happy [3] Meta-Compilers.
 
 Quick start:  the following gives you a default build:
 
-    $ make config
+    $ ./configure
     $ make
 
 These steps give you the default build (an executable file

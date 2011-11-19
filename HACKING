@@ -42,8 +42,6 @@ All the paths below are relative to $(TOP).
   Files in $(TOP)
     Documentation files
         README, INSTALL, HACKING, LICENSE
-    Cabal autoconfig machinery
-        gac.cabal, Setup.hs
     Makefile
         The top-level Makefile. GAC requires GNU make.
 

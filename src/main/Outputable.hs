@@ -8,33 +8,81 @@
 module Outputable (
     printOutput,
     printErrs, printWarns,
-    internalError
+    printLocErrs, printLocWarns,
+    usageString,
+
+    printMessages,
+
+    printDumpedAst,
+
+    progName,
+    panic
   ) where
+
+#include "versions.h"
 
 import Bag
 import ErrUtils
+import SrcLoc
+import UnTypedAst (UAst, dumpedUAst)
+import DynFlags
+
+import System.IO (hPutStrLn, stderr)
+
+
+-- -------------------------------------------------------------------
+-- Print Output
+
+printOutput :: [String] -> IO ()
+printOutput = mapM_ putStrLn
+
+printErrs :: [String] -> IO ()
+printErrs = mapM_ (hPutStrLn stderr)
+
+printWarns :: [String] -> IO ()
+printWarns = printErrs
+
+printLocErrs :: [Located String] -> IO ()
+printLocErrs =
+    mapM_ (\(L loc msg) -> hPutStrLn stderr (show loc ++ " " ++ msg))
+
+printLocWarns :: [Located String] -> IO ()
+printLocWarns = printLocErrs
+
+usageString :: String
+usageString = "Usage: For basic information, try the `--help' option."
 
 
 -- -------------------------------------------------------------------
 -- Print Messages
 
-printOutput :: Messages -> IO ()
-printOutput (warns, errs) = printMsgBag output
+printMessages :: DynFlags -> Messages -> IO ()
+printMessages dflags (warns, errs) = printMsgBag dflags output
     where output = warns `unionBags` errs
 
-printErrs :: Messages -> IO ()
-printErrs = printMsgBag . snd
+printMsgBag :: DynFlags -> Bag Message -> IO ()
+printMsgBag dflags msgBag =
+    mapM_ (\msg -> hPutStrLn stderr $ (showMsg dflags msg) ++ "\n")
+                        (sortMessages (bagToList msgBag))
 
-printWarns :: Messages -> IO ()
-printWarns = printMsgBag . fst
 
-printMsgBag :: Bag Message -> IO ()
-printMsgBag msgBag =
-    mapM_ (\msg -> putStrLn $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
+-- -------------------------------------------------------------------
+-- Print dumped Ast
+printDumpedAst :: UAst -> IO ()
+printDumpedAst uast = do
+    putStrLn "\n==================== Parser ===================="
+    putStrLn (dumpedUAst uast)
+
+
+-- -------------------------------------------------------------------
+-- The name of the program
+
+progName :: String
+progName = PROG_NAME
 
 
 -- -------------------------------------------------------------------
 -- Internal Errors
 
-internalError :: String -> a
-internalError str = error ("My brain just exploded\n\t" ++ str ++ "\n")
+panic :: String -> a
+panic str = error ("My brain just exploded\n\t" ++ str ++ "\n")

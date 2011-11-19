@@ -1,7 +1,7 @@
-Name: gac
-Version: 0.4
+Name: @PACKAGE_TARNAME@
+Version: @PACKAGE_VERSION@
 License: MIT
-License-File: LICENSE
+License-File: ../LICENSE
 Author:  Ilias Tsitsimpis
 Maintainer: iliastsi@hotmail.com
 Synopsis: Alan Compiler written in Haskell
@@ -14,22 +14,6 @@ Build-Type: Custom
 Cabal-Version: >= 1.6
 Tested-With: GHC
 
-Extra-Source-Files:
-    Makefile
-    INSTALL
-    README
-    HACKING
-    TODO
-    docs/*.pdf
-    docs/*.html
-    docs/alex-html/*.html
-    docs/alex-html/*.css
-    docs/happy/*.html
-    docs/happy/*.css
-    testsuite/*.alan
-
-Extra-Tmp-Files: src/parser/Parser.info
-
 source-repository head
     type:     mercurial
     location: http://foss.ntua.gr/hg/private/gac
@@ -37,11 +21,15 @@ source-repository head
 
 Executable gac
   Main-is: Main.hs
-  Build-Tools:  happy   >= 1.18.6,
-                alex    >= 2.3.5
+  Build-Tools: happy, alex
+
   Build-Depends: base       >= 4,
                  array      >= 0.3,
-                 containers >= 0.4
+                 containers >= 0.4,
+                 filepath   >= 1.2,
+                 process    >= 1.0,
+                 directory  >= 1.1,
+                 haskell98  >= 1.1
   if os(windows)
      Build-Depends: Win32
   else
@@ -49,28 +37,38 @@ Executable gac
 
   GHC-Options: -Wall -Wwarn -w -O
 
+  Extensions: CPP
+  Include-Dirs: .
+
   Hs-Source-Dirs:
-        src
-        src/parser
-        src/basicTypes
-        src/utils
-        src/typecheck
-        src/main
+        basicTypes
+        codeGen
+        main
+        parser
+        typecheck
+        utils
   Other-Modules:
-        Parser
-        Lexer
-        ----------
         ErrUtils
         SrcLoc
         TypedAst
         UnTypedAst
         ----------
-        Bag
-        MonadUtils
-        Util
+        Platform
+        ----------
+        CmdLineParser
+        DynFlags
+        ModeFlags
+        Outputable
+        SysTools
+        ----------
+        Parser
+        Lexer
         ----------
         SymbolTable
         TcMonad
         TypeCheck
         ----------
-        Outputable
+        Bag
+        Maybes
+        MonadUtils
+        Util

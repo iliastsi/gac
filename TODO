@@ -9,3 +9,6 @@
         Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt
+
+** Fix in configure.ac
+        Use LIBRARY_VERSION when we introduce our libraries

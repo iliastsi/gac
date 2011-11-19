@@ -28,6 +28,9 @@ module SrcLoc (
     -- ** Predicates on SrcLoc
     isGoodSrcLoc,
 
+    -- ** SrcLoc to String
+    showSrcLoc,
+
     -- * SrcSpan
     SrcSpan,                -- Abstract
 
@@ -51,8 +54,14 @@ module SrcLoc (
     -- ** Predicates on SrcSpan
     isGoodSrcSpan, isOneLineSpan,
 
+    -- ** SrcSpan to String
+    showSrcSpan,
+
     -- * Located
     Located(..),
+
+    -- ** Constructing Located
+    noLoc, mkGeneralLocated,
 
     -- ** Deconstructing Located
     getLoc, unLoc,
@@ -62,7 +71,7 @@ module SrcLoc (
   ) where
 
 import Util
-import {-# Source #-} Outputable(internalError)
+import {-# Source #-} Outputable(panic)
 
 import Data.Bits
 
@@ -104,12 +113,12 @@ srcLocFile _other             = "<unknown file"
 -- | Raises an error when used on a "bad" 'SrcLoc'
 srcLocLine :: SrcLoc -> Int
 srcLocLine (SrcLoc _ l _) = l
-srcLocLine (UnhelpfulLoc s) = internalError "SrcLoc.srcLocLine can't handle `UnhelpfulLoc'"
+srcLocLine (UnhelpfulLoc s) = panic "SrcLoc.srcLocLine can't handle `UnhelpfulLoc'"
 
 -- | Raises an error when used on a "bad" 'SrcLoc'
 srcLocCol :: SrcLoc -> Int
 srcLocCol (SrcLoc _ _ c) = c
-srcLocCol (UnhelpfulLoc s) = internalError "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'"
+srcLocCol (UnhelpfulLoc s) = panic "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'"
 
 -- | Move the 'SrcLoc' down by one line if the character is a newline,
 -- to the next 8-char tabstop if it is a tab, and across by one
@@ -121,6 +130,12 @@ advanceSrcLoc (SrcLoc f l c) '\t' = SrcLoc f  l (((((c - 1) `shiftR` 3) + 1)
                                                   `shiftL` 3) + 1)
 advanceSrcLoc (SrcLoc f l c) _    = SrcLoc f  l (c + 1)
 advanceSrcLoc loc            _    = loc -- Better than nothing
+
+-- | Convert SrcLoc to String
+showSrcLoc :: SrcLoc -> String
+showSrcLoc (UnhelpfulLoc str) = str ++ ":"
+showSrcLoc (SrcLoc name line col)   =
+    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
 
 
 -- -------------------------------------------------------------------
@@ -265,22 +280,22 @@ srcSpanEndCol :: SrcSpan -> Int
 srcSpanStartLine SrcSpanOneLine{ srcSpanLine=l }    = l
 srcSpanStartLine SrcSpanMultiLine{ srcSpanSLine=l } = l
 srcSpanStartLine SrcSpanPoint{ srcSpanLine=l }      = l
-srcSpanStartLine _ = internalError "SrcLoc.srcSpanStartLine got unexpected input"
+srcSpanStartLine _ = panic "SrcLoc.srcSpanStartLine got unexpected input"
 
 srcSpanEndLine SrcSpanOneLine{ srcSpanLine=l }    = l
 srcSpanEndLine SrcSpanMultiLine{ srcSpanELine=l } = l
 srcSpanEndLine SrcSpanPoint{ srcSpanLine=l }      = l
-srcSpanEndLine _ = internalError "SrcLoc.srcSpanEndLine got unexpected input"
+srcSpanEndLine _ = panic "SrcLoc.srcSpanEndLine got unexpected input"
 
 srcSpanStartCol SrcSpanOneLine{ srcSpanSCol=l }   = l
 srcSpanStartCol SrcSpanMultiLine{ srcSpanSCol=l } = l
 srcSpanStartCol SrcSpanPoint{ srcSpanCol=l }      = l
-srcSpanStartCol _ = internalError "SrcLoc.srcSpanStartCol got unexpected input"
+srcSpanStartCol _ = panic "SrcLoc.srcSpanStartCol got unexpected input"
 
 srcSpanEndCol SrcSpanOneLine{ srcSpanECol=c }   = c
 srcSpanEndCol SrcSpanMultiLine{ srcSpanECol=c } = c
 srcSpanEndCol SrcSpanPoint{ srcSpanCol=c }      = c
-srcSpanEndCol _ = internalError "SrcLoc.srcSpanEndCol got unexpected input"
+srcSpanEndCol _ = panic "SrcLoc.srcSpanEndCol got unexpected input"
 
 
 -- -------------------------------------------------------------------
@@ -309,6 +324,20 @@ srcSpanFileName_maybe (SrcSpanMultiLine { srcSpanFile = nm }) = Just nm
 srcSpanFileName_maybe (SrcSpanPoint { srcSpanFile = nm})      = Just nm
 srcSpanFileName_maybe _                                       = Nothing
 
+-- | Convert SrcSpan to String
+showSrcSpan :: SrcSpan -> String
+showSrcSpan (UnhelpfulSpan str) = str ++ ":"
+showSrcSpan (SrcSpanOneLine name line scol ecol) =
+    name ++ ":" ++ show line ++ ":" ++ show scol ++
+        if (ecol - scol) <= 1 then "" else "-" ++ show (ecol-1) ++ ":"
+showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
+    let ecol' = if ecol == 0 then ecol else (ecol-1) in
+    name ++ ":" ++ show sline ++ "," ++ show (scol-1) ++ "-" ++
+        show eline ++ "," ++ show ecol' ++ ":"
+showSrcSpan (SrcSpanPoint name line col) =
+    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
+
+
 
 -- -------------------------------------------------------------------
 -- Instances
@@ -327,6 +356,7 @@ instance Show SrcSpan where
             col  = show $ srcSpanStartCol  other_span
         in
         file ++ ":" ++ line ++ ":" ++ col ++ ":"
+
 
 -- -------------------------------------------------------------------
 -- Attaching SrcSpans to things

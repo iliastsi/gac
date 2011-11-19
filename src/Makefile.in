@@ -1,0 +1,44 @@
+# -----------------------------------------------------------------------------
+#
+# (c) 2011 Tsitsimpis Ilias
+#
+# This file is part of the GAC build system.
+#
+# To understand how the build system works and how to modify it, see HACKING
+#
+# -----------------------------------------------------------------------------
+
+prefix   = @prefix@
+builddir = @abs_top_builddir@/dist
+
+GHC    = @GHC@
+HAPPY  = @HappyCmd@
+ALEX   = @AlexCmd@
+LFLAGS = @LFLAGS@
+YFLAGS = @YFLAGS@
+
+.PHONY: all
+all: build
+
+.PHONY: build
+build: config Setup
+	./Setup build --builddir=$(builddir)
+
+Setup: Setup.hs
+	$(GHC) -o Setup Setup.hs
+
+.PHONY: config
+config: $(builddir)/setup-config
+
+$(builddir)/setup-config: Setup
+	./Setup configure --builddir=$(builddir) --prefix=$(prefix) \
+		--with-ghc="$(GHC)" --with-alex="$(ALEX)" --with-happy="$(HAPPY)" \
+		--alex-options="$(LFLAGS)" --happy-options="$(YFLAGS)" --user
+
+.PHONY: clean, clean-force
+clean:
+	@test -e Setup && $(MAKE) clean-force || echo "Nothing to clean here.."
+# We use clean-force only if Setup exists
+clean-force: Setup
+	./Setup clean --builddir=$(builddir)
+	$(RM) Setup.hi Setup.o Setup

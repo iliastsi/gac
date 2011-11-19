@@ -8,13 +8,15 @@
 module ErrUtils (
     Message, mkLocMessage,
     msgSpan, msgContext, msgSeverity, msgExtraInfo,
+    showMsg,
 
     MsgCode(..),
     Severity(..),
 
     ErrMsg, WarnMsg,
     ErrorMessages, WarningMessages,
-    Messages, errorsFound, emptyMessages,
+    Messages, errorsFound, warnsFound,
+    emptyMessages, unionMessages,
     mkErrMsg, mkWarnMsg,
 
     sortMessages,
@@ -25,7 +27,7 @@ module ErrUtils (
 import Bag
 import SrcLoc
 import Util
-import UnTypedAst (UAst, Ide)
+import DynFlags
 
 
 -- -------------------------------------------------------------------
@@ -34,15 +36,16 @@ import UnTypedAst (UAst, Ide)
 
 data MsgCode
   = ParseError String
-  | TypeError UAst
-  | ScopeError Ide
+  | TypeError  String
+  | ScopeError String
   | UnreachError        -- unreachable code
-  | RedefError Ide      -- function/variable redefinition
-  | NoRetError Ide      -- missing return statement
+  | RedefError String   -- function/variable redefinition
+  | NoRetError String   -- missing return statement
   | UnknownError
 
 data Severity
   = SevInfo
+  | SevOutput
   | SevWarning
   | SevError
   | SevFatal
@@ -84,6 +87,23 @@ emptyMessages = (emptyBag, emptyBag)
 errorsFound :: Messages -> Bool
 errorsFound (warns, errs) = not (isEmptyBag errs)
 
+warnsFound :: Messages -> Bool
+warnsFound (warns, errs) = not (isEmptyBag warns)
+
+unionMessages :: Messages -> Messages -> Messages
+unionMessages (w1, e1) (w2, e2) =
+    (w1 `unionBags` w2, e1 `unionBags` e2)
+
+-- ---------------------------
+-- Convert a Message to a String
+showMsg :: DynFlags -> Message -> String
+showMsg dflags Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
+    let extra' = if null extra then "" else "\n\t" ++ extra
+        loc    = if dopt Opt_ErrorSpans dflags
+                    then showSrcSpan mspan
+                    else showSrcLoc (srcSpanStart mspan)
+    in loc ++ " " ++ show sev ++ ": " ++ show code ++ extra'
+
 
 -- -------------------------------------------------------------------
 -- Sort a list of messages by descending SrcSpan order
@@ -111,23 +131,17 @@ addWarning warn (warns, errs) =
 -- Instance declartions
 
 instance Show Severity where
-    show SevInfo    = "info"
-    show SevWarning = "warning"
-    show SevError   = "error"
-    show SevFatal   = "fatal error"
+    show SevInfo    = "Info"
+    show SevWarning = "Warning"
+    show SevError   = "Error"
+    show SevFatal   = "Fatal Error"
 
 instance Show MsgCode where
     show (ParseError "")      = "Parse error at end of file"
-    show (ParseError buf)     = "Parse error on input `" ++ show buf ++ "'"
+    show (ParseError buf)     = "Parse error on input `" ++ buf ++ "'"
     show (ScopeError ide)     = "Not in scope `" ++ ide ++ "'"
-    show (TypeError ast)      = "Type error at `" ++ show ast ++ "'"
+    show (TypeError expr)      = "Type error at `" ++ expr ++ "'"
     show UnreachError         = "Unreachable code"
     show (RedefError ide)     = "Conflicting definitions for `" ++ ide ++ "'"
     show (NoRetError ide)     = "Control reaches end of non-proc function `" ++ ide ++ "'"
     show UnknownError         = "Unknown Error :@"
-
-instance Show Message where
-    show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
-        let extra' = if null extra then "" else "\n\t" ++ extra
-        in
-        show mspan ++ " " ++ show sev    ++ ": " ++ show code ++ extra'

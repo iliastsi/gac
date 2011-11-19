@@ -17,7 +17,7 @@ module TypedAst where
 
 import UnTypedAst (UType(..), LIde, Ide, LOp, Mode)
 import SrcLoc
-import Outputable (internalError)
+import Outputable (panic)
 
 import Data.Int
 import Data.Word
@@ -25,6 +25,9 @@ import Foreign.Ptr
 import Control.Monad
 
 
+type TAst = TDef
+
+-- ---------------------------
 type LTDef a = Located (TDef a)
 
 data TDef a where
@@ -176,7 +179,7 @@ extractTDef :: (Type a) => ADef -> TDef a
 extractTDef adef =
     case extract theType adef of
          Just x  -> x
-         Nothing -> internalError "extract in TypedAst.extractTDef returned Nothing"
+         Nothing -> panic "extract in TypedAst.extractTDef returned Nothing"
     where extract :: TType a -> ADef -> Maybe (TDef a)
           extract s (ADef e t) = do
               Eq <- test s t
@@ -186,7 +189,7 @@ extractTExpr :: (Type a) => AExpr -> TExpr a
 extractTExpr aexpr =
     case extract theType aexpr of
          Just x  -> x
-         Nothing -> internalError "extract in TypedAst.extractTExpr returned Nothing"
+         Nothing -> panic "extract in TypedAst.extractTExpr returned Nothing"
     where extract :: TType a -> AExpr -> Maybe (TExpr a)
           extract s (AExpr e t) = do
               Eq <- test s t
@@ -196,7 +199,7 @@ extractTVariable :: (Type a) => AVariable -> TVariable a
 extractTVariable avar =
     case extract theType avar of
          Just x  -> x
-         Nothing -> internalError "extract in TypedAst.extractTVariable returned Nothing"
+         Nothing -> panic "extract in TypedAst.extractTVariable returned Nothing"
     where extract :: TType a -> AVariable -> Maybe (TVariable a)
           extract s (AVariable e t) = do
               Eq <- test s t

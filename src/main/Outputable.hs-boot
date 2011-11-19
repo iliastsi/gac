@@ -1,3 +1,9 @@
 module Outputable where
 
-internalError :: String -> a
+progName :: String
+
+panic :: String -> a
+
+printErrs   :: [String] -> IO ()
+printWarns  :: [String] -> IO ()
+printOutput :: [String] -> IO ()

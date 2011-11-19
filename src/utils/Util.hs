@@ -21,13 +21,22 @@ module Util (
     isSingleton, singleton,
     notNull,
 
+    -- * List operations controlled by another list
+    split,
+
     -- * Sorting
     sortLe, sortWith,
 
     -- * Comparisons
-    isEqual, thenCmp
+    isEqual, thenCmp,
+    removeSpaces,
+
+    -- * IO-ish utilities
+    consIORef
   ) where
 
+import Data.Char (isSpace)
+import Data.IORef
 
 infixr 9 `thenCmp`
 
@@ -158,6 +167,17 @@ notNull _  = True
 
 
 -- -------------------------------------------------------------------
+-- List operations controlled by another list
+
+split :: Char -> String -> [String]
+split c s =
+    case rest of
+         []     -> [chunk]
+         _:rest -> chunk : split c rest
+    where (chunk, rest) = break (==c) s
+
+
+-- -------------------------------------------------------------------
 -- A mergesort from Carsten
 --
 -- Date: Mon, 3 May 93 20:45:23 +0200
@@ -255,3 +275,14 @@ thenCmp :: Ordering -> Ordering -> Ordering
 {-# INLINE thenCmp #-}
 thenCmp EQ       ordering = ordering
 thenCmp ordering _        = ordering
+
+removeSpaces :: String -> String
+removeSpaces = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+
+-- -------------------------------------------------------------------
+-- IO-ish utilities
+
+consIORef :: IORef [a] -> a -> IO ()
+consIORef var x = do
+    atomicModifyIORef var (\xs -> (x:xs,()))
