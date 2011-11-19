@@ -14,7 +14,8 @@ module ErrUtils (
 
     ErrMsg, WarnMsg,
     ErrorMessages, WarningMessages,
-    Messages, errorsFound, emptyMessages, unionMessages,
+    Messages, errorsFound, warnsFound,
+    emptyMessages, unionMessages,
     mkErrMsg, mkWarnMsg,
 
     sortMessages,
@@ -83,6 +84,9 @@ emptyMessages = (emptyBag, emptyBag)
 
 errorsFound :: Messages -> Bool
 errorsFound (warns, errs) = not (isEmptyBag errs)
+
+warnsFound :: Messages -> Bool
+warnsFound (warns, errs) = not (isEmptyBag warns)
 
 unionMessages :: Messages -> Messages -> Messages
 unionMessages (w1, e1) (w2, e2) =

@@ -9,7 +9,12 @@ module Outputable (
     printOutput,
     printErrs, printWarns,
     printLocErrs, printLocWarns,
+    usageString,
+
     printMessages,
+
+    printDumpedAst,
+
     progName,
     panic
   ) where
@@ -19,6 +24,7 @@ module Outputable (
 import Bag
 import ErrUtils
 import SrcLoc
+import UnTypedAst (UAst, dumpedUAst)
 
 import System.IO (hPutStrLn, stderr)
 
@@ -42,6 +48,9 @@ printLocErrs =
 printLocWarns :: [Located String] -> IO ()
 printLocWarns = printLocErrs
 
+printString :: String
+printString = "Usage: For basic information, try the `--help' option."
+
 
 -- -------------------------------------------------------------------
 -- Print Messages
@@ -53,6 +62,14 @@ printMessages (warns, errs) = printMsgBag output
 printMsgBag :: Bag Message -> IO ()
 printMsgBag msgBag =
     mapM_ (\msg -> hPutStrLn stderr $ (show msg) ++ "\n") (sortMessages (bagToList msgBag))
+
+
+-- -------------------------------------------------------------------
+-- Print dumped Ast
+printDumpedAst :: UAst -> IO ()
+printDumpedAst uast = do
+    putStrLn "\n==================== Parser ===================="
+    putStrLn (dumpedUAst uast)
 
 
 -- -------------------------------------------------------------------

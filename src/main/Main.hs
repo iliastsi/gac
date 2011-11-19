@@ -35,9 +35,9 @@ import System.IO
 -- Parse ModeFlags
 main :: IO ()
 main = do
+    prog_name <- getProgName
     -- 1. extract the -B flag from the args
     argv0 <- getArgs
-
     let (minusB_args, argv1) = partition ("-B" `isPrefixOf`) argv0
         mbMinusB | null minusB_args = Nothing
                  | otherwise = Just (drop 2 (last minusB_args))
@@ -72,12 +72,12 @@ main = do
                                     ShowInfo            -> showInfo dflags1
                                     PrintWithDynFlags f -> putStrLn (f dflags1)
                            Right postLoadMode -> do
-                               main' dflags1 argv2
+                               main' prog_name postLoadMode dflags1 argv2
 
 -- ---------------------------
 -- Parse DynFlags
-main' :: DynFlags -> [Located String] -> IO ()
-main' dflags0 args = do
+main' :: String -> PostLoadMode -> DynFlags -> [Located String] -> IO ()
+main' prog_name postLoadMode dflags0 args = do
     -- Parse the "dynamic" arguments
     -- Leftover ones are presumably files
     case parseDynamicFlags dflags0 args of
@@ -87,72 +87,88 @@ main' dflags0 args = do
          Right (dflags1, fileish_args, dynamicFlagWarnings) -> do
              printLocWarns dynamicFlagWarnings
              let normal_fileish_paths = map (normalise . unLoc) fileish_args
-                 (srcs, objs)         = partition_args normal_fileish_paths [] []
+             (srcs, objs) <- partition_args prog_name normal_fileish_paths [] []
              if (null objs) && (length srcs == 1)
                 then do
-                    main'' dflags1 srcs objs
+                    main'' postLoadMode dflags1 srcs objs
                 else do
-                    printErrs ["You must specify one alan source file"]
+                    printErrs [ prog_name ++ ": you must specify one alan source file"
+                              , usageString ]
                     exitFailure
 
 -- ---------------------------
 -- Right now handle only one file
-main'' :: DynFlags -> [String] -> [String] -> IO ()
-main'' dflags0 srcs objs = do
-    let source = head srcs
-    handle <- openFile source ReadMode
-    contents <- hGetContents handle
-    (p_state, luast) <- parse dflags0 source contents
-    hClose handle
-    let p_messages = getPMessages p_state
-    if errorsFound p_messages
-       then do
-           printMessages p_messages
-           exitFailure
-       else do
-           return ()
-    (tc_state, _) <- typeCheck luast
-    let tc_messages = unionMessages p_messages (getTcMessages tc_state)
-    if errorsFound tc_messages
-       then do
-           printMessages tc_messages
-           exitFailure
-       else do
-           return ()
-    printMessages tc_messages
+main'' :: PostLoadMode -> DynFlags -> [String] -> [String] -> IO ()
+main'' postLoadMode dflags0 srcs objs = do
+    src_objs <- mapM (driverPhase dflags0) srcs
+    let objs' = (reverse . catMaybes) src_objs ++ objs
 
 
 -- -------------------------------------------------------------------
--- Parse and Typecheck
+-- Drive one source file through all the necessary compilation steps
 
-parse :: DynFlags -> String -> String -> IO (PState, Located UAst)
-parse dflags filename buf = do
-    case unP parser (mkPState dflags buf (mkSrcLoc filename 1 1)) of
-         PFailed msg       -> do
+-- ---------------------------
+-- parse a file and return
+-- the produced object file (if any)
+driverParse :: DynFlags -> String -> IO (Maybe String)
+driverParse dflags filename = do
+    handle <- openFile filename ReadMode
+    contents <- hGetContents handle
+    let p_state = mkPState dflags contents (mkSrcLoc filename 1 1)
+    hClose handle
+    case unP parser p_state of
+         PFailed msg        -> do
              printMessages msg
              exitFailure
-         POk p_state luast -> do
-             return (p_state, luast)
+         POk p_state' luast -> do
+             if dopt Opt_D_dump_parsed dflags
+                then printDumpedAst (unLoc luast)
+                else return ()
+             let p_messages = getPMessages p_state'
+             if errorsFound p_messages ||
+                 (warnsFound p_messages && dopt Opt_WarnIsError dflags)
+                then do
+                    printMessages p_messages
+                    exitFailure
+                else do
+                    driverTypeCheck dflags p_messages luast
 
-typeCheck :: (Located UAst) -> IO (TcState, Located ADef)
-typeCheck luast = do
-    case unTcM (typeCheckDef luast) (mkTcState predefinedTable) of
-         TcFailed msg       -> do
+-- ---------------------------
+-- type check an UAst and return
+-- the produced object file (if any)
+driverTypeCheck :: DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
+driverTypeCheck dflags p_messages luast = do
+    let tc_state = mkTcState predefinedTable
+    case unTcM (typeCheckDef luast) tc_state of
+         TcFailed msg         -> do
              printMessages msg
              exitFailure
-         TcOk tc_state ltast -> do
-             return (tc_state, ltast)
+         TcOk tc_state' ltast -> do
+             let tc_messages  = (getTcMessages tc_state')
+                 tc_messages' = unionMessages p_messages tc_messages
+             if errorsFound tc_messages' ||
+                 (warnsFound tc_messages && dopt Opt_WarnIsError dflags)
+                then do
+                    printMessages tc_messages'
+                    exitFailure
+                else do
+                    printMessages tc_messages'
+                    return Nothing
 
 
 -- -------------------------------------------------------------------
 -- Splitting arguments into source files and object files.
 
-partition_args :: [String] -> [String] -> [String]
-               -> ([String], [String])
-partition_args [] srcs objs = (reverse srcs, reverse objs)
-partition_args (arg:args) srcs objs
-  | looks_like_an_input arg = partition_args args (arg:srcs) objs
-  | otherwise               = partition_args args srcs (arg:objs)
+partition_args :: String -> [String] -> [String] -> [String]
+               -> IO ([String], [String])
+partition_args _ [] srcs objs = return (reverse srcs, reverse objs)
+partition_args pname (arg:args) srcs objs
+  | looks_like_an_input arg = partition_args pname args (arg:srcs) objs
+  | looks_like_an_obj   arg = partition_args pname args srcs (arg:objs)
+  | otherwise               = do
+      printErrs [ pname ++ ": unrecognised flags: " ++ arg
+                , usageString ]
+      exitFailure
 
 -- ---------------------------
 -- We split out the object files (.o, etc) and add them to
@@ -161,3 +177,6 @@ partition_args (arg:args) srcs objs
 --      - alan source files (string ending in .alan extension)
 looks_like_an_input :: String -> Bool
 looks_like_an_input m = (drop 1 $ takeExtension m) == "alan"
+
+looks_like_an_obj :: String -> Bool
+looks_like_an_obj m = (drop 1 $ takeExtension m) == "o"

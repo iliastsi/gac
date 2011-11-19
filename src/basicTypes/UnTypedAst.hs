@@ -16,7 +16,7 @@ module UnTypedAst (
     UCond(..), UVariable(..), UType(..), UFuncCall(..),
 
     -- * Dump UnTypedAst
-    UAst, dumpUnTypedAst
+    UAst, dumpedUAst
   ) where
 
 import SrcLoc
@@ -25,8 +25,8 @@ import SrcLoc
 -- ---------------------------
 type UAst = UDef
 
-dumpUnTypedAst :: UDef -> String
-dumpUnTypedAst = dumpUDef 0
+dumpedUAst :: UAst -> String
+dumpedUAst = dumpUDef 0
 
 -- Used to indent the code when dumping ast
 indent :: Int -> String
