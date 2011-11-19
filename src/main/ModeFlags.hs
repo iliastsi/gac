@@ -87,10 +87,16 @@ printWithDynFlagsMode f = mkPreLoadMode (PrintWithDynFlags f)
 mkPreLoadMode :: PreLoadMode -> Mode
 mkPreLoadMode = Right . Left
 
-data PostLoadMode = PostLoadMode
+data PostLoadMode
+    = StopBeforeAs      -- stop before assembly phase
+    | StopBeforeLn      -- stop before link phase (the default)
+
+stopBeforeAsMode, stopBeforeLnMode :: Mode
+stopBeforeAsMode = mkPostLoadMode StopBeforeAs
+stopBeforeLnMode = mkPostLoadMode StopBeforeLn
 
 mkPostLoadMode :: Mode
-mkPostLoadMode = Right $ Right PostLoadMode
+mkPostLoadMode = Right . Right
 
 
 -- -------------------------------------------------------------------
@@ -106,7 +112,7 @@ parseModeFlags args =
             runCmdLine (processArgs mode_flags args)
                        (Nothing, [], [])
         mode = case mModeFlag of
-                    Nothing     -> mkPostLoadMode
+                    Nothing     -> stopBeforeLnMode
                     Just (m, _) -> m
         errs = errs1 ++ map (mkGeneralLocated "on the commandline") errs2
     in
@@ -141,6 +147,11 @@ mode_flags =
           mode = case v of
                  String str -> printMode str
                  FromDynFlags f -> printWithDynFlagsMode f
+    ] ++
+    [ ---- primary modes ----
+      Flag "c"          (PassFlag (\f -> do setMode stopBeforeLn f
+                                            addFlag "-no-link" f))
+    , Flag "S"          (PassFlag (setMode stopBeforeAs))
     ]
 
 setMode :: Mode -> String -> EwM ModeM ()
