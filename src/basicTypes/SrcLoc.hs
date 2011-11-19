@@ -328,10 +328,12 @@ srcSpanFileName_maybe _                                       = Nothing
 showSrcSpan :: SrcSpan -> String
 showSrcSpan (UnhelpfulSpan str) = str ++ ":"
 showSrcSpan (SrcSpanOneLine name line scol ecol) =
-    name ++ ":" ++ show line ++ ":" ++ show scol ++ "-" ++ show (ecol-1) ++ ":"
+    name ++ ":" ++ show line ++ ":" ++ show scol ++
+        if (ecol - scol) <= 1 then "" else "-" ++ show (ecol-1) ++ ":"
 showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
+    let ecol' = if ecol == 0 then ecol else (ecol-1) in
     name ++ ":" ++ show sline ++ "," ++ show (scol-1) ++ "-" ++
-        show eline ++ "," ++ show ecol ++ ":"
+        show eline ++ "," ++ show ecol' ++ ":"
 showSrcSpan (SrcSpanPoint name line col) =
     name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
 
