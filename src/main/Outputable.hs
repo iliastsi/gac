@@ -49,8 +49,8 @@ printLocErrs =
 printLocWarns :: [Located String] -> IO ()
 printLocWarns = printLocErrs
 
-printString :: String
-printString = "Usage: For basic information, try the `--help' option."
+usageString :: String
+usageString = "Usage: For basic information, try the `--help' option."
 
 
 -- -------------------------------------------------------------------
@@ -62,26 +62,8 @@ printMessages dflags (warns, errs) = printMsgBag dflags output
 
 printMsgBag :: DynFlags -> Bag Message -> IO ()
 printMsgBag dflags msgBag =
-    mapM_ (\msg -> hPutStrLn stderr $ (showMsg dflags) ++ "\n") (sortMessages (bagToList msgBag))
-
-showMsg :: DynFlags -> Messages -> String
-showMsg dflags Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
-    let extra' = if null extra then "" else "\n\t" ++ extra
-        loc    = if dopt Opt_ErrorSpans dflags then showSpan mspan else showLoc (srcSpanStart mspan)
-    in loc ++ " " ++ show sev ++ ": " ++ show code ++ extra'
-
-showLoc :: SrcLoc -> String
-showLoc UnhelpfulLoc str = str ++ ":"
-showLoc (SrcLoc name line col)   =
-    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
-
-showSpan :: SrcSpan -> String
-showSpan UnhelpfulSpan str = str ++ ":"
-showSpan (SrcSpanOneLine name line scol ecol) =
-    name ++ ":" ++ show line ++ ":" ++ show scol ++ "-" ++ show ecol ++ ":"
-showSpan (SrcSpanMultiLine name sline scol eline ecol) =
-    name ++ ":" ++ show sline ++ "," show scol "-" ++
-        show eline ++ "," show ecol ++ ":"
+    mapM_ (\msg -> hPutStrLn stderr $ (showMsg dflags msg) ++ "\n")
+                        (sortMessages (bagToList msgBag))
 
 
 -- -------------------------------------------------------------------

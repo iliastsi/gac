@@ -28,6 +28,9 @@ module SrcLoc (
     -- ** Predicates on SrcLoc
     isGoodSrcLoc,
 
+    -- ** SrcLoc to String
+    showSrcLoc,
+
     -- * SrcSpan
     SrcSpan,                -- Abstract
 
@@ -50,6 +53,9 @@ module SrcLoc (
 
     -- ** Predicates on SrcSpan
     isGoodSrcSpan, isOneLineSpan,
+
+    -- ** SrcSpan to String
+    showSrcSpan,
 
     -- * Located
     Located(..),
@@ -124,6 +130,12 @@ advanceSrcLoc (SrcLoc f l c) '\t' = SrcLoc f  l (((((c - 1) `shiftR` 3) + 1)
                                                   `shiftL` 3) + 1)
 advanceSrcLoc (SrcLoc f l c) _    = SrcLoc f  l (c + 1)
 advanceSrcLoc loc            _    = loc -- Better than nothing
+
+-- | Convert SrcLoc to String
+showSrcLoc :: SrcLoc -> String
+showSrcLoc (UnhelpfulLoc str) = str ++ ":"
+showSrcLoc (SrcLoc name line col)   =
+    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
 
 
 -- -------------------------------------------------------------------
@@ -312,6 +324,18 @@ srcSpanFileName_maybe (SrcSpanMultiLine { srcSpanFile = nm }) = Just nm
 srcSpanFileName_maybe (SrcSpanPoint { srcSpanFile = nm})      = Just nm
 srcSpanFileName_maybe _                                       = Nothing
 
+-- | Convert SrcSpan to String
+showSrcSpan :: SrcSpan -> String
+showSrcSpan (UnhelpfulSpan str) = str ++ ":"
+showSrcSpan (SrcSpanOneLine name line scol ecol) =
+    name ++ ":" ++ show line ++ ":" ++ show scol ++ "-" ++ show (ecol-1) ++ ":"
+showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
+    name ++ ":" ++ show sline ++ "," ++ show (scol-1) ++ "-" ++
+        show eline ++ "," ++ show ecol ++ ":"
+showSrcSpan (SrcSpanPoint name line col) =
+    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
+
+
 
 -- -------------------------------------------------------------------
 -- Instances
@@ -330,6 +354,7 @@ instance Show SrcSpan where
             col  = show $ srcSpanStartCol  other_span
         in
         file ++ ":" ++ line ++ ":" ++ col ++ ":"
+
 
 -- -------------------------------------------------------------------
 -- Attaching SrcSpans to things

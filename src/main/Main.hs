@@ -17,7 +17,7 @@ import Outputable
 import TcMonad (TcResult(..), mkTcState, unTcM, TcState, getTcMessages)
 import SymbolTable (predefinedTable)
 import TypeCheck (typeCheckDef)
-import ErrUtils (errorsFound, unionMessages)
+import ErrUtils
 import UnTypedAst (UAst)
 import TypedAst (ADef)
 import DynFlags
@@ -29,6 +29,7 @@ import System
 import System.FilePath
 import Data.List
 import System.IO
+import Data.Maybe
 
 
 -- ---------------------------
@@ -100,8 +101,9 @@ main' prog_name postLoadMode dflags0 args = do
 -- Right now handle only one file
 main'' :: PostLoadMode -> DynFlags -> [String] -> [String] -> IO ()
 main'' postLoadMode dflags0 srcs objs = do
-    src_objs <- mapM (driverPhase dflags0) srcs
+    src_objs <- mapM (driverParse postLoadMode dflags0) srcs
     let objs' = (reverse . catMaybes) src_objs ++ objs
+    exitSuccess
 
 
 -- -------------------------------------------------------------------
@@ -110,17 +112,18 @@ main'' postLoadMode dflags0 srcs objs = do
 -- ---------------------------
 -- parse a file and return
 -- the produced object file (if any)
-driverParse :: DynFlags -> String -> IO (Maybe String)
-driverParse dflags filename = do
+driverParse :: PostLoadMode -> DynFlags -> String -> IO (Maybe String)
+driverParse postLoadMode dflags filename = do
     handle <- openFile filename ReadMode
     contents <- hGetContents handle
     let p_state = mkPState dflags contents (mkSrcLoc filename 1 1)
-    hClose handle
     case unP parser p_state of
          PFailed msg        -> do
+             hClose handle
              printMessages dflags msg
              exitFailure
          POk p_state' luast -> do
+             hClose handle
              if dopt Opt_D_dump_parsed dflags
                 then printDumpedAst (unLoc luast)
                 else return ()
@@ -131,13 +134,13 @@ driverParse dflags filename = do
                     printMessages dflags p_messages
                     exitFailure
                 else do
-                    driverTypeCheck dflags p_messages luast
+                    driverTypeCheck postLoadMode dflags p_messages luast
 
 -- ---------------------------
 -- type check an UAst and return
 -- the produced object file (if any)
-driverTypeCheck :: DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
-driverTypeCheck dflags p_messages luast = do
+driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
+driverTypeCheck postLoadMode dflags p_messages luast = do
     let tc_state = mkTcState predefinedTable
     case unTcM (typeCheckDef luast) tc_state of
          TcFailed msg         -> do

@@ -8,6 +8,7 @@
 module ErrUtils (
     Message, mkLocMessage,
     msgSpan, msgContext, msgSeverity, msgExtraInfo,
+    showMsg,
 
     MsgCode(..),
     Severity(..),
@@ -26,6 +27,7 @@ module ErrUtils (
 import Bag
 import SrcLoc
 import Util
+import DynFlags
 
 
 -- -------------------------------------------------------------------
@@ -91,6 +93,17 @@ warnsFound (warns, errs) = not (isEmptyBag warns)
 unionMessages :: Messages -> Messages -> Messages
 unionMessages (w1, e1) (w2, e2) =
     (w1 `unionBags` w2, e1 `unionBags` e2)
+
+-- ---------------------------
+-- Convert a Message to a String
+showMsg :: DynFlags -> Message -> String
+showMsg dflags Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
+    let extra' = if null extra then "" else "\n\t" ++ extra
+        loc    = if dopt Opt_ErrorSpans dflags
+                    then showSrcSpan mspan
+                    else showSrcLoc (srcSpanStart mspan)
+    in loc ++ " " ++ show sev ++ ": " ++ show code ++ extra'
+
 
 -- -------------------------------------------------------------------
 -- Sort a list of messages by descending SrcSpan order

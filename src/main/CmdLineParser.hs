@@ -18,7 +18,7 @@ module CmdLineParser (
   ) where
 
 import Util
-import Outputable(panic)
+import {-# SOURCE #-} Outputable(panic)
 import Bag
 import SrcLoc
 

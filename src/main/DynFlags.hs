@@ -49,11 +49,11 @@ module DynFlags (
 
 import Platform
 import CmdLineParser
-import Outputable
+import {-# SOURCE #-} Outputable
 import Util
 import Maybes       (orElse)
 import SrcLoc
-import ErrUtils
+import {-# SOURCE #-} ErrUtils
 
 import Data.IORef
 import Data.Char
@@ -255,7 +255,7 @@ defaultDynFlags =
                              SevFatal -> printErrs [msg]
                              _        -> do
                                  hPutChar stderr '\n'
-                                 printLocErrs [(L srcSpan msg)]
+                                 printErrs [msg]
     }
 
 {-

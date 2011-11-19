@@ -95,7 +95,7 @@ stopBeforeAsMode, stopBeforeLnMode :: Mode
 stopBeforeAsMode = mkPostLoadMode StopBeforeAs
 stopBeforeLnMode = mkPostLoadMode StopBeforeLn
 
-mkPostLoadMode :: Mode
+mkPostLoadMode :: PostLoadMode -> Mode
 mkPostLoadMode = Right . Right
 
 
@@ -149,9 +149,9 @@ mode_flags =
                  FromDynFlags f -> printWithDynFlagsMode f
     ] ++
     [ ---- primary modes ----
-      Flag "c"          (PassFlag (\f -> do setMode stopBeforeLn f
+      Flag "c"          (PassFlag (\f -> do setMode stopBeforeLnMode f
                                             addFlag "-no-link" f))
-    , Flag "S"          (PassFlag (setMode stopBeforeAs))
+    , Flag "S"          (PassFlag (setMode stopBeforeAsMode))
     ]
 
 setMode :: Mode -> String -> EwM ModeM ()
@@ -177,6 +177,12 @@ setMode newMode newFlag = liftEwM $ do
 flagMismatchErr :: String -> String -> String
 flagMismatchErr oldFlag newFlag =
     "cannot use `" ++ oldFlag ++ "' with `" ++ newFlag ++ "'"
+
+addFlag :: String -> String -> EwM ModeM ()
+addFlag s flag = liftEwM $ do
+    (m, e, flags') <- getCmdLineState
+    putCmdLineState (m, e, mkGeneralLocated loc s : flags')
+  where loc = "addFlag by " ++ flag ++ " on the commandline"
 
 
 -- -------------------------------------------------------------------
