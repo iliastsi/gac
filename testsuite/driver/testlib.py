@@ -483,9 +483,9 @@ def test_common_work (name, opts, func, args):
     setLocalTestOpts(opts)
 
     # All the ways we might run this test
-    if func == compile or func == multimod_compile:
+    if func == compile:
         all_ways = config.compile_ways
-    elif func == compile_and_run or func == multimod_compile_and_run:
+    elif func == compile_and_run:
         all_ways = config.run_ways
     elif func == ghci_script:
         if 'ghci' in config.run_ways:

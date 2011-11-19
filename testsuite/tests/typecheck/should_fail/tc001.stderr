@@ -1,8 +1,0 @@
-[("Project name","The Glorious Alan Compilation System")
-,("Project version","0.4.0")
-,("Build platform","x86_64-unknown-linux")
-,("Host platform","x86_64-unknown-linux")
-,("Target platform","x86_64-unknown-linux")
-,("Have native code generator","YES")
-,("Have llvm code generator","YES")
-]

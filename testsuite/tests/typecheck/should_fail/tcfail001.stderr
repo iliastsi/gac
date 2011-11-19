@@ -1,0 +1,6 @@
+tcfail001.alan:18:23: Warning: Parse error on input `55555'
+	number `55555' is bigger than 16 bits
+
+tcfail001.alan:20:26: Error: Not in scope `foo'
+	Each undeclared identifier is reported only once for each function it appears in
+
