@@ -132,9 +132,3 @@ instance Show MsgCode where
     show (RedefError ide)     = "Conflicting definitions for `" ++ ide ++ "'"
     show (NoRetError ide)     = "Control reaches end of non-proc function `" ++ ide ++ "'"
     show UnknownError         = "Unknown Error :@"
-
-instance Show Message where
-    show Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=extra} =
-        let extra' = if null extra then "" else "\n\t" ++ extra
-        in
-        show mspan ++ " " ++ show sev    ++ ": " ++ show code ++ extra'

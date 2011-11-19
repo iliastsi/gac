@@ -118,7 +118,7 @@ driverParse dflags filename = do
     hClose handle
     case unP parser p_state of
          PFailed msg        -> do
-             printMessages msg
+             printMessages dflags msg
              exitFailure
          POk p_state' luast -> do
              if dopt Opt_D_dump_parsed dflags
@@ -128,7 +128,7 @@ driverParse dflags filename = do
              if errorsFound p_messages ||
                  (warnsFound p_messages && dopt Opt_WarnIsError dflags)
                 then do
-                    printMessages p_messages
+                    printMessages dflags p_messages
                     exitFailure
                 else do
                     driverTypeCheck dflags p_messages luast
@@ -141,7 +141,7 @@ driverTypeCheck dflags p_messages luast = do
     let tc_state = mkTcState predefinedTable
     case unTcM (typeCheckDef luast) tc_state of
          TcFailed msg         -> do
-             printMessages msg
+             printMessages dflags msg
              exitFailure
          TcOk tc_state' ltast -> do
              let tc_messages  = (getTcMessages tc_state')
@@ -149,10 +149,10 @@ driverTypeCheck dflags p_messages luast = do
              if errorsFound tc_messages' ||
                  (warnsFound tc_messages && dopt Opt_WarnIsError dflags)
                 then do
-                    printMessages tc_messages'
+                    printMessages dflags tc_messages'
                     exitFailure
                 else do
-                    printMessages tc_messages'
+                    printMessages dflags tc_messages'
                     return Nothing
 
 
