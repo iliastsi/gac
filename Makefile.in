@@ -30,6 +30,7 @@ ARCHIVE = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 all:
 	$(MAKE) -C src $@
 
+##### Install gac #####
 .PHONY: install
 install: all
 	@echo "#!/bin/sh"                                        >  gac_shell
@@ -53,6 +54,7 @@ uninstall:
 	$(RM) -r $(docdir)
 	$(RM) $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
 
+##### Distribute gac #####
 .PHONY: dist
 dist:
 	@echo "Cleaning all the generated files.."
@@ -73,17 +75,19 @@ distcheck: dist
 	@echo "Unpacking the tar.."
 	tar xzf $(ARCHIVE).tar.gz
 	@echo "Configuring the dist package.."
-	(cd $(ARCHIVE) && ./configure)
+	(cd $(ARCHIVE) && ./configure --prefix=`pwd`/install)
 	@echo "Compiling the dist package.."
-	$(MAKE) -C $(ARCHIVE)
+	$(MAKE) -C $(ARCHIVE) install
 	@echo "Testing the dist package.."
 	$(MAKE) -C $(ARCHIVE) test
 	@echo "Cleaning temp files.."
 	$(RM) -r $(ARCHIVE)
 
+##### Clean build dir #####
 .PHONY: clean
 clean:
 	$(MAKE) -C src $@
+	$(MAKE) -C testsuite clean
 
 .PHONY: distclean
 distclean: clean
@@ -94,6 +98,11 @@ distclean: clean
 maintainer-clean: distclean
 	$(RM) -r autom4te.cache
 
+##### Test gac #####
 .PHONY: test
 test:
-	@echo "Coming soon.."
+	$(MAKE) -C testsuite/tests CLEANUP=1 OUTPUT_SUMMARY=../../testsuite_summary.txt fast
+
+.PHONY: fulltest
+fulltest:
+	$(MAKE) -C testsuite/tests CLEANUP=1 OUTPUT_SUMMARY=../../testsuite_summary.txt
