@@ -1,3 +1,5 @@
+    Bugs
+~~~~~~~~~~~~~~~~~~~
 ** Fix in Lexer:
         Add error messages when include more than one char in \'
         Fix number bound warnings (we may have errors given a very big number)
@@ -8,7 +10,24 @@
         Enable parsing to continue on errors
         Add the grammar rule to write `<string-literal>[<int>]>'
 
-** Look in compiler/main/SysTools.lhs (ghc) for as, ld, llc, opt
-
 ** Fix in configure.ac
         Use LIBRARY_VERSION when we introduce our libraries
+
+
+    Releases
+~~~~~~~~~~~~~~~~~~~
+0.6 : Add tests
+      Fix parser
+            (to parse forward declerated functions)
+            (try to continue parsing after error)
+      Fix error messages
+            (better messages, check for flags)
+
+0.7 : Add llvm back end
+
+0.8 : Implement llvm libraries
+
+0.9 : Add native code back end
+      Implement native code libraries
+
+1.0 : Add c back end
