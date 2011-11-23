@@ -46,6 +46,9 @@ install: all
 	$(INSTALL_DATA) -D README  $(docdir)/README
 	$(INSTALL_DATA) -D docs/alan2011.pdf $(docdir)/alan2011.pdf
 	$(INSTALL_DATA) -D docs/man_page/gac.1.gz $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
+	@echo "\n\nInstallation of $(ARCHIVE) was successful."
+	@echo "To use, add $(bindir) to your PATH."
+
 
 .PHONY: uninstall
 uninstall:

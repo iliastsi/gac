@@ -84,32 +84,20 @@ if test "$WithGhc" != ""; then
   AC_SUBST(GhcMajVersion)dnl
   AC_SUBST(GhcMinVersion)dnl
   AC_SUBST(GhcPatchLevel)dnl
-  GhcMinVersion2=`echo "$GhcMinVersion" | sed 's/^\\(.\\)$/0\\1/'`
-  GhcCanonVersion="$GhcMajVersion$GhcMinVersion2"
-  FP_COMPARE_VERSIONS($GhcVersion,[-ge],[6.10.2],
-                      [ghc_ge_6102=YES], [ghc_ge_6102=NO])
-  if test $GhcCanonVersion -ge 611; then ghc_ge_611=YES; else ghc_ge_611=NO; fi
-  if test $GhcCanonVersion -ge 613; then ghc_ge_613=YES; else ghc_ge_613=NO; fi
-  AC_SUBST(ghc_ge_6102)dnl
-  AC_SUBST(ghc_ge_611)dnl
-  AC_SUBST(ghc_ge_613)dnl
 fi
 
 dnl ** Must have GHC to build GAC
 if test "$WithGhc" = ""; then
    AC_MSG_ERROR([GHC is required unless bootstrapping from .hc files.])
 fi
-FP_COMPARE_VERSIONS([$GhcVersion],[-lt],[6.10],
-  [AC_MSG_ERROR([GHC version 6.10 or later is required to compile GHC.])])dnl
+FP_COMPARE_VERSIONS([$GhcVersion],[-lt],[7.0.3],
+  [AC_MSG_ERROR([GHC version 7.0.3 or later is required to compile GAC.])])dnl
 
 if test `expr $GhcMinVersion % 2` = "1"; then
-   if test "$EnableBootstrapWithDevelSnaphost" = "NO"; then
       AC_MSG_ERROR([
    $WithGhc is a development snapshot of GHC, version $GhcVersion.
    Compiling using this version of GHC is not supported, and may not
-   work.  Use --enable-bootstrap-with-devel-snapshot to try it anyway,
-   or --with-ghc to specify a different GHC to use.])
-   fi
+   work.  Use --with-ghc to specify a different GHC to use.])
 fi;
 
 # GHC is passed to Cabal, so we need a native path

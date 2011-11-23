@@ -685,9 +685,6 @@ GMP_INCLUDE_DIRS
 ICONV_LIB_DIRS
 ICONV_INCLUDE_DIRS
 WithGhc
-ghc_ge_613
-ghc_ge_611
-ghc_ge_6102
 GhcPatchLevel
 GhcMinVersion
 GhcMajVersion
@@ -2630,41 +2627,12 @@ $as_echo "$fptools_version_of_ghc" >&6; }
      as_fn_error $? "Cannot determine the version of $WithGhc.  Is it really GHC?" "$LINENO" 5
   fi
 
-          GhcMinVersion2=`echo "$GhcMinVersion" | sed 's/^\\(.\\)$/0\\1/'`
-  GhcCanonVersion="$GhcMajVersion$GhcMinVersion2"
-  fp_version1=$GhcVersion; fp_version2=6.10.2
-fp_save_IFS=$IFS; IFS='.'
-while test x"$fp_version1" != x || test x"$fp_version2" != x
-do
-
-  set dummy $fp_version1; shift
-  fp_num1=""
-  test $# = 0 || { fp_num1="$1"; shift; }
-  test x"$fp_num1" = x && fp_num1="0"
-  fp_version1="$*"
-
-  set dummy $fp_version2; shift
-  fp_num2=""
-  test $# = 0 || { fp_num2="$1"; shift; }
-  test x"$fp_num2" = x && fp_num2="0"
-  fp_version2="$*"
-
-  test "$fp_num1" = "$fp_num2" || break;
-done
-IFS=$fp_save_IFS
-if test "$fp_num1" -ge "$fp_num2"; then :
-  ghc_ge_6102=YES
-else
-  ghc_ge_6102=NO
-fi
-  if test $GhcCanonVersion -ge 611; then ghc_ge_611=YES; else ghc_ge_611=NO; fi
-  if test $GhcCanonVersion -ge 613; then ghc_ge_613=YES; else ghc_ge_613=NO; fi
-      fi
+        fi
 
 if test "$WithGhc" = ""; then
    as_fn_error $? "GHC is required unless bootstrapping from .hc files." "$LINENO" 5
 fi
-fp_version1=$GhcVersion; fp_version2=6.10
+fp_version1=$GhcVersion; fp_version2=7.0.3
 fp_save_IFS=$IFS; IFS='.'
 while test x"$fp_version1" != x || test x"$fp_version2" != x
 do
@@ -2685,16 +2653,13 @@ do
 done
 IFS=$fp_save_IFS
 if test "$fp_num1" -lt "$fp_num2"; then :
-  as_fn_error $? "GHC version 6.10 or later is required to compile GHC." "$LINENO" 5
+  as_fn_error $? "GHC version 7.0.3 or later is required to compile GAC." "$LINENO" 5
 fi
 if test `expr $GhcMinVersion % 2` = "1"; then
-   if test "$EnableBootstrapWithDevelSnaphost" = "NO"; then
       as_fn_error $? "
    $WithGhc is a development snapshot of GHC, version $GhcVersion.
    Compiling using this version of GHC is not supported, and may not
-   work.  Use --enable-bootstrap-with-devel-snapshot to try it anyway,
-   or --with-ghc to specify a different GHC to use." "$LINENO" 5
-   fi
+   work.  Use --with-ghc to specify a different GHC to use." "$LINENO" 5
 fi;
 
 # GHC is passed to Cabal, so we need a native path

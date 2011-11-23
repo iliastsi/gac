@@ -23,13 +23,13 @@ Executable gac
   Main-is: Main.hs
   Build-Tools: happy, alex
 
-  Build-Depends: base       >= 4,
-                 array      >= 0.3,
-                 containers >= 0.4,
-                 filepath   >= 1.2,
-                 process    >= 1.0,
-                 directory  >= 1.1,
-                 haskell98  >= 1.1
+  Build-Depends: base       >= 4.3.1.0,
+                 array      >= 0.3.0.2,
+                 containers >= 0.4.0.0,
+                 filepath   >= 1.2.0.0,
+                 process    >= 1.0.1.5,
+                 directory  >= 1.1.0.0,
+                 haskell98  >= 1.1.0.1
   if os(windows)
      Build-Depends: Win32
   else

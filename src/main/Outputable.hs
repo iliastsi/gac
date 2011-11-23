@@ -70,8 +70,9 @@ printMsgBag dflags msgBag =
 -- Print dumped Ast
 printDumpedAst :: UAst -> IO ()
 printDumpedAst uast = do
-    putStrLn "\n==================== Parser ===================="
+    putStrLn "==================== Parser ===================="
     putStrLn (dumpedUAst uast)
+    putStr "\n\n"
 
 
 -- -------------------------------------------------------------------
