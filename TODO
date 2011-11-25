@@ -25,9 +25,13 @@
 
 0.7 : Add llvm back end
 
-0.8 : Implement llvm libraries
+0.8 : Implement extensions
+      - Multiple files compilation
+      - Arrays bigger than one dimension
 
-0.9 : Add native code back end
+0.9 : Implement llvm libraries
+
+1.0 : Add native code back end
       Implement native code libraries
 
-1.0 : Add c back end
+1.1 : Add c back end

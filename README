@@ -24,7 +24,7 @@ Building & Installing
 
 First you need GHC installed in order to build GAC, because the compiler
 is itself written in Haskell. Hugs is supposed to work but it hasn't been
-tested. You will alse need Alex [2] and Happy [3] Meta-Compilers.
+tested. You will also need Alex [2] and Happy [3] Meta-Compilers.
 
 
 Quick start:  the following gives you a default build:
