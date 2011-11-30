@@ -1,0 +1,17 @@
+==================== Parser ====================
+hello() : proc
+  c : int;
+  foo() : proc
+    foo2 : byte;
+  { -- foo
+  } -- foo
+{ -- hello
+  if(false)
+  { -- if-clause
+    writeString("What??\n");
+  } -- if-clause
+  else
+    writeString("Hello world!\n");
+} -- hello
+
+

@@ -104,7 +104,7 @@ dumpUDef :: Int -> UDef -> String
 dumpUDef ind (UDefFun lide luparams lutype ludefs lustmt) =
     indent ind ++ dumpIde (unLoc lide) ++ "(" ++ dumpLUParams luparams ++
         ") : " ++ dumpUType (unLoc lutype) ++
-        "\n" ++ dumpLUDefs (ind+1) ludefs ++ "\n" ++
+        "\n" ++ dumpLUDefs (ind+1) ludefs ++
         dumpUStmt (ind+1) (unLoc lide) (unLoc lustmt)
 -- UDefVar
 dumpUDef ind (UDefVar lide lutype) =
@@ -116,10 +116,8 @@ dumpUDef ind (UDefArr ludef lsize) =
         "[" ++ show (unLoc lsize) ++ "];"
 
 dumpLUDefs :: Int -> [LUDef] -> String
-dumpLUDefs ind [] = ""
-dumpLUDefs ind (ludef:ludefs) =
-    dumpUDef ind (unLoc ludef) ++
-        (foldl (\buf t -> buf ++ "\n" ++ dumpUDef ind (unLoc t)) "" ludefs)
+dumpLUDefs ind ludefs =
+    foldl (\buf t -> buf ++ dumpUDef ind (unLoc t) ++ "\n") "" ludefs
             
 -- ---------------------------
 type LUParam = Located UParam
@@ -166,7 +164,7 @@ dumpUStmt ind _ (UStmtAssign luvar luexpr) =
 -- UStmtCompound
 dumpUStmt ind comment (UStmtCompound lustmts) =
     indent (ind-1) ++ "{ -- " ++ comment ++ "\n" ++
-        dumpLUStmts ind lustmts ++ "\n" ++ indent (ind-1) ++
+        dumpLUStmts ind lustmts ++ indent (ind-1) ++
         "} -- " ++ comment
 -- UStmtFun
 dumpUStmt ind _ (UStmtFun ufunc) =
@@ -177,7 +175,7 @@ dumpUStmt ind _ (UStmtIf lucond ifstmt m_elsestmt) =
         ")\n" ++ dumpUStmt (ind+1) "if-clause" (unLoc ifstmt) ++
         case m_elsestmt of
              Just elsestmt ->
-                 indent ind ++ "else" ++ "\n" ++
+                 "\n" ++ indent ind ++ "else" ++ "\n" ++
                      dumpUStmt (ind+1) "else-clause" (unLoc elsestmt)
              Nothing -> ""
 -- UStmtWhile
@@ -192,10 +190,8 @@ dumpUStmt ind _ (UStmtReturn m_luexpr) =
              Nothing     -> ";"
 
 dumpLUStmts :: Int -> [LUStmt] -> String
-dumpLUStmts ind [] = ""
-dumpLUStmts ind (lustmt:lustmts) =
-    dumpUStmt ind "" (unLoc lustmt) ++
-        (foldl (\buf t -> buf ++ "\n" ++ dumpUStmt ind "" (unLoc t)) "" lustmts)
+dumpLUStmts ind lustmts =
+    foldl (\buf t -> buf ++ dumpUStmt ind "" (unLoc t) ++ "\n") "" lustmts
 
 -- ---------------------------
 type LUExpr = Located UExpr

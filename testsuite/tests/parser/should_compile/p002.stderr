@@ -1,0 +1,7 @@
+==================== Parser ====================
+hello() : proc
+{ -- hello
+  writeString("Hello world!\n");
+} -- hello
+
+

@@ -1,0 +1,11 @@
+hello() : proc
+    c : int;	
+	foo() : proc
+	foo2 : byte;
+	{}
+{
+  if (false) {
+    writeString("What??\n");
+  } else
+    writeString("Hello world!\n");
+}

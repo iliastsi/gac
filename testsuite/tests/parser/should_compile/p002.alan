@@ -1,0 +1,8 @@
+hello() : proc
+{
+(* we are here
+   -- to test
+ (* comments (**) *)
+		*)
+	writeString("Hello world!\n");
+}
