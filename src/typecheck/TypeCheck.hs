@@ -37,6 +37,7 @@ import SrcLoc
 import SymbolTable
 import MonadUtils
 import Outputable (panic)
+import DynFlags
 
 import Data.Int
 import Data.Word
@@ -93,8 +94,23 @@ tcVarDef (L loc (UDefVar lide lutype)) = do
     return (lide, L loc $ ADef (TDefVar lide (L type_loc ftype)) ftype)
 tcVarDef (L loc (UDefArr ludef lsize)) = do
     (lide, L var_loc (ADef var_def var_type)) <- tcVarDef ludef
-    let lsize' = L (getLoc lsize) (fromIntegral (unLoc lsize))
+    let size'  = fromIntegral (unLoc lsize)
+        lsize' = L (getLoc lsize) size'
+    tcCheckIntOverflow lsize size'
     return (lide, L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
+
+-- Check for integer overflows
+tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
+tcCheckIntOverflow (L loc origin) rounded = do
+    flags <- getDynFlags
+    let max_bound = toInteger (maxBound :: Int32)
+        min_bound = toInteger (minBound :: Int32)
+    if (origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags
+       then do
+           addOverflowWarn loc (show origin)
+                ("Integer has been rounded to `" ++ show rounded ++ "'")
+       else do
+           return ()
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -257,7 +273,9 @@ tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
 typeCheckExpr :: Located UExpr -> TcM (Located AExpr)
 -- UExprInt
 typeCheckExpr (L loc (UExprInt i)) = do
-    return (L loc $ AExpr (TExprInt (fromIntegral i)) (TTypeInt))
+    let i' = fromIntegral i
+    tcCheckIntOverflow (L loc i) i'
+    return (L loc $ AExpr (TExprInt i') (TTypeInt))
 -- UExprChar
 typeCheckExpr (L loc (UExprChar c)) = do
     return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))

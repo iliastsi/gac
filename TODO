@@ -3,17 +3,21 @@
 ** Use a faster Type than String for reading from file
 
 ** Fix in Lexer:
-        Add error messages when include more than one char in \'
-        Fix number bound warnings (we may have errors given a very big number)
+    - Add error messages when include more than one char in \'
 
 ** Fix Parser:
-        Express "this should be between spaces"
-        Write better error messages
-        Enable parsing to continue on errors
-        Add the grammar rule to write `<string-literal>[<int>]>'
+    - Express "this should be between spaces"
+    - Write better error messages
+    - Enable parsing to continue on errors
+    - Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Fix in configure.ac
-        Use LIBRARY_VERSION when we introduce our libraries
+    - Use LIBRARY_VERSION when we introduce our libraries
+
+** Error Messages:
+    - When report int overflow we see only the positive number
+      (though we fail to check the lower bound, for negatives)
+    - We have to check for 0-sized array definitions
 
 
     Releases

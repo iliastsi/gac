@@ -38,10 +38,10 @@ data MsgCode
   = ParseError String
   | TypeError  String
   | ScopeError String
-  | UnreachError        -- unreachable code
-  | RedefError String   -- function/variable redefinition
-  | NoRetError String   -- missing return statement
-  | LimitError String   -- type limit error (ie ints > 32 bits)
+  | UnreachError          -- unreachable code
+  | RedefError    String  -- function/variable redefinition
+  | NoRetError    String  -- missing return statement
+  | OverflowError String  -- type overflow error (ie ints > 32 bits)
   | UnknownError
 
 data Severity
@@ -139,12 +139,12 @@ instance Show Severity where
     show SevFatal   = "Fatal Error"
 
 instance Show MsgCode where
-    show (ParseError "")    = "Parse error at end of file"
-    show (ParseError buf)   = "Parse error on input `" ++ buf ++ "'"
-    show (ScopeError ide)   = "Not in scope `" ++ ide ++ "'"
-    show (TypeError expr)   = "Type mismatch at `" ++ expr ++ "'"
-    show UnreachError       = "Unreachable code"
-    show (RedefError ide)   = "Conflicting definitions for `" ++ ide ++ "'"
-    show (NoRetError ide)   = "Control reaches end of non-proc function `" ++ ide ++ "'"
-    show (LimitError buf)   = ""
-    show UnknownError       = "Unknown Error :@"
+    show (ParseError "")     = "Parse error at end of file"
+    show (ParseError buf)    = "Parse error on input `" ++ buf ++ "'"
+    show (ScopeError ide)    = "Not in scope `" ++ ide ++ "'"
+    show (TypeError expr)    = "Type mismatch at `" ++ expr ++ "'"
+    show UnreachError        = "Unreachable code"
+    show (RedefError ide)    = "Conflicting definitions for `" ++ ide ++ "'"
+    show (NoRetError ide)    = "Control reaches end of non-proc function `" ++ ide ++ "'"
+    show (OverflowError buf) = "Type overflow at `" ++ buf ++ "'"
+    show UnknownError        = "Unknown Error :@"

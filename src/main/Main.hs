@@ -141,7 +141,7 @@ driverParse postLoadMode dflags filename = do
 -- the produced object file (if any)
 driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
 driverTypeCheck postLoadMode dflags p_messages luast = do
-    let tc_state = mkTcState predefinedTable
+    let tc_state = mkTcState dflags predefinedTable
     case unTcM (typeCheckDef luast) tc_state of
          TcFailed msg         -> do
              printMessages dflags msg

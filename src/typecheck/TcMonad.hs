@@ -10,9 +10,9 @@ module TcMonad (
     -- Type check monad
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
-    getTcState, getTable, getUnique, setTable,
+    getTcState, getDynFlags, getTable, getUnique, setTable,
     mkTcState, addTypeWarning, addTypeError, addScopeError,
-    addUnreachWarning, addNoRetError,
+    addUnreachWarning, addNoRetError, addOverflowWarn,
     getTcMessages,
 
     -- symbol table functionality
@@ -28,6 +28,7 @@ import SymbolTable
 import ErrUtils
 import UnTypedAst (Ide)
 import TypedAst (AType(..), TType(..))
+import DynFlags
 
 import Control.Monad
 
@@ -39,6 +40,7 @@ data TcResult a
     | TcFailed Messages
 
 data TcState = TcState {
+    dflags      :: DynFlags,
     table       :: Table,           -- the symbol table
     messages    :: Messages,        -- the error messages
     unique      :: !Int             -- unique id number
@@ -73,7 +75,10 @@ failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg loc (TypeError expr) msg) ms)
 
 getTcState :: TcM TcState
-getTcState = TcM $  \s -> TcOk s s
+getTcState = TcM $ \s -> TcOk s s
+
+getDynFlags :: TcM DynFlags
+getDynFlags = TcM $ \s -> TcOk s (dflags s)
 
 getTable :: TcM Table
 getTable = TcM $ \s@(TcState{table=t}) -> TcOk s t
@@ -86,9 +91,10 @@ setTable t = TcM $ \s -> TcOk s{table=t} ()
 
 -- create a type check state
 --
-mkTcState :: Table -> TcState
-mkTcState t =
+mkTcState :: DynFlags -> Table -> TcState
+mkTcState flags t =
     TcState {
+        dflags      = flags,
         table       = t,
         messages    = emptyMessages,
         unique      = 1
@@ -125,6 +131,12 @@ addNoRetError :: SrcSpan -> Ide -> String -> TcM ()
 addNoRetError loc ide msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg loc (NoRetError ide) msg) msgs) } ()
+
+-- Warn for type overflows
+addOverflowWarn :: SrcSpan -> String -> String -> TcM ()
+addOverflowWarn loc constant msg =
+    TcM $ \s@(TcState{messages=msgs}) ->
+        TcOk s{ messages=(addWarning (mkWarnMsg loc (OverflowError constant) msg) msgs) } ()
 
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms
