@@ -1,3 +1,0 @@
-tc001.alan:18:23: Warning: Parse error on input `55555'
-	number `55555' is bigger than 16 bits
-

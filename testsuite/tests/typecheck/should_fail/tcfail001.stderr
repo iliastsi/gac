@@ -1,6 +1,3 @@
-tcfail001.alan:18:23: Warning: Parse error on input `55555'
-	number `55555' is bigger than 16 bits
-
-tcfail001.alan:20:26: Error: Not in scope `foo'
-	Each undeclared identifier is reported only once for each function it appears in
+tcfail001.alan:4:15: Warning: Type overflow at `5262147483648'
+	Integer has been rounded to `812546048'
 

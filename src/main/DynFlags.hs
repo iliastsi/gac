@@ -767,6 +767,6 @@ compilerInfo =
     ,("Host platform",              String HOST_PLATFORM)
     ,("Target platform",            String TARGET_PLATFORM)
     ,("Have native code generator", String "NO")
-    ,("Have llvmcode generator",    String "NO")
+    ,("Have llvm code generator",    String "NO")
     ,("LibDir",                     FromDynFlags topDir)
     ]

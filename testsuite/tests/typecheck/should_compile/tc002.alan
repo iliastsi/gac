@@ -1,8 +1,5 @@
 hello () : proc
-	c : byte;
+	foo : int;
 {
-	   	c = 'a';
-(* test haha *)
-    c = '\n';
-    writeString("Hello world!\n");
+	foo = 2147483648;
 }

@@ -38,9 +38,14 @@ endif
 
 
 ifneq "$(shell $(SHELL) -c 'llvmc --version | grep version' 2> /dev/null)" ""
-RUNTEST_OPTS += -e gac_with_llvm=1
+  $(eval $(call get-gac-feature-bool,GacWithLlvmCodeGen,Have llvm code generator))
+  ifeq "$(GacWithLlvmCodeGen)" "YES"
+  RUNTEST_OPTS += -e gac_with_llvm=1
+  else
+  RUNTEST_OPTS += -e gac_with_llvm=0
+  endif
 else
-RUNTEST_OPTS += -e gac_with_llvm=0
+  RUNTEST_OPTS += -e gac_with_llvm=0
 endif
 
 ifeq "$(WINDOWS)" "YES"
