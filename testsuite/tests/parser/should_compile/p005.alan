@@ -1,0 +1,8 @@
+hello() : proc
+  s : byte [40];
+{
+  s = "abc";
+  s = "Route 66";
+  s = "Hello world!\n";
+  s = "Name:\t\"Douglas Adams\"\nValue:\t42\n";
+}

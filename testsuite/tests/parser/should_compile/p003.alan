@@ -8,4 +8,8 @@ hello() : proc
     writeString("What??\n");
   } else
     writeString("Hello world!\n");
+
+	while (false) {
+    writeString("What??\n");
+	}
 }

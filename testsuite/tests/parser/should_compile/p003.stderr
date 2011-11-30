@@ -12,6 +12,10 @@ hello() : proc
   } -- if-clause
   else
     writeString("Hello world!\n");
+  while(false)
+  { -- while-clause
+    writeString("What??\n");
+  } -- while-clause
 } -- hello
 
 
