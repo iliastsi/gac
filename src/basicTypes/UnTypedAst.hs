@@ -96,19 +96,24 @@ type LUDef = Located UDef
 
 data UDef
     = UDefFun LIde [LUParam] LUType [LUDef] LUStmt
-    | UDefVar LIde (Located Int) LUType
+    | UDefVar LIde LUType
+    | UDefArr LUDef (Located Integer)
 
 dumpUDef :: Int -> UDef -> String
 -- UDefFun
 dumpUDef ind (UDefFun lide luparams lutype ludefs lustmt) =
     indent ind ++ dumpIde (unLoc lide) ++ "(" ++ dumpLUParams luparams ++
-        ") : " ++ dumpUType (TypeEmpty) (unLoc lutype) ++
+        ") : " ++ dumpUType (unLoc lutype) ++
         "\n" ++ dumpLUDefs (ind+1) ludefs ++ "\n" ++
         dumpUStmt (ind+1) (unLoc lide) (unLoc lustmt)
 -- UDefVar
-dumpUDef ind (UDefVar lide lsize lutype) =
+dumpUDef ind (UDefVar lide lutype) =
     indent ind ++ dumpIde (unLoc lide) ++ " : " ++
-        dumpUType (TypeWith $ unLoc lsize) (unLoc lutype) ++ ";"
+        dumpUType (unLoc lutype) ++ ";"
+-- UDefArr
+dumpUDef ind (UDefArr ludef lsize) =
+    indent ind ++ init (dumpUDef 0 (unLoc ludef)) ++
+        "[" ++ show (unLoc lsize) ++ "];"
 
 dumpLUDefs :: Int -> [LUDef] -> String
 dumpLUDefs ind [] = ""
@@ -128,7 +133,7 @@ instance Show UParam where
 dumpUParam :: UParam -> String
 dumpUParam (UParam lide mode lutype) =
     dumpIde (unLoc lide) ++ " : " ++ dumpMode mode ++ " " ++ 
-        dumpUType (TypeEmpty) (unLoc lutype)
+        dumpUType (unLoc lutype)
 
 dumpLUParams :: [LUParam] -> String
 dumpLUParams [] = ""
@@ -196,7 +201,7 @@ dumpLUStmts ind (lustmt:lustmts) =
 type LUExpr = Located UExpr
 
 data UExpr
-    = UExprInt Int
+    = UExprInt Integer
     | UExprChar Char
     | UExprString String
     | UExprVar UVariable
@@ -250,15 +255,15 @@ type LUVariable = Located UVariable
 
 data UVariable
     = UVar Ide
-    | UVarArray LIde LUExpr
+    | UVarArray LUVariable LUExpr
 
 instance Show UVariable where
     show = dumpUVariable
 
 dumpUVariable :: UVariable -> String
 dumpUVariable (UVar ide)      = dumpIde ide
-dumpUVariable (UVarArray i e) =
-    dumpIde (unLoc i) ++ "[" ++ dumpUExpr (unLoc e) ++ "]"
+dumpUVariable (UVarArray v e) =
+    dumpUVariable (unLoc v) ++ "[" ++ dumpUExpr (unLoc e) ++ "]"
 
 -- ---------------------------
 type LUType = Located UType
@@ -269,16 +274,12 @@ data UType
     | UTypeProc
     | UTypePtr UType
 
-dumpUType :: TypeShow -> UType -> String
-dumpUType _ UTypeInt = "int"
-dumpUType _ UTypeChar = "byte"
-dumpUType _ UTypeProc = "proc"
-dumpUType TypeEmpty    (UTypePtr utype) =
-    dumpUType TypeEmpty utype ++ "[]"
-dumpUType (TypeWith n) (UTypePtr utype) =
-    dumpUType TypeEmpty utype ++ "[" ++ show n ++ "]"
-
-data TypeShow = TypeEmpty | TypeWith Int
+dumpUType :: UType -> String
+dumpUType UTypeInt = "int"
+dumpUType UTypeChar = "byte"
+dumpUType UTypeProc = "proc"
+dumpUType (UTypePtr utype) =
+    dumpUType utype ++ "[]"
 
 -- ---------------------------
 data UFuncCall = UFuncCall LIde [LUExpr]

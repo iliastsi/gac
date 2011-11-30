@@ -75,10 +75,26 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
     return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
                             (TTypeFunc ptype ftype))
 -- UDefVar
-typeCheckDef (L loc (UDefVar lide lsize lutype)) = do
+typeCheckDef ludef@(L _ (UDefVar _ _)) = do
+    (lide, ladef@(L _ (ADef _ var_type))) <- tcVarDef ludef
+    addVarM lide (AType var_type)
+    return ladef
+-- UDefArr
+typeCheckDef ludef@(L _ (UDefArr _ _)) = do
+    (lide, ladef@(L _ (ADef _ var_type))) <- tcVarDef ludef
+    addVarM lide (AType var_type)
+    return ladef
+
+-- ---------------------------
+-- Type Check variable definitions
+tcVarDef :: Located UDef -> TcM (Located Ide, Located ADef)
+tcVarDef (L loc (UDefVar lide lutype)) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
-    addVarM lide (AType ftype)
-    return (L loc $ ADef (TDefVar lide lsize (L type_loc ftype)) ftype)
+    return (lide, L loc $ ADef (TDefVar lide (L type_loc ftype)) ftype)
+tcVarDef (L loc (UDefArr ludef lsize)) = do
+    (lide, L var_loc (ADef var_def var_type)) <- tcVarDef ludef
+    let lsize' = L (getLoc lsize) (fromIntegral (unLoc lsize))
+    return (lide, L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -340,30 +356,32 @@ typeCheckVariable (L loc (UVar ide)) = do
     (AType var_type) <- getVarTypeM m_var_info
     return (L loc $ AVariable (TVar ide var_type) var_type)
 -- UVarArray
-typeCheckVariable luvar@(L loc (UVarArray lide lexpr)) = do
-    (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr lexpr
-    m_var_info <- getVarM lide
-    lide' <- liftM (L (getLoc lide)) (getVarNameM m_var_info)
-    (AType var_type) <- getVarTypeM m_var_info
+typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
+    (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr luexpr
+    (L var_loc (AVariable tvar var_type)) <- typeCheckVariable luvar
     let exprIsInt     = (AType expr_type) == (AType TTypeInt)
         exprIsUnknown = (AType expr_type) == (AType TTypeUnknown)
         varIsArray    = atypeIsArray (AType var_type)
         varIsUnknown  = (AType var_type)  == (AType TTypeUnknown)
     if (not exprIsInt) && (not exprIsUnknown)
-       then tcIntExprErr luvar
+       then tcIntExprErr luarr
        else return ()
     if (not varIsArray) && (not varIsUnknown)
-       then tcArrayVarErr luvar (AType var_type)
+       then tcArrayVarErr luarr (AType var_type)
        else return ()
     if exprIsInt && varIsArray
        then do
            (AType ptr_type) <- return $ getPointer (AType var_type)
            let lexpr' = L aeloc texpr
            case test expr_type TTypeInt of
-                Just Eq ->
-                    return (L loc $ AVariable (TVarArray lide' ptr_type lexpr') ptr_type)
-                Nothing ->
-                    panic "test in TypeCheck.typeCheckVariable had to return Eq"
+             Just Eq ->
+                 case test var_type (TTypePtr ptr_type) of
+                      Just Eq ->
+                          return (L loc $ AVariable (TVarArray (L var_loc tvar) lexpr') ptr_type)
+                      Nothing ->
+                          panic "test in TypeCheck.typeCheckVariable had to return Eq"
+             Nothing ->
+                 panic "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
            return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
 
@@ -381,16 +399,16 @@ getPointer _ = panic "TypeCheck.getPointer got unexpected input"
 -- ---------------------------
 -- Error when the array index expression is not of type of int
 tcIntExprErr :: Located UVariable -> TcM ()
-tcIntExprErr (L loc (uvar@(UVarArray lide lexpr))) =
+tcIntExprErr (L loc (uvar@(UVarArray _ lexpr))) =
     addTypeError loc (show uvar)
         ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
 
 -- Error when variable is not of type `array'
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
-tcArrayVarErr (L loc uvar@(UVarArray lide lexpr)) var_type =
-    addTypeError loc (show uvar)
-        ("Incompatible type of variable `" ++ (unLoc lide) ++
-         "'\n\tExpected `array' but variable is of type `" ++
+tcArrayVarErr (L loc uarr@(UVarArray luvar lexpr)) var_type =
+    addTypeError loc (show uarr)
+        ("Incompatible type of expression `" ++ show (unLoc luvar) ++
+         "'\n\tExpected `array' but expression is of type `" ++
          show var_type ++ "'")
 
 

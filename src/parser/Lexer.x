@@ -129,7 +129,7 @@ data Token
     | ITreference
 
     | ITid String
-    | ITdigit Int
+    | ITdigit Integer
     | ITchar Char
     | ITstring String
 
@@ -186,10 +186,7 @@ lex_int_tok :: Action
 lex_int_tok span buf len = do
     let num_str = take len buf
         num     = read num_str
-    if (num <= 32768) && (num >= -32769)
-       then return (L span (ITdigit num))
-       else warnThen ("number `" ++ show num ++ "' is bigger than 16 bits")
-                (\_ _ _ -> return (L span (ITdigit num))) span buf len
+    return (L span (ITdigit num))
 
 lex_string_tok :: Action
 lex_string_tok span buf len = return (L span (ITstring tok_string))

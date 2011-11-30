@@ -31,9 +31,12 @@ type TAst = TDef
 type LTDef a = Located (TDef a)
 
 data TDef a where
-    TDefFun  :: LIde -> LTParam a   -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
-    TDefFunE :: LIde                -> LTType b -> [LADef] -> LTStmt -> TDef b
-    TDefVar  :: LIde -> Located Int -> LTType a -> TDef a
+      -- functions
+    TDefFun  :: LIde -> LTParam a -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
+    TDefFunE :: LIde              -> LTType b -> [LADef] -> LTStmt -> TDef b
+      -- variables
+    TDefVar  :: LIde    -> LTType a      -> TDef a
+    TDefArr  :: LTDef a -> Located Int32 -> TDef (Ptr a)
 
 type LADef = Located ADef
 
@@ -94,8 +97,8 @@ data TCond
 type LTVariable a = Located (TVariable a)
 
 data TVariable a where
-    TVar      :: Ide  -> TType a                 -> TVariable a
-    TVarArray :: LIde -> TType a -> LTExpr Int32 -> TVariable a
+    TVar      :: Ide                -> TType a      -> TVariable a
+    TVarArray :: LTVariable (Ptr a) -> LTExpr Int32 -> TVariable a
 
 type LAVariable = Located AVariable
 

@@ -1,5 +1,7 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
+** Use a faster Type than String for reading from file
+
 ** Fix in Lexer:
         Add error messages when include more than one char in \'
         Fix number bound warnings (we may have errors given a very big number)
@@ -25,11 +27,11 @@
 
 0.7 : Add llvm back end
 
-0.8 : Implement extensions
+0.8 : Implement llvm libraries
+
+0.9 : Implement extensions
       - Multiple files compilation
       - Arrays bigger than one dimension
-
-0.9 : Implement llvm libraries
 
 1.0 : Add native code back end
       Implement native code libraries
