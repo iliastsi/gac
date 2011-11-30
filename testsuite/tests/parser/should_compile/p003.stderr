@@ -1,7 +1,7 @@
 ==================== Parser ====================
 hello() : proc
   c : int;
-  foo() : proc
+  foo(f1 :  int, f2 : reference byte) : proc
     foo2 : byte;
   { -- foo
   } -- foo
@@ -14,6 +14,7 @@ hello() : proc
     writeString("Hello world!\n");
   while(false)
   { -- while-clause
+    c = 1 + 10 * 50 - 2 / 3;
     writeString("What??\n");
   } -- while-clause
 } -- hello

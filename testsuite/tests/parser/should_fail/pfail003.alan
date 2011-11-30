@@ -1,0 +1,6 @@
+hello() : proc
+ c : int;
+{
+ (* unknown token *)
+ c = $ 4;
+}

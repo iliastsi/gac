@@ -1,6 +1,6 @@
 hello() : proc
     c : int;	
-	foo() : proc
+	foo(f1:int, f2:reference byte) : proc
 	foo2 : byte;
 	{}
 {
@@ -10,6 +10,7 @@ hello() : proc
     writeString("Hello world!\n");
 
 	while (false) {
+	c = 1+ 10 *50 - 2 /3;
     writeString("What??\n");
 	}
 }

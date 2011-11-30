@@ -1,0 +1,5 @@
+hello() : proc
+  foo(f1 : int[)  : proc
+  {}
+{
+}

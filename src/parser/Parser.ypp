@@ -130,18 +130,17 @@ incorrect.
 
 program :: { Located UDef }
     : funcdef                       { $1 }
+    | error                         {% srcParseFail "Expected function declaration" }
 
 funcdef :: { Located UDef }
     : ID fpar ':' rtype localdefs compoundstmt
                                     { LL $ let (L span (ITid i)) = $1 in UDefFun (sL span i) $2 $4 (reverse $5) $6 }
-    | error                         {% srcParseFail "expected function decleration" }
 
 fpar :: { [Located UParam] }
     : '(' ')'                       { [] }
-    | '(' error                     {% srcParseFail "unclosed `)'" }
+    | '(' error                     {% srcParseFail "Probably unclosed `)'" }
     | '(' fparlist ')'              { reverse $2 }
-    | '(' fparlist error            {% srcParseFail "unclosed `)'" }
-    | error                         {% srcParseFail "expected function definition parameters" }
+    | '(' fparlist error            {% srcParseFail "Probably unclosed `)'" }
 
 fparlist :: { [Located UParam] }
     : fpardef                       { [$1] }
@@ -150,14 +149,15 @@ fparlist :: { [Located UParam] }
 fpardef :: { Located UParam }
     : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByVal $3 }
     | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByRef $4 }
-    | ID error                      {% srcParseFail "missing `:'for type definition" }
-    | error                         {% srcParseFail "expected parameter definition name" }
+    | ID error                      {% srcParseFail "Probably missing `:' for type definition" }
+    | error                         {% srcParseFail "Expected parameter definition" }
 
 type :: { Located UType }
     : datatype                      { $1 }
     | datatype '[' ']'              { LL $ UTypePtr (unLoc $1) }
-    | datatype '[' error            {% srcParseFail "expected `]'" }
-    | error                         {% srcParseFail "unknown datatype" }
+    | datatype '[' error            {% srcParseFail "Probably missing `]'" }
+    | error                         {% srcParseFail ("Unknown type" ++
+                                           "\n\tYou have to use either int or byte") }
 
 datatype :: { Located UType }
     : INT                           { L1 $ UTypeInt }
@@ -166,7 +166,8 @@ datatype :: { Located UType }
 rtype :: { Located UType}
     : datatype                      { $1 }
     | PROC                          { L1 $ UTypeProc }
-    | error                         {% srcParseFail "unknown datatype" }
+    | error                         {% srcParseFail ("Unknown type" ++
+                                           "\n\tYou have to use int, byte or proc") }
 
 localdefs :: { [Located UDef] }
     : {- nothing -}                 { [] }
@@ -175,18 +176,20 @@ localdefs :: { [Located UDef] }
 localdef :: { Located UDef }
     : funcdef                       { $1 }
     | vardef                        { $1 }
+    | ID error                      {% srcParseFail ("Probably missing `:' for variable definition" ++
+                                                        " or '(' for function definition") }
+    | error                         {% srcParseFail "Expected function or variable declaration" }
 
 vardef :: { Located UDef }
     : vardef2 ';'                   { $1 }
     | vardef2 '[' DIGIT ']' ';'     { LL $ let (L digit_span (ITdigit d)) = $3 in UDefArr $1 (sL digit_span d) }
-    | vardef2 '[' DIGIT ']' error   {% srcParseFail "missing `;'" }
-    | vardef2 '[' DIGIT error       {% srcParseFail "unclosed `]'" }
-    | vardef2 '[' error             {% srcParseFail "array size must be a positive integer" }
-    | vardef2 error                 {% srcParseFail "missing `;'" }
+    | vardef2 '[' DIGIT ']' error   {% srcParseFail "Probably missing `;'" }
+    | vardef2 '[' DIGIT error       {% srcParseFail "Probably missing `]'" }
+    | vardef2 '[' error             {% srcParseFail "Array size must be a positive integer" }
+    | vardef2 error                 {% srcParseFail "Probably missing `;'" }
 
 vardef2 :: { Located UDef }
     : ID ':' datatype               { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
-    | ID error                      {% srcParseFail "missing `:' for type definition" }
 
 stmt :: { Located UStmt }
     : ';'                           { L1 $ UStmtNothing }

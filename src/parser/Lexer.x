@@ -101,7 +101,7 @@ $white+             ;
   ":"               { token ITcolon }
   ";"               { token ITsemi }
 
-  "*)"              { errorMsg ("unmatched `*)'") }
+  "*)"              { errorMsg ("You are trying to close the comments without having opened them first") }
 }
 
 "--" .*             ;
@@ -414,7 +414,7 @@ lexToken = do
             let span = mkSrcSpan loc1 loc1
             setLastToken span ""
             if sc > 0
-               then errorThen ("unterminated `(*'")
+               then errorThen ("You forgot to close the comments")
                         (\_ _ _ -> return (L span ITeof)) span buf 0
                else return (L span ITeof)
         AlexError (AI loc2 buf2 _) ->

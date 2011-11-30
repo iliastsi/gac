@@ -1,0 +1,5 @@
+hello() : proc
+  foo  : int[100];
+  foo2 : byte
+{
+}

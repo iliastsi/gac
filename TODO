@@ -14,6 +14,9 @@
 ** Fix in configure.ac
     - Use LIBRARY_VERSION when we introduce our libraries
 
+** Fix in TypeCheck:
+    - Outermost function has to take no arguments
+
 ** Error Messages:
     - When report int overflow we see only the positive number
       (though we fail to check the lower bound, for negatives)

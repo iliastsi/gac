@@ -1,0 +1,3 @@
+pfail001.alan:5:5: Error: Parse error on input `*)'
+	You are trying to close the comments without having opened them first
+

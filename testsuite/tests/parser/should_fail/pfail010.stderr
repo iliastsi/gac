@@ -1,0 +1,3 @@
+pfail010.alan:2:11: Error: Parse error on input `int'
+	Probably missing `:' for type definition
+

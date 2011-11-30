@@ -1,0 +1,3 @@
+pfail016.alan:2:13: Error: Parse error on input `-'
+	Array size must be a positive integer
+

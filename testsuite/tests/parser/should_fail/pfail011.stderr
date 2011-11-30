@@ -1,0 +1,4 @@
+pfail011.alan:2:12: Error: Parse error on input `integer'
+	Unknown type
+	You have to use either int or byte
+
