@@ -261,32 +261,46 @@ expr :: { Located UExpr }
 lvalue :: { Located UVariable }
     : ID                            { L1 $ let (ITid i) = unLoc $1 in UVar i }
     | ID '[' expr ']'               { LL $ let (L span (ITid i)) = $1 in UVarArray (sL span (UVar i)) $3 }
-    | ID '[' expr error             {% srcParseFail "unclosed `]'" }
-    | ID '[' error                  {% srcParseFail "not a valid expression" }
+    | ID '[' expr error             {% srcParseFail "Probably missing `]'" }
+    | ID '[' error                  {% srcParseFail "Not a valid expression" }
 
 cond :: { Located UCond }
     : TRUE                          { L1 $ UCondTrue }
     | FALSE                         { L1 $ UCondFalse }
     | '(' cond ')'                  { LL $ let c = unLoc $2 in c }
-    | '(' cond error                {% srcParseFail "unclosed `)'" }
+    | '(' cond error                {% srcParseFail "Probably missing `)'" }
     | '!' cond                      { LL $ UCondNot $2 }
-    | '!' error                     {% srcParseFail "not a valid condition" }
+    | '!' error                     {% srcParseFail "Not a valid condition" }
     | expr '==' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpEqual) $3 }
-    | expr '==' error               {% srcParseFail "not a valid expression" }
+    | expr '==' error               {% srcParseFail "Not a valid expression" }
     | expr '!=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpNotEqual) $3 }
-    | expr '!=' error               {% srcParseFail "not a valid expression" }
+    | expr '!=' error               {% srcParseFail "Not a valid expression" }
     | expr '<'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLT) $3 }
-    | expr '<'  error               {% srcParseFail "not a valid expression" }
+    | expr '<'  error               {% srcParseFail "Not a valid expression" }
     | expr '>'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGT) $3 }
-    | expr '>'  error               {% srcParseFail "not a valid expression" }
+    | expr '>'  error               {% srcParseFail "Not a valid expression" }
     | expr '<=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLE) $3 }
-    | expr '<=' error               {% srcParseFail "not a valid expression" }
+    | expr '<=' error               {% srcParseFail "Not a valid expression" }
     | expr '>=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGE) $3 }
-    | expr '>=' error               {% srcParseFail "not a valid expression" }
+    | expr '>=' error               {% srcParseFail "Not a valid expression" }
+    | expr cond_symbols             {% srcParseFail "Cannot use conditional symbols in expressions" }
     | cond '&'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpAnd) $3 }
-    | cond '&'  error               {% srcParseFail "not a valid condition" }
+    | cond '&'  error               {% srcParseFail "Not a valid condition" }
     | cond '|'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpOr) $3 }
-    | cond '|'  error               {% srcParseFail "not a valid condition" }
+    | cond '|'  error               {% srcParseFail "Not a valid condition" }
+    | cond expr_symbols             {% srcParseFail "Cannot use comparison symbols in conditions" }
+
+expr_symbols
+    : '=='                          {}
+    | '!='                          {}
+    | '<'                           {}
+    | '>'                           {}
+    | '<='                          {}
+    | '>='                          {}
+
+cond_symbols
+    : '&'                           {}
+    | '|'                           {}
 
 
 {

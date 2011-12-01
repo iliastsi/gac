@@ -1,0 +1,3 @@
+pfail039.alan:4:5: Error: Parse error on input `return'
+	Probably missing `)'
+

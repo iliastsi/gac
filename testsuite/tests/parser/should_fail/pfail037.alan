@@ -1,0 +1,4 @@
+hello() : proc
+{
+  foo[4 = 5;
+}

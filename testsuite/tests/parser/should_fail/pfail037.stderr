@@ -1,0 +1,3 @@
+pfail037.alan:3:9: Error: Parse error on input `='
+	Probably missing `]'
+

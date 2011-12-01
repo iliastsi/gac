@@ -1,0 +1,5 @@
+hello() : proc
+{
+  if(true & %3)
+    return;
+}

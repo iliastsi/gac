@@ -1,0 +1,3 @@
+pfail046.alan:3:10: Error: Parse error on input `1'
+	Cannot use conditional symbols in expressions
+

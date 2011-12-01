@@ -1,0 +1,3 @@
+pfail041.alan:3:6: Error: Parse error on input `%'
+	Not a valid condition
+
