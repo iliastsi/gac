@@ -1,0 +1,10 @@
+input():proc
+  i : int;
+  b : byte;
+  s : byte[42];
+{
+  i = readInteger();
+  b = readByte();
+  b = readChar();
+  readString(i, s);
+}

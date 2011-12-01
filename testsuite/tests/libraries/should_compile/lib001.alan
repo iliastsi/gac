@@ -1,0 +1,7 @@
+output():proc
+{
+  writeInteger(42);
+  writeByte('t');
+  writeChar('\x42');
+  writeString("Ilias\n");
+}

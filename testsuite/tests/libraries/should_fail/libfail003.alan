@@ -1,0 +1,11 @@
+convert():proc
+  i : int;
+  b : byte;
+{
+  i = shrink(42);
+  b = shrink('\x42');
+  b = shrink(42, 42);
+
+  b = extend('\x42');
+  i = extend(42);
+}

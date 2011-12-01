@@ -1,0 +1,17 @@
+libfail003.alan:5:3: Error: Type mismatch at `i = shrink(42);'
+	Lvalue is of type `int' but Rvalue is of type `byte'
+
+libfail003.alan:6:14: Error: Type mismatch at `'B''
+	Incompatible type of argument 1 of function `shrink'
+	Expected `int' but argument is of type `byte'
+
+libfail003.alan:7:7: Error: Type mismatch at `shrink(42, 42)'
+	The function `shrink' is applied to 2 parameters but its type has 1
+
+libfail003.alan:9:3: Error: Type mismatch at `b = extend('B');'
+	Lvalue is of type `byte' but Rvalue is of type `int'
+
+libfail003.alan:10:14: Error: Type mismatch at `42'
+	Incompatible type of argument 1 of function `extend'
+	Expected `byte' but argument is of type `int'
+

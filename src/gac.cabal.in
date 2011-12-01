@@ -35,7 +35,7 @@ Executable gac
   else
      Build-Depends: unix
 
-  GHC-Options: -Wall -Wwarn -w -O
+  GHC-Options: -Wall -Wwarn -w -O2
 
   Extensions: CPP
   Include-Dirs: .

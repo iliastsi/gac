@@ -1,0 +1,17 @@
+string():proc
+  s : byte[42];
+  i : int;
+{
+  i = strlen(42);
+  i = strlen(s, 42);
+  s = strlen(s);
+
+  i = strcmp(s, i);
+  s = strcmp(s, s);
+
+  strcpy(i, s);
+  strcpy(i, i);
+  strcpy(i, i, s);
+
+  i = strcat(s, i);
+}

@@ -1,0 +1,14 @@
+output():proc
+{
+  writeInteger('t');
+  writeInteger("123");
+
+  writeByte(42);
+  writeByte("123");
+
+  writeChar(42);
+  writeChar("123");
+
+  writeString(42);
+  writeString('t');
+}

@@ -1,0 +1,7 @@
+convert():proc
+  i : int;
+  b : byte;
+{
+  b = shrink(42);
+  i = extend(b);
+}
