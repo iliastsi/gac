@@ -1,0 +1,5 @@
+hello() : proc
+{
+  hello(;
+  foo = 3;
+}

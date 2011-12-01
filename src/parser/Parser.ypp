@@ -225,14 +225,14 @@ stmts :: { [Located UStmt] }
 
 funcall :: { Located UFuncCall }
     : ID '(' ')'                    { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) [] }
-    | ID '(' error                  {% srcParseFail "unclosed `)'" }
+    | ID '(' error                  {% srcParseFail "Probably missing `)'" }
     | ID '(' exprlist ')'           { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) (reverse $3) }
-    | ID '(' exprlist error         {% srcParseFail "unclosed `)'" }
+    | ID '(' exprlist error         {% srcParseFail "Probably missing `)'" }
 
 exprlist :: { [Located UExpr] }
     : expr                          { [$1] }
     | exprlist ',' expr             { $3 : $1 }
-    | exprlist ',' error            {% srcParseFail "not a valid expression" }
+    | exprlist ',' error            {% srcParseFail "Not a valid expression" }
 
 expr :: { Located UExpr }
     : DIGIT                         { L1 $ let (ITdigit i) = (unLoc $1) in UExprInt i }
@@ -240,23 +240,23 @@ expr :: { Located UExpr }
     | STRING                        { L1 $ let (ITstring i) = (unLoc $1) in UExprString i }
     | lvalue                        { L1 $ let v = unLoc $1 in UExprVar v }
     | '(' expr ')'                  { LL $ let e = unLoc $2 in e}
-    | '(' expr error                {% srcParseFail "unclosed `)'" }
-    | '(' error                     {% srcParseFail "not a valid expression" }
+    | '(' expr error                {% srcParseFail "Probably missing `)'" }
+    | '(' error                     {% srcParseFail "Not a valid expression" }
     | funcall                       { L1 $ let f = unLoc $1 in UExprFun f }
     | '+' expr %prec SIGN           { LL $ let e = unLoc $2 in e}
-    | '+' error %prec SIGN          {% srcParseFail "not a valid expression" }
+    | '+' error %prec SIGN          {% srcParseFail "Not a valid expression" }
     | '-' expr %prec SIGN           { LL $ UExprMinus $2 }
-    | '-' error %prec SIGN          {% srcParseFail "not a valid expression" }
+    | '-' error %prec SIGN          {% srcParseFail "Not a valid expression" }
     | expr '+' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpPlus) $3 }
-    | expr '+' error                {% srcParseFail "not a valid expression" }
+    | expr '+' error                {% srcParseFail "Not a valid expression" }
     | expr '-' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMinus) $3 }
-    | expr '-' error                {% srcParseFail "not a valid expression" }
+    | expr '-' error                {% srcParseFail "Not a valid expression" }
     | expr '*' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpTimes) $3 }
-    | expr '*' error                {% srcParseFail "not a valid expression" }
+    | expr '*' error                {% srcParseFail "Not a valid expression" }
     | expr '/' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpDiv) $3 }
-    | expr '/' error                {% srcParseFail "not a valid expression" }
+    | expr '/' error                {% srcParseFail "Not a valid expression" }
     | expr '%' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMod) $3 }
-    | expr '%' error                {% srcParseFail "not a valid expression" }
+    | expr '%' error                {% srcParseFail "Not a valid expression" }
 
 lvalue :: { Located UVariable }
     : ID                            { L1 $ let (ITid i) = unLoc $1 in UVar i }
