@@ -363,7 +363,7 @@ if test x"$ac_cv_env_YFLAGS_set" != x
 then
         YFLAGS=$ac_cv_env_YFLAGS_value
 else
-        YFLAGS="-i -a -g" 
+        YFLAGS="--info --array --ghc --coerce"
 fi
 AC_SUBST([YFLAGS])
 
