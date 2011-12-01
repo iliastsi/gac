@@ -1,0 +1,7 @@
+hello() : proc
+  foo : int;
+{
+  if(true
+      foo =4;
+  foo = 3;
+}

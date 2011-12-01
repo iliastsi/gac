@@ -1,0 +1,6 @@
+hello() : proc
+  foo : int;
+{
+  hello()
+  foo = 3;
+}

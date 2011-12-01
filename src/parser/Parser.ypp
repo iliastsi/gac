@@ -177,7 +177,7 @@ localdef :: { Located UDef }
     : funcdef                       { $1 }
     | vardef                        { $1 }
     | ID error                      {% srcParseFail ("Probably missing `:' for variable definition" ++
-                                                        " or '(' for function definition") }
+                                                        " or `(' for function definition") }
     | error                         {% srcParseFail "Expected function or variable declaration" }
 
 vardef :: { Located UDef }
@@ -194,27 +194,27 @@ vardef2 :: { Located UDef }
 stmt :: { Located UStmt }
     : ';'                           { L1 $ UStmtNothing }
     | lvalue '=' expr ';'           { LL $ UStmtAssign $1 $3 }
-    | lvalue '=' expr error         {% srcParseFail "missing `;'" }
-    | lvalue '=' error              {% srcParseFail "not a valid expression" }
-    | ID error                      {% srcParseFail "expected an lvalue or `(' for function" }
+    | lvalue '=' expr error         {% srcParseFail "Probably missing `;'" }
+    | lvalue '=' error              {% srcParseFail "Not a valid expression" }
+    | ID error                      {% srcParseFail "Probably missing `=' or `('" }
     | compoundstmt                  { $1 }
     | funcall ';'                   { LL $ UStmtFun (unLoc $1) }
-    | funcall error                 {% srcParseFail "missing `;'" }
+    | funcall error                 {% srcParseFail "Probably missing `;'" }
     | IF '(' cond ')' stmt          { LL $ UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
                                     { LL $ UStmtIf $3 $5 (Just $7) }
-    | IF '(' cond error             {% srcParseFail "unclosed `)'" }
-    | IF '(' error                  {% srcParseFail "not a valid condition" }
-    | IF error                      {% srcParseFail "expected `('" }
+    | IF '(' cond error             {% srcParseFail "Probably missing `)'" }
+    | IF '(' error                  {% srcParseFail "Not a valid condition" }
+    | IF error                      {% srcParseFail "Probably missing `('" }
     | WHILE '(' cond ')' stmt       { LL $ UStmtWhile $3 $5 }
-    | WHILE '(' cond error          {% srcParseFail "unclosed `)'" }
-    | WHILE '(' error               {% srcParseFail "not a valid condition" }
-    | WHILE error                   {% srcParseFail "expected `('" }
+    | WHILE '(' cond error          {% srcParseFail "Probably missing `)'" }
+    | WHILE '(' error               {% srcParseFail "Not a valid condition" }
+    | WHILE error                   {% srcParseFail "Probably missing `('" }
     | RETURN ';'                    { LL $ UStmtReturn Nothing }
-    | RETURN error                  {% srcParseFail "missing `;'" }
+    | RETURN error                  {% srcParseFail "Probably missing `;'" }
     | RETURN expr ';'               { LL $ UStmtReturn (Just $2) }
-    | RETURN expr error             {% srcParseFail "missing `;'" }
-    | error                         {% srcParseFail "not a valid statement" }
+    | RETURN expr error             {% srcParseFail "Probably missing `;'" }
+    | error                         {% srcParseFail "Not a valid statement" }
 
 compoundstmt :: { Located UStmt }
     : '{' stmts '}'                 { LL $ UStmtCompound (reverse $2) }

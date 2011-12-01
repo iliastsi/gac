@@ -1,0 +1,3 @@
+pfail022.alan:5:7: Error: Parse error on input `foo'
+	Probably missing `)'
+

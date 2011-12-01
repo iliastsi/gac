@@ -1,0 +1,7 @@
+hello() : proc
+  foo : int;
+{
+  while( *1)
+      foo =4;
+  foo = 3;
+}

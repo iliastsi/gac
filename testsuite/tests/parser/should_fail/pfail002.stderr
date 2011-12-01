@@ -2,5 +2,5 @@ pfail002.alan:7:1: Error: Parse error at end of file
 	You forgot to close the comments
 
 pfail002.alan:7:1: Error: Parse error at end of file
-	not a valid statement
+	Not a valid statement
 

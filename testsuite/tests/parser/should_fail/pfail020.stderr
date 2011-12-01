@@ -1,0 +1,3 @@
+pfail020.alan:4:7: Error: Parse error on input `*'
+	Probably missing `=' or `('
+

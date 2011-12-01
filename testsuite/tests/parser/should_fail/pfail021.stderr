@@ -1,0 +1,3 @@
+pfail021.alan:5:3: Error: Parse error on input `foo'
+	Probably missing `;'
+

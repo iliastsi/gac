@@ -1,0 +1,7 @@
+hello() : proc
+  foo : int;
+{
+  if( *foo)
+      foo =4;
+  foo = 3;
+}
