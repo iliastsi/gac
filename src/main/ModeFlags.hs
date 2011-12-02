@@ -8,7 +8,7 @@
 
 module ModeFlags (
     -- * Mode flags and associated configuration types
-    Mode(..),
+    Mode,
     PreStartupMode(..), PostStartupMode,
     PreLoadMode(..), PostLoadMode(..),
 
@@ -207,17 +207,17 @@ showGacUsage :: IO ()
 showGacUsage = do
   putStrLn $ "Usage:"
   putStrLn $ ""
-  putStrLn $ "    "++PROG_NAME++" [command-line-options-and-input-files]"
+  putStrLn $ "    "++progName++" [command-line-options-and-input-files]"
   putStrLn $ ""
   putStrLn $ "To compile and link a complete Alan program, run the compiler like"
   putStrLn $ "so:"
   putStrLn $ ""
-  putStrLn $ "    "++PROG_NAME++" Main.alan"
+  putStrLn $ "    "++progName++" Main.alan"
   putStrLn $ ""
   putStrLn $ "where the file Main.alan is located in the current directory."
   putStrLn $ "The linked program will be placed in the file `a.out'."
   putStrLn $ ""
-  putStrLn $ "Alternatively, "++PROG_NAME++" can be used to compile files individually.  Each"
+  putStrLn $ "Alternatively, "++progName++" can be used to compile files individually.  Each"
   putStrLn $ "input file is guided through (some of the) possible phases of a"
   putStrLn $ "compilation:"
   putStrLn $ ""
@@ -245,12 +245,12 @@ showGacUsage = do
   putStrLn $ ""
   putStrLn $ "    -O          An `optimising' package of compiler flags, for faster code"
   putStrLn $ ""
-  putStrLn $ "Given the above, here are some TYPICAL invocations of "++PROG_NAME++":"
+  putStrLn $ "Given the above, here are some TYPICAL invocations of "++progName++":"
   putStrLn $ ""
   putStrLn $ "    # compile an Alan module to a .o file, optimising:"
-  putStrLn $ "    % "++PROG_NAME++" -c -O Foo.alan"
+  putStrLn $ "    % "++progName++" -c -O Foo.alan"
   putStrLn $ "    # link three .o files into an executable called \"test\":"
-  putStrLn $ "    % "++PROG_NAME++" -o test Foo.o Bar.o Baz.o"
+  putStrLn $ "    % "++progName++" -o test Foo.o Bar.o Baz.o"
   putStrLn $ ""
   putStrLn $ "The man page has more information about GAC's *many* options."
   putStrLn $ ""

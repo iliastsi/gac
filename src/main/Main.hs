@@ -10,21 +10,20 @@ module Main(main) where
 
 #include "versions.h"
 
-import Lexer (ParseResult(..), mkPState, unP, PState, getPMessages)
+import Lexer (ParseResult(..), mkPState, unP, getPMessages)
 import Parser (parser)
 import SrcLoc
 import Outputable
-import TcMonad (TcResult(..), mkTcState, unTcM, TcState, getTcMessages)
+import TcMonad (TcResult(..), mkTcState, unTcM, getTcMessages)
 import SymbolTable (predefinedTable)
 import TypeCheck (typeCheckDef)
 import ErrUtils
 import UnTypedAst (UAst)
-import TypedAst (ADef)
 import DynFlags
 import ModeFlags
 import SysTools
 
-import System.Exit (exitSuccess, exitFailure)
+import System.Exit (exitSuccess)
 import System
 import System.FilePath
 import Data.List
@@ -102,7 +101,7 @@ main' prog_name postLoadMode dflags0 args = do
 main'' :: PostLoadMode -> DynFlags -> [String] -> [String] -> IO ()
 main'' postLoadMode dflags0 srcs objs = do
     src_objs <- mapM (driverParse postLoadMode dflags0) srcs
-    let objs' = (reverse . catMaybes) src_objs ++ objs
+    let _objs' = (reverse . catMaybes) src_objs ++ objs
     exitSuccess
 
 
@@ -140,13 +139,13 @@ driverParse postLoadMode dflags filename = do
 -- type check an UAst and return
 -- the produced object file (if any)
 driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
-driverTypeCheck postLoadMode dflags p_messages luast = do
+driverTypeCheck _postLoadMode dflags p_messages luast = do
     let tc_state = mkTcState dflags predefinedTable
     case unTcM (typeCheckDef luast) tc_state of
          TcFailed msg         -> do
              printMessages dflags msg
              exitFailure
-         TcOk tc_state' ltast -> do
+         TcOk tc_state' _ltast -> do
              let tc_messages  = (getTcMessages tc_state')
                  tc_messages' = unionMessages p_messages tc_messages
              if errorsFound tc_messages' ||

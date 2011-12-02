@@ -9,6 +9,8 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module DynFlags (
     -- * Dynamic flags and associated configuration types
     DynFlag(..),
@@ -56,7 +58,6 @@ import SrcLoc
 import {-# SOURCE #-} ErrUtils
 
 import Data.IORef
-import Data.Char
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -248,7 +249,7 @@ defaultDynFlags =
         extensions          = [],
         extensionFlags      = flattenExtensionFlags [],
 
-        log_action = \severity srcSpan msg ->
+        log_action = \severity _srcSpan msg ->
                         case severity of
                              SevOutput -> printOutput [msg]
                              SevInfo  -> printErrs [msg]
@@ -654,7 +655,6 @@ forceRecompile :: DynP ()
 -- Whenever we -ddump, force recompilation (by switching off the
 -- recompilation checker), else you don't see the dump!
 forceRecompile = do
-    dfs <- liftEwM getCmdLineState
     setDynFlag Opt_ForceRecomp
 
 setVerbosity :: Maybe Int -> DynP ()

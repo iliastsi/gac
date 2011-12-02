@@ -6,6 +6,7 @@
 -- 
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module TcMonad (
     -- Type check monad
     TcResult(..), TcState, TcM(..),
@@ -63,15 +64,15 @@ thenTcM :: TcM a -> (a -> TcM b) -> TcM b
          TcFailed msgs -> TcFailed msgs
 
 failTcM :: String -> TcM a
-failTcM msg = TcM $ \s@(TcState{messages=ms}) ->
+failTcM msg = TcM $ \(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg noSrcSpan UnknownError msg) ms)
 
 failSpanMsgTcM :: SrcSpan -> String -> TcM a
-failSpanMsgTcM loc msg = TcM $ \s@(TcState{messages=ms}) ->
+failSpanMsgTcM loc msg = TcM $ \(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg loc UnknownError msg) ms)
 
 failExprMsgTcM :: SrcSpan -> String -> String -> TcM a
-failExprMsgTcM loc expr msg = TcM $ \s@(TcState{messages=ms}) ->
+failExprMsgTcM loc expr msg = TcM $ \(TcState{messages=ms}) ->
     TcFailed (addError (mkErrMsg loc (TypeError expr) msg) ms)
 
 getTcState :: TcM TcState
@@ -187,7 +188,7 @@ getVarM lide@(L _ ide) = do
          Nothing -> do
              addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
              -- add the variable
-             addVarM lide (AType TTypeUnknown)
+             _ <- addVarM lide (AType TTypeUnknown)
              return Nothing
 
 getVarNameM :: Maybe VarInfo -> TcM Ide

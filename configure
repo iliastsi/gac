@@ -615,6 +615,7 @@ LFLAGS
 AlexVersion
 AlexCmd
 YFLAGS
+HFLAGS
 HappyVersion
 HappyCmd
 GhcPkgCmd
@@ -762,6 +763,7 @@ LDFLAGS
 LIBS
 CPPFLAGS
 CPP
+HFLAGS
 YFLAGS
 LFLAGS'
 
@@ -1406,6 +1408,7 @@ Some influential environment variables:
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   CPP         C preprocessor
+  HFLAGS      GHC compiler flags
   YFLAGS      Happy metacompiler flags
   LFLAGS      Alex metacompiler flags
 
@@ -5266,6 +5269,15 @@ if test "$fp_num1" -lt "$fp_num2"; then :
 fi
 HappyVersion=$fptools_cv_happy_version;
 
+
+
+
+if test x"$ac_cv_env_HFLAGS_set" != x
+then
+        HFLAGS=$ac_cv_env_HFLAGS_value
+else
+        HFLAGS="-Wall -O2"
+fi
 
 
 

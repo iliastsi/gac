@@ -5,6 +5,7 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module ErrUtils (
     Message, mkLocMessage,
     msgSpan, msgContext, msgSeverity, msgExtraInfo,
@@ -86,10 +87,10 @@ emptyMessages :: Messages
 emptyMessages = (emptyBag, emptyBag)
 
 errorsFound :: Messages -> Bool
-errorsFound (warns, errs) = not (isEmptyBag errs)
+errorsFound (_warns, errs) = not (isEmptyBag errs)
 
 warnsFound :: Messages -> Bool
-warnsFound (warns, errs) = not (isEmptyBag warns)
+warnsFound (warns, _errs) = not (isEmptyBag warns)
 
 unionMessages :: Messages -> Messages -> Messages
 unionMessages (w1, e1) (w2, e2) =

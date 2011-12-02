@@ -16,6 +16,7 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module SysTools (
     -- initialisation
     initSysTools,
@@ -157,7 +158,7 @@ copy dflags purpose from to =
 
 copyWithHeader :: DynFlags -> String -> Maybe String -> FilePath -> FilePath
                -> IO ()
-copyWithHeader dflags purpose maybe_header from to = do
+copyWithHeader _dflags _purpose maybe_header from to = do
     hout <- openBinaryFile to   WriteMode
     hin  <- openBinaryFile from ReadMode
     ls <- hGetContents hin  -- inefficient, but it'll do for no. ToDo: speed up
@@ -252,11 +253,11 @@ removeTmpFiles dflags fs =
             ("Deleting: " ++ unwords deletees)
             (mapM_ (removeWith dflags removeFile) deletees)
     where
-        (non_deletees, deletees) = partition isAlanUserSrcFilename fs
+        (_non_deletees, deletees) = partition isAlanUserSrcFilename fs
         isAlanUserSrcFilename str = (drop 1 $ takeExtension str) == "alan"
 
 removeWith :: DynFlags -> (FilePath -> IO ()) -> FilePath -> IO ()
-removeWith dflags remover f = remover f
+removeWith _dflags remover f = remover f
 
 
 -- -------------------------------------------------------------------
@@ -419,10 +420,8 @@ data BuildMessage
 traceCmd :: DynFlags -> String -> String -> IO () -> IO ()
 -- a) trace the command (at two levels of verbosity)
 -- b) don't do it at all if dry-run is set
-traceCmd dflags phase_name cmd_line action = do
-    let verb = verbosity dflags
+traceCmd dflags _phase_name _cmd_line action = do
     hFlush stderr
-
     -- Test for -n flag
     unless (dopt Opt_DryRun dflags) action
 

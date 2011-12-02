@@ -6,6 +6,7 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module SymbolTable (
     -- * Table
     Table,          -- Abstract
@@ -131,7 +132,7 @@ nested t@Table{parent=pt} f =
 
 -- local function
 getName :: Table -> Ide
-getName t@Table{name=n} = n
+getName Table{name=n} = n
 
 getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d

@@ -113,12 +113,12 @@ srcLocFile _other             = "<unknown file"
 -- | Raises an error when used on a "bad" 'SrcLoc'
 srcLocLine :: SrcLoc -> Int
 srcLocLine (SrcLoc _ l _) = l
-srcLocLine (UnhelpfulLoc s) = panic "SrcLoc.srcLocLine can't handle `UnhelpfulLoc'"
+srcLocLine (UnhelpfulLoc _) = panic "SrcLoc.srcLocLine can't handle `UnhelpfulLoc'"
 
 -- | Raises an error when used on a "bad" 'SrcLoc'
 srcLocCol :: SrcLoc -> Int
 srcLocCol (SrcLoc _ _ c) = c
-srcLocCol (UnhelpfulLoc s) = panic "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'"
+srcLocCol (UnhelpfulLoc _) = panic "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'"
 
 -- | Move the 'SrcLoc' down by one line if the character is a newline,
 -- to the next 8-char tabstop if it is a tab, and across by one

@@ -357,6 +357,16 @@ FP_PROG_GHC_PKG
 dnl ** check for installed happy binary + version
 FPTOOLS_HAPPY
 
+dnl ** set ghc flags
+AC_ARG_VAR([HFLAGS], [GHC compiler flags])
+if test x"$ac_cv_env_HFLAGS_set" != x
+then
+        HFLAGS=$ac_cv_env_HFLAGS_value
+else
+        HFLAGS="-Wall -O2"
+fi
+AC_SUBST([HFLAGS])
+
 dnl ** set happy flags
 AC_ARG_VAR([YFLAGS], [Happy metacompiler flags])
 if test x"$ac_cv_env_YFLAGS_set" != x

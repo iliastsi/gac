@@ -5,6 +5,7 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Bag (
     Bag, -- abstract type
 

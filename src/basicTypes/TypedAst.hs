@@ -12,10 +12,9 @@
 --------------------------------------------------------------------------------
 
 {-# LANGUAGE GADTs, ExistentialQuantification, PatternGuards #-}
-
 module TypedAst where
 
-import UnTypedAst (UType(..), LIde, Ide, LOp, Mode)
+import UnTypedAst (LIde, Ide, LOp, Mode)
 import SrcLoc
 import Outputable (panic)
 
@@ -133,6 +132,7 @@ instance Show AType where
     show (AType TTypeProc)    = "proc"
     show (AType (TTypePtr t)) = "array of " ++ show (AType t)
     show (AType TTypeUnknown) = "unknown"
+    show (AType TTypeFunc {}) = panic "TypedAst.show cannot handle (AType TTypeFunc)"
 
 -- ---------------------------
 type LTFuncCall a = Located (TFuncCall a)

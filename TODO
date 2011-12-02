@@ -7,8 +7,6 @@
 
 ** Fix Parser:
     - Express "this should be between spaces"
-    - Write better error messages
-    - Enable parsing to continue on errors
     - Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Fix in configure.ac
@@ -26,9 +24,6 @@
     Releases
 ~~~~~~~~~~~~~~~~~~~
 0.6 : Add tests
-      Fix parser
-            (to parse forward declerated functions)
-            (try to continue parsing after error)
       Fix error messages
             (better messages, check for flags)
 

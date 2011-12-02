@@ -7,8 +7,8 @@
 --
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE PatternGuards #-}
-
 module CmdLineParser (
     processArgs, OptKind(..),
     CmdLineP(..), getCmdLineState, putCmdLineState,

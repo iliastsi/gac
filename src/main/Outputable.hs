@@ -78,6 +78,7 @@ printDumpedAst uast = do
 -- -------------------------------------------------------------------
 -- The name of the program
 
+{-# INLINE progName #-}
 progName :: String
 progName = PROG_NAME
 

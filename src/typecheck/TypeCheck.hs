@@ -26,22 +26,19 @@
 --      typeCheckExpr :: UExpr -> TcM (AExpr)
 --------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE GADTs, PatternGuards #-}
-
 module TypeCheck (typeCheckDef) where
 
 import UnTypedAst
 import TypedAst
 import TcMonad
 import SrcLoc
-import SymbolTable
 import MonadUtils
 import Outputable (panic)
 import DynFlags
 
 import Data.Int
-import Data.Word
-import Foreign.Ptr
 import Control.Monad
 
 
@@ -98,6 +95,7 @@ tcVarDef (L loc (UDefArr ludef lsize)) = do
         lsize' = L (getLoc lsize) size'
     tcCheckIntOverflow lsize size'
     return (lide, L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
+tcVarDef _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check for integer overflows
 tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
@@ -166,12 +164,12 @@ tcArrayParamErr (L loc uparam) =
 
 typeCheckStmt :: AType -> Located UStmt -> TcM (Bool, Located TStmt)
 -- UStmtNothing
-typeCheckStmt ret_type (L loc UStmtNothing) = do
+typeCheckStmt _ (L loc UStmtNothing) = do
     return (False, L loc TStmtNothing)
 -- UStmtAssign
-typeCheckStmt ret_type lustmt@(L loc (UStmtAssign luvar luexpr)) = do
-    lavar@(L locv (AVariable tvar var_type)) <- typeCheckVariable luvar
-    laexpr@(L loce (AExpr texpr expr_type))  <- typeCheckExpr luexpr
+typeCheckStmt _ lustmt@(L loc (UStmtAssign luvar luexpr)) = do
+    lavar@(L _ (AVariable _ var_type)) <- typeCheckVariable luvar
+    laexpr@(L _ (AExpr _ expr_type))  <- typeCheckExpr luexpr
     if (AType var_type) == (AType TTypeUnknown) || (AType expr_type) == (AType TTypeUnknown)
        then return (False, L loc TStmtNothing)
        else do
@@ -186,7 +184,7 @@ typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
     (does_ret, ltstmts) <- tcCompoundStmt loc ret_type lustmts
     return (does_ret, L loc $ TStmtCompound ltstmts)
 -- UStmtFun
-typeCheckStmt ret_type (L loc (UStmtFun f)) = do
+typeCheckStmt _ (L loc (UStmtFun f)) = do
     (L _ afunc) <- typeCheckFunc (L loc f)
     return (False, L loc $ TStmtFun afunc)
 -- UStmtIf
@@ -202,7 +200,7 @@ typeCheckStmt ret_type (L loc (UStmtIf lucond lustmt1 m_lustmt2)) = do
 -- UStmtWhile
 typeCheckStmt ret_type (L loc (UStmtWhile lucond lustmt)) = do
     ltcond <- typeCheckCond lucond
-    (does_ret, ltstmt) <- typeCheckStmt ret_type lustmt
+    (_, ltstmt) <- typeCheckStmt ret_type lustmt
     return (False, L loc $ TStmtWhile ltcond ltstmt)
 -- UStmtReturn
 typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
@@ -213,7 +211,7 @@ typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
                 else return ()
              return (True, L loc $ TStmtReturn Nothing)
          Just luexpr -> do
-             laexpr@(L loce (AExpr texpr expr_type)) <- typeCheckExpr luexpr
+             laexpr@(L _ (AExpr _ expr_type)) <- typeCheckExpr luexpr
              if ret_type /= (AType expr_type)
                 then tcRetStmtErr lustmt ret_type (AType expr_type)
                 else return ()
@@ -250,6 +248,7 @@ tcAssignErr (L loc ustmt@(UStmtAssign _ _)) vtype etype =
     addTypeError loc (show ustmt)
         ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
          show etype ++ "'")
+tcAssignErr _ _ _ = panic "TypeCheck.tcAssignErr got unexpected input"
 
 -- Error when we have unreachable code on a block
 tcUnreachableErr :: SrcSpan -> TcM ()
@@ -265,6 +264,7 @@ tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
         ("Incopatible return type of function `" ++ fun_name ++
          "'\n\tExpected `" ++ show exptype ++
          "' but instead function returned `" ++ show acttype ++ "'")
+tcRetStmtErr _ _ _ = panic "TypeCheck.tcRetStmtErr got unexpected input"
 
 
 -- -------------------------------------------------------------------
@@ -319,6 +319,7 @@ tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
         ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
          show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
          "' is of type `" ++ show stype ++ "'")
+tcOpExprErr _ _ _ = panic "TypeCheck.tcOpExprErr got unexpected input"
 
 
 -- -------------------------------------------------------------------
@@ -336,8 +337,8 @@ typeCheckCond (L loc (UCondNot lucond)) = do
     ltcond <- typeCheckCond lucond
     return (L loc (TCondNot ltcond))
 typeCheckCond lucond@(L loc (UCondOp lue1 lop lue2)) = do
-    lae1@(L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
-    lae2@(L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
+    lae1@(L _ (AExpr _ tt1)) <- typeCheckExpr lue1
+    lae2@(L _ (AExpr _ tt2)) <- typeCheckExpr lue2
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
        then return (L loc TCondFalse)
        else do
@@ -361,6 +362,7 @@ tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
         ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
          show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
          "' is of type `" ++ show stype ++ "'")
+tcOpCondErr _ _ _ = panic "TypeCheck.tcOpCondErr got unexpected input"
 
 
 -- -------------------------------------------------------------------
@@ -372,7 +374,7 @@ typeCheckVariable (L loc (UVar ide)) = do
     m_var_info <- getVarM (L loc ide)
     ide' <- getVarNameM m_var_info
     (AType var_type) <- getVarTypeM m_var_info
-    return (L loc $ AVariable (TVar ide var_type) var_type)
+    return (L loc $ AVariable (TVar ide' var_type) var_type)
 -- UVarArray
 typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
     (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr luexpr
@@ -420,14 +422,16 @@ tcIntExprErr :: Located UVariable -> TcM ()
 tcIntExprErr (L loc (uvar@(UVarArray _ lexpr))) =
     addTypeError loc (show uvar)
         ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
+tcIntExprErr _ = panic "TypeCheck.tcIntExprErr got unexpected input"
 
 -- Error when variable is not of type `array'
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
-tcArrayVarErr (L loc uarr@(UVarArray luvar lexpr)) var_type =
+tcArrayVarErr (L loc uarr@(UVarArray luvar _)) var_type =
     addTypeError loc (show uarr)
         ("Incompatible type of expression `" ++ show (unLoc luvar) ++
          "'\n\tExpected `array' but expression is of type `" ++
          show var_type ++ "'")
+tcArrayVarErr _ _ = panic "TypeCheck.tcArrayVarErr got unexpected input"
 
 
 -- -------------------------------------------------------------------
@@ -453,7 +457,7 @@ typeCheckType (L loc (UTypePtr utype)) = do
 -- TypeCheck UFuncCall
 
 typeCheckFunc :: Located UFuncCall -> TcM (Located AFuncCall)
-typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
+typeCheckFunc lufunc@(L loc (UFuncCall lide _)) = do
     m_fun_info <- getFuncM lide
     lide' <- liftM (L (getLoc lide)) (getFuncNameM m_fun_info)
     AType ret_type <- getFuncRetTypeM m_fun_info
@@ -468,7 +472,7 @@ typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
 -- ---------------------------
 -- Type Check function parameters
 tcFunPar :: Located UFuncCall -> [AType] -> TcM [LAExpr]
-tcFunPar lufunc@(L loc (UFuncCall lide lupars)) expr_atype = do
+tcFunPar lufunc@(L _ (UFuncCall lide lupars)) expr_atype = do
     let pars_len = length lupars
         type_len = length expr_atype
     if pars_len /= type_len
@@ -480,19 +484,19 @@ tcFunPar lufunc@(L loc (UFuncCall lide lupars)) expr_atype = do
            return $ reverse lapars
 
 tcFunPar' :: Ide -> [Located UExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
-tcFunPar' ide [] [] acc = return acc
+tcFunPar' _ [] [] acc = return acc
 tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
-    (L aeloc aexpr@(AExpr texpr ttype)) <- typeCheckExpr pexpr
+    (L aeloc aexpr@(AExpr _ ttype)) <- typeCheckExpr pexpr
     if (AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)
        then return ()
        else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
-tcFunPar' ide _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
+tcFunPar' _ _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
 
 -- ---------------------------
 -- Error when the function parameter's number is different from the prototype
 tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
-tcParLenErr (L loc ufunc@(UFuncCall lide lupars)) pars_len type_len =
+tcParLenErr (L loc ufunc@(UFuncCall lide _)) pars_len type_len =
     addTypeError loc (show ufunc)
         ("The function `" ++ (unLoc lide) ++ "' is applied to " ++
          show pars_len ++ " parameters but its type has " ++ show type_len)
