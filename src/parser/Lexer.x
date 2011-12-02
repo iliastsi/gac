@@ -26,7 +26,7 @@
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
 module Lexer (
-    ParseResult(..), PState(..), P(..), mkPState, Token(..),
+    ParseResult(..), PState, P(..), mkPState, Token(..),
     failMsgP, failLocMsgP, failSpanMsgP, failSpanTokP, srcParseFail,
     lexer, lexDummy, getPState,
     getInput, setInput, AlexInput(..),

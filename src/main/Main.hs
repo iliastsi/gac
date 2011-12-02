@@ -10,7 +10,7 @@ module Main(main) where
 
 #include "versions.h"
 
-import Lexer (ParseResult(..), mkPState, unP, getPMessages)
+import Lexer
 import Parser
 import SrcLoc
 import Outputable
