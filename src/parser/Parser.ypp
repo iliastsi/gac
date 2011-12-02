@@ -138,9 +138,9 @@ funcdef :: { Located UDef }
 
 fpar :: { [Located UParam] }
     : '(' ')'                       { [] }
-    | '(' error                     {% srcParseFail "Probably unclosed `)'" }
+    | '(' error                     {% missing ')' }
     | '(' fparlist ')'              { reverse $2 }
-    | '(' fparlist error            {% srcParseFail "Probably unclosed `)'" }
+    | '(' fparlist error            {% missing ')' }
 
 fparlist :: { [Located UParam] }
     : fpardef                       { [$1] }
@@ -149,13 +149,13 @@ fparlist :: { [Located UParam] }
 fpardef :: { Located UParam }
     : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByVal $3 }
     | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByRef $4 }
-    | ID error                      {% srcParseFail "Probably missing `:' for type definition" }
+    | ID error                      {% missing ':' }
     | error                         {% srcParseFail "Expected parameter definition" }
 
 type :: { Located UType }
     : datatype                      { $1 }
     | datatype '[' ']'              { LL $ UTypePtr (unLoc $1) }
-    | datatype '[' error            {% srcParseFail "Probably missing `]'" }
+    | datatype '[' error            {% missing ']' }
     | error                         {% srcParseFail ("Unknown type" ++
                                            "\n\tYou have to use either int or byte") }
 
@@ -183,10 +183,10 @@ localdef :: { Located UDef }
 vardef :: { Located UDef }
     : vardef2 ';'                   { $1 }
     | vardef2 '[' DIGIT ']' ';'     { LL $ let (L digit_span (ITdigit d)) = $3 in UDefArr $1 (sL digit_span d) }
-    | vardef2 '[' DIGIT ']' error   {% srcParseFail "Probably missing `;'" }
-    | vardef2 '[' DIGIT error       {% srcParseFail "Probably missing `]'" }
+    | vardef2 '[' DIGIT ']' error   {% missing ';' }
+    | vardef2 '[' DIGIT error       {% missing ']' }
     | vardef2 '[' error             {% srcParseFail "Array size must be a positive integer" }
-    | vardef2 error                 {% srcParseFail "Probably missing `;'" }
+    | vardef2 error                 {% missing ';' }
 
 vardef2 :: { Located UDef }
     : ID ':' datatype               { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
@@ -194,26 +194,26 @@ vardef2 :: { Located UDef }
 stmt :: { Located UStmt }
     : ';'                           { L1 $ UStmtNothing }
     | lvalue '=' expr ';'           { LL $ UStmtAssign $1 $3 }
-    | lvalue '=' expr error         {% srcParseFail "Probably missing `;'" }
-    | lvalue '=' error              {% srcParseFail "Not a valid expression" }
-    | ID error                      {% srcParseFail "Probably missing `=' or `('" }
+    | lvalue '=' expr error         {% missing ';' }
+    | lvalue '=' error              {% notValidExpr }
+    | ID error                      {% missing '=' }
     | compoundstmt                  { $1 }
     | funcall ';'                   { LL $ UStmtFun (unLoc $1) }
-    | funcall error                 {% srcParseFail "Probably missing `;'" }
+    | funcall error                 {% missing ';' }
     | IF '(' cond ')' stmt          { LL $ UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt
                                     { LL $ UStmtIf $3 $5 (Just $7) }
-    | IF '(' cond error             {% srcParseFail "Probably missing `)'" }
-    | IF '(' error                  {% srcParseFail "Not a valid condition" }
-    | IF error                      {% srcParseFail "Probably missing `('" }
+    | IF '(' cond error             {% missing ')' }
+    | IF '(' error                  {% notValidCond }
+    | IF error                      {% missing '(' }
     | WHILE '(' cond ')' stmt       { LL $ UStmtWhile $3 $5 }
-    | WHILE '(' cond error          {% srcParseFail "Probably missing `)'" }
-    | WHILE '(' error               {% srcParseFail "Not a valid condition" }
-    | WHILE error                   {% srcParseFail "Probably missing `('" }
+    | WHILE '(' cond error          {% missing ')' }
+    | WHILE '(' error               {% notValidCond }
+    | WHILE error                   {% missing '(' }
     | RETURN ';'                    { LL $ UStmtReturn Nothing }
-    | RETURN error                  {% srcParseFail "Probably missing `;'" }
+    | RETURN error                  {% missing ';' }
     | RETURN expr ';'               { LL $ UStmtReturn (Just $2) }
-    | RETURN expr error             {% srcParseFail "Probably missing `;'" }
+    | RETURN expr error             {% missing ';' }
     | error                         {% srcParseFail "Not a valid statement" }
 
 compoundstmt :: { Located UStmt }
@@ -225,14 +225,14 @@ stmts :: { [Located UStmt] }
 
 funcall :: { Located UFuncCall }
     : ID '(' ')'                    { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) [] }
-    | ID '(' error                  {% srcParseFail "Probably missing `)'" }
+    | ID '(' error                  {% missing ')' }
     | ID '(' exprlist ')'           { LL $ let (L span (ITid i)) = $1 in UFuncCall (sL span i) (reverse $3) }
-    | ID '(' exprlist error         {% srcParseFail "Probably missing `)'" }
+    | ID '(' exprlist error         {% missing ')' }
 
 exprlist :: { [Located UExpr] }
     : expr                          { [$1] }
     | exprlist ',' expr             { $3 : $1 }
-    | exprlist ',' error            {% srcParseFail "Not a valid expression" }
+    | exprlist ',' error            {% notValidExpr }
 
 expr :: { Located UExpr }
     : DIGIT                         { L1 $ let (ITdigit i) = (unLoc $1) in UExprInt i }
@@ -240,67 +240,67 @@ expr :: { Located UExpr }
     | STRING                        { L1 $ let (ITstring i) = (unLoc $1) in UExprString i }
     | lvalue                        { L1 $ let v = unLoc $1 in UExprVar v }
     | '(' expr ')'                  { LL $ let e = unLoc $2 in e}
-    | '(' expr error                {% srcParseFail "Probably missing `)'" }
-    | '(' error                     {% srcParseFail "Not a valid expression" }
+    | '(' expr error                {% missing ')' }
+    | '(' error                     {% notValidExpr }
     | funcall                       { L1 $ let f = unLoc $1 in UExprFun f }
     | '+' expr %prec SIGN           { LL $ let e = unLoc $2 in e}
-    | '+' error %prec SIGN          {% srcParseFail "Not a valid expression" }
+    | '+' error %prec SIGN          {% notValidExpr }
     | '-' expr %prec SIGN           { LL $ UExprMinus $2 }
-    | '-' error %prec SIGN          {% srcParseFail "Not a valid expression" }
+    | '-' error %prec SIGN          {% notValidExpr }
     | expr '+' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpPlus) $3 }
-    | expr '+' error                {% srcParseFail "Not a valid expression" }
+    | expr '+' error                {% notValidExpr }
     | expr '-' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMinus) $3 }
-    | expr '-' error                {% srcParseFail "Not a valid expression" }
+    | expr '-' error                {% notValidExpr }
     | expr '*' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpTimes) $3 }
-    | expr '*' error                {% srcParseFail "Not a valid expression" }
+    | expr '*' error                {% notValidExpr }
     | expr '/' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpDiv) $3 }
-    | expr '/' error                {% srcParseFail "Not a valid expression" }
+    | expr '/' error                {% notValidExpr }
     | expr '%' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpMod) $3 }
-    | expr '%' error                {% srcParseFail "Not a valid expression" }
+    | expr '%' error                {% notValidExpr }
 
 lvalue :: { Located UVariable }
     : ID                            { L1 $ let (ITid i) = unLoc $1 in UVar i }
     | ID '[' expr ']'               { LL $ let (L span (ITid i)) = $1 in UVarArray (sL span (UVar i)) $3 }
-    | ID '[' expr error             {% srcParseFail "Probably missing `]'" }
-    | ID '[' error                  {% srcParseFail "Not a valid expression" }
+    | ID '[' expr error             {% missing ']' }
+    | ID '[' error                  {% notValidExpr }
 
 cond :: { Located UCond }
     : TRUE                          { L1 $ UCondTrue }
     | FALSE                         { L1 $ UCondFalse }
     | '(' cond ')'                  { LL $ let c = unLoc $2 in c }
-    | '(' cond error                {% srcParseFail "Probably missing `)'" }
+    | '(' cond error                {% missing ')' }
     | '!' cond                      { LL $ UCondNot $2 }
-    | '!' error                     {% srcParseFail "Not a valid condition" }
+    | '!' error                     {% notValidCond }
     | expr '==' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpEqual) $3 }
-    | expr '==' error               {% srcParseFail "Not a valid expression" }
+    | expr '==' error               {% notValidExpr }
     | expr '!=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpNotEqual) $3 }
-    | expr '!=' error               {% srcParseFail "Not a valid expression" }
+    | expr '!=' error               {% notValidExpr }
     | expr '<'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLT) $3 }
-    | expr '<'  error               {% srcParseFail "Not a valid expression" }
+    | expr '<'  error               {% notValidExpr }
     | expr '>'  expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGT) $3 }
-    | expr '>'  error               {% srcParseFail "Not a valid expression" }
+    | expr '>'  error               {% notValidExpr }
     | expr '<=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpLE) $3 }
-    | expr '<=' error               {% srcParseFail "Not a valid expression" }
+    | expr '<=' error               {% notValidExpr }
     | expr '>=' expr                { LL $ UCondOp $1 (sL (getLoc $2) OpGE) $3 }
-    | expr '>=' error               {% srcParseFail "Not a valid expression" }
-    | expr cond_symbols             {% srcParseFail "Cannot use conditional symbols in expressions" }
+    | expr '>=' error               {% notValidExpr }
+    | expr cond_symbols             {% condSymbol $2 }
     | cond '&'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpAnd) $3 }
-    | cond '&'  error               {% srcParseFail "Not a valid condition" }
+    | cond '&'  error               {% notValidCond }
     | cond '|'  cond                { LL $ UCondLog $1 (sL (getLoc $2) OpOr) $3 }
-    | cond '|'  error               {% srcParseFail "Not a valid condition" }
-    | cond expr_symbols             {% srcParseFail "Cannot use comparison symbols in conditions" }
+    | cond '|'  error               {% notValidCond }
+    | cond expr_symbols             {% compSymbol $2 }
 
-expr_symbols
-    : '=='                          {}
-    | '!='                          {}
-    | '<'                           {}
-    | '>'                           {}
-    | '<='                          {}
-    | '>='                          {}
+expr_symbols :: { Located String }
+    : '=='                          { L1 $ "==" }
+    | '!='                          { L1 $ "!=" }
+    | '<'                           { L1 $ "<"  }
+    | '>'                           { L1 $ ">"  }
+    | '<='                          { L1 $ "<=" }
+    | '>='                          { L1 $ ">=" }
 
-cond_symbols
-    : '&'                           {}
-    | '|'                           {}
+cond_symbols :: { Located String }
+    : '&'                           { L1 $ "$" }
+    | '|'                           { L1 $ "|" }
 
 
 {
@@ -326,4 +326,24 @@ comb4 a b c d = a `seq` b `seq` c `seq` d `seq`
 sL :: SrcSpan -> a -> Located a
 sL span a = span `seq` a `seq` L span a
 
+
+-- ---------------------------
+-- Parser error messages
+
+notValidExpr :: P a
+notValidExpr = srcParseFail "Not a valid expression"
+
+notValidCond :: P a
+notValidCond = srcParseFail "Not a valid condition"
+
+missing :: Char -> P a
+missing c = srcParseFail $ "Probably missing `" ++ [c] ++ "'"
+
+compSymbol :: Located String -> P a
+compSymbol (L loc str) =
+  failSpanTokP loc str "Cannot use comparison symbols in conditions"
+
+condSymbol :: Located String -> P a
+condSymbol (L loc str) =
+  failSpanTokP loc str "Cannot use conditional symbols in expressions"
 }

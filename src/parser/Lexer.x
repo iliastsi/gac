@@ -27,7 +27,7 @@
 
 module Lexer (
     ParseResult(..), PState(..), P(..), mkPState, Token(..),
-    failMsgP, failLocMsgP, failSpanMsgP, srcParseFail,
+    failMsgP, failLocMsgP, failSpanMsgP, failSpanTokP, srcParseFail,
     lexer, lexDummy, getPState,
     getInput, setInput, AlexInput(..),
     getSrcLoc, setSrcLoc,
@@ -299,6 +299,10 @@ failLocMsgP loc1 loc2 msg = P $ \s@(PState{messages=ms, last_tok=tok}) ->
 
 failSpanMsgP :: SrcSpan -> String -> P a
 failSpanMsgP span msg = P $ \s@(PState{messages=ms, last_tok=tok}) ->
+    PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
+
+failSpanTokP :: SrcSpan -> String -> String -> P a
+failSpanTokP span tok msg = P $ \s@(PState{messages=ms}) ->
     PFailed (addError (mkErrMsg span (ParseError tok) msg) ms)
 
 getPState :: P PState
