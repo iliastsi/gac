@@ -74,28 +74,26 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
                             (TTypeFunc ptype ftype))
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
-    (lide, ladef@(L _ (ADef _ var_type))) <- tcVarDef ludef
-    addVarM lide (AType var_type)
-    return ladef
+    tcVarDef ludef id
 -- UDefArr
 typeCheckDef ludef@(L _ (UDefArr _ _)) = do
-    (lide, ladef@(L _ (ADef _ var_type))) <- tcVarDef ludef
-    addVarM lide (AType var_type)
-    return ladef
+    tcVarDef ludef id
 
 -- ---------------------------
 -- Type Check variable definitions
-tcVarDef :: Located UDef -> TcM (Located Ide, Located ADef)
-tcVarDef (L loc (UDefVar lide lutype)) = do
+tcVarDef :: Located UDef -> (AType -> AType) -> TcM (Located ADef)
+tcVarDef (L loc (UDefVar lide lutype)) type_fn = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
-    return (lide, L loc $ ADef (TDefVar lide (L type_loc ftype)) ftype)
-tcVarDef (L loc (UDefArr ludef lsize)) = do
-    (lide, L var_loc (ADef var_def var_type)) <- tcVarDef ludef
+    lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
+    return (L loc $ ADef (TDefVar lide' (L type_loc ftype)) ftype)
+tcVarDef (L loc (UDefArr ludef lsize)) type_fn = do
+    let type_fn' = type_fn . (\(AType ttype) -> AType (TTypePtr ttype))
+    (L var_loc (ADef var_def var_type)) <- tcVarDef ludef type_fn'
     let size'  = fromIntegral (unLoc lsize)
         lsize' = L (getLoc lsize) size'
     tcCheckIntOverflow lsize size'
-    return (lide, L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
-tcVarDef _ = panic "TypeCheck.tcVarDef got unexpected input"
+    return (L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
+tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check for integer overflows
 tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
@@ -134,20 +132,20 @@ typeCheckParam lparams = do
 typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam)
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) ([], _) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
-    addVarM lide (AType ftype)
+    lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
     if atypeIsArray (AType ftype) && (mode /= ModeByRef)
        then tcArrayParamErr luparam
        else return ()
-    return ([AType ftype], L loc $ AParam (TParTail lide mode (L type_loc ftype)) ftype)
+    return ([AType ftype], L loc $ AParam (TParTail lide' mode (L type_loc ftype)) ftype)
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     (L par_loc (AParam tparam par_types)) <- return laparam
-    addVarM lide (AType ftype)
+    lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
     if atypeIsArray (AType ftype) && (mode /= ModeByRef)
        then tcArrayParamErr luparam
        else return ()
     let atype_accum   = (AType ftype) : atypes
-        laparam_accum = L loc $ AParam (TParHead lide mode (L type_loc ftype)
+        laparam_accum = L loc $ AParam (TParHead lide' mode (L type_loc ftype)
                                         (L par_loc tparam)) (TTypeFunc ftype par_types)
     return (atype_accum, laparam_accum)
 
