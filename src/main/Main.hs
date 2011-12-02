@@ -11,24 +11,25 @@ module Main(main) where
 #include "versions.h"
 
 import Lexer (ParseResult(..), mkPState, unP, getPMessages)
-import Parser (parser)
+import Parser
 import SrcLoc
 import Outputable
-import TcMonad (TcResult(..), mkTcState, unTcM, getTcMessages)
-import SymbolTable (predefinedTable)
-import TypeCheck (typeCheckDef)
+import TcMonad
+import SymbolTable
+import TypeCheck
 import ErrUtils
-import UnTypedAst (UAst)
+import UnTypedAst
 import DynFlags
 import ModeFlags
 import SysTools
 
-import System.Exit (exitSuccess)
+import System.Exit
 import System
 import System.FilePath
 import Data.List
 import System.IO
 import Data.Maybe
+import Control.Monad (when)
 
 
 -- ---------------------------
@@ -123,9 +124,8 @@ driverParse postLoadMode dflags filename = do
              exitFailure
          POk p_state' luast -> do
              hClose handle
-             if dopt Opt_D_dump_parsed dflags
-                then printDumpedAst (unLoc luast)
-                else return ()
+             when (dopt Opt_D_dump_parsed dflags) $
+                    printDumpedAst (unLoc luast)
              let p_messages = getPMessages p_state'
              if errorsFound p_messages ||
                  (warnsFound p_messages && dopt Opt_WarnIsError dflags)
@@ -141,7 +141,7 @@ driverParse postLoadMode dflags filename = do
 driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
 driverTypeCheck _postLoadMode dflags p_messages luast = do
     let tc_state = mkTcState dflags predefinedTable
-    case unTcM (typeCheckDef luast) tc_state of
+    case unTcM (typeCheckAst luast) tc_state of
          TcFailed msg         -> do
              printMessages dflags msg
              exitFailure

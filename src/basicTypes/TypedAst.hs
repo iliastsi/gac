@@ -24,7 +24,9 @@ import Foreign.Ptr
 import Control.Monad
 
 
-type TAst = TDef
+-- ---------------------------
+--
+type TAst = ADef
 
 -- ---------------------------
 type LTDef a = Located (TDef a)

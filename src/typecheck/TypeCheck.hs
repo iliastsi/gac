@@ -28,7 +28,7 @@
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE GADTs, PatternGuards #-}
-module TypeCheck (typeCheckDef) where
+module TypeCheck (typeCheckAst) where
 
 import UnTypedAst
 import TypedAst
@@ -42,6 +42,11 @@ import Data.Int
 import Control.Monad
 
 
+-- ---------------------------
+--
+typeCheckAst :: Located UAst -> TcM (Located TAst)
+typeCheckAst = typeCheckDef
+
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
 typeCheckDef :: Located UDef -> TcM (Located ADef)
@@ -52,9 +57,8 @@ typeCheckDef (L loc (UDefFun lide [] lutype ludefs lustmt)) = do
     rawOpenScopeM (unLoc lide)
     ladefs <- mapM typeCheckDef ludefs
     (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
-    if (not does_ret) && ((AType ftype) /= (AType TTypeProc))
-       then tcNoRetErr (unLoc lide) (getLoc ltstmt)
-       else return ()
+    when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
+            tcNoRetErr (unLoc lide) (getLoc ltstmt)
     rawCloseScopeM
     return (L loc $ ADef (TDefFunE fname (L type_loc ftype) ladefs ltstmt) ftype)
 -- UDefFun
@@ -66,9 +70,8 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
     updateFuncM par_types
     ladefs <- mapM typeCheckDef ludefs
     (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
-    if (not does_ret) && ((AType ftype) /= (AType TTypeProc))
-       then tcNoRetErr (unLoc lide) (getLoc ltstmt)
-       else return ()
+    when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
+            tcNoRetErr (unLoc lide) (getLoc ltstmt)
     rawCloseScopeM
     return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
                             (TTypeFunc ptype ftype))
@@ -101,12 +104,9 @@ tcCheckIntOverflow (L loc origin) rounded = do
     flags <- getDynFlags
     let max_bound = toInteger (maxBound :: Int32)
         min_bound = toInteger (minBound :: Int32)
-    if (origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags
-       then do
-           addOverflowWarn loc (show origin)
+    when ((origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
+            addOverflowWarn loc (show origin)
                 ("Integer has been rounded to `" ++ show rounded ++ "'")
-       else do
-           return ()
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -133,17 +133,15 @@ typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) ([], _) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
-    if atypeIsArray (AType ftype) && (mode /= ModeByRef)
-       then tcArrayParamErr luparam
-       else return ()
+    when (atypeIsArray (AType ftype) && (mode /= ModeByRef)) $
+            tcArrayParamErr luparam
     return ([AType ftype], L loc $ AParam (TParTail lide' mode (L type_loc ftype)) ftype)
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     (L par_loc (AParam tparam par_types)) <- return laparam
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
-    if atypeIsArray (AType ftype) && (mode /= ModeByRef)
-       then tcArrayParamErr luparam
-       else return ()
+    when (atypeIsArray (AType ftype) && (mode /= ModeByRef)) $
+            tcArrayParamErr luparam
     let atype_accum   = (AType ftype) : atypes
         laparam_accum = L loc $ AParam (TParHead lide' mode (L type_loc ftype)
                                         (L par_loc tparam)) (TTypeFunc ftype par_types)
@@ -204,15 +202,13 @@ typeCheckStmt ret_type (L loc (UStmtWhile lucond lustmt)) = do
 typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
     case m_expr of
          Nothing -> do
-             if ret_type /= (AType TTypeProc)
-                then tcRetStmtErr lustmt ret_type (AType TTypeProc)
-                else return ()
+             when (ret_type /= (AType TTypeProc)) $
+                    tcRetStmtErr lustmt ret_type (AType TTypeProc)
              return (True, L loc $ TStmtReturn Nothing)
          Just luexpr -> do
              laexpr@(L _ (AExpr _ expr_type)) <- typeCheckExpr luexpr
-             if ret_type /= (AType expr_type)
-                then tcRetStmtErr lustmt ret_type (AType expr_type)
-                else return ()
+             when (ret_type /= (AType expr_type)) $
+                    tcRetStmtErr lustmt ret_type (AType expr_type)
              return (True, L loc $ TStmtReturn (Just laexpr))
 
 -- ---------------------------
@@ -381,12 +377,10 @@ typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
         exprIsUnknown = (AType expr_type) == (AType TTypeUnknown)
         varIsArray    = atypeIsArray (AType var_type)
         varIsUnknown  = (AType var_type)  == (AType TTypeUnknown)
-    if (not exprIsInt) && (not exprIsUnknown)
-       then tcIntExprErr luarr
-       else return ()
-    if (not varIsArray) && (not varIsUnknown)
-       then tcArrayVarErr luarr (AType var_type)
-       else return ()
+    when ((not exprIsInt) && (not exprIsUnknown)) $
+            tcIntExprErr luarr
+    when ((not varIsArray) && (not varIsUnknown)) $
+        tcArrayVarErr luarr (AType var_type)
     if exprIsInt && varIsArray
        then do
            (AType ptr_type) <- return $ getPointer (AType var_type)
@@ -485,9 +479,8 @@ tcFunPar' :: Ide -> [Located UExpr] -> [AType] -> [LAExpr] -> TcM [LAExpr]
 tcFunPar' _ [] [] acc = return acc
 tcFunPar' ide (pexpr:pexprs) (ptype:ptypes) acc = do
     (L aeloc aexpr@(AExpr _ ttype)) <- typeCheckExpr pexpr
-    if (AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)
-       then return ()
-       else tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
+    when (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown))) $
+            tcParTypeErr ide pexpr ((length acc) + 1) ptype (AType ttype)
     tcFunPar' ide pexprs ptypes ((L aeloc aexpr):acc)
 tcFunPar' _ _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
 
