@@ -18,11 +18,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
--- But alex still generates some code that causes the "lazy unlifted bindings"
--- warning, and old compilers don't know about it so we can't easily turn
--- it off, so for now we use the sledge hammer:
-{-# OPTIONS_GHC -w #-}
-
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 
 module Lexer (

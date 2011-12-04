@@ -1,6 +1,7 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
 ** Use a faster Type than String for reading from file
+    - Use `readFile' instead of `hGetContents'
 
 ** Fix in Lexer:
     - Add error messages when include more than one char in \'
