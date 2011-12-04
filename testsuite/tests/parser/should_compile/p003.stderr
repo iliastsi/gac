@@ -6,17 +6,14 @@ hello() : proc
   { -- foo
   } -- foo
 { -- hello
-  if(false)
-  { -- if-clause
+  if(false) {
     writeString("What??\n");
-  } -- if-clause
-  else
+  } else
     writeString("Hello world!\n");
-  while(false)
-  { -- while-clause
+  while(false) {
     c = 1 + 10 * 50 - 2 / 3;
     writeString("What??\n");
-  } -- while-clause
+  }
 } -- hello
 
 

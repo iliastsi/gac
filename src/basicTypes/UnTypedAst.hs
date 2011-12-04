@@ -20,6 +20,7 @@ module UnTypedAst (
   ) where
 
 import SrcLoc
+import {-# SOURCE #-} Outputable (panic)
 
 
 -- ---------------------------
@@ -106,7 +107,7 @@ dumpUDef ind (UDefFun lide luparams lutype ludefs lustmt) =
     indent ind ++ dumpIde (unLoc lide) ++ "(" ++ dumpLUParams luparams ++
         ") : " ++ dumpUType (unLoc lutype) ++
         "\n" ++ dumpLUDefs (ind+1) ludefs ++
-        dumpUStmt (ind+1) (unLoc lide) (unLoc lustmt)
+        dumpComp (ind+1) (unLoc lide) (unLoc lustmt)
 -- UDefVar
 dumpUDef ind (UDefVar lide lutype) =
     indent ind ++ dumpIde (unLoc lide) ++ " : " ++
@@ -153,38 +154,36 @@ data UStmt
     | UStmtReturn (Maybe LUExpr)
 
 instance Show UStmt where
-    show = dumpUStmt 0 ""
+    show = dumpUStmt 0
 
-dumpUStmt :: Int -> String -> UStmt -> String
+dumpUStmt :: Int -> UStmt -> String
 -- UStmtNothing
-dumpUStmt _ _ UStmtNothing = ";"
+dumpUStmt ind UStmtNothing = indent ind ++ ";"
 -- UStmtAssign
-dumpUStmt ind _ (UStmtAssign luvar luexpr) =
+dumpUStmt ind (UStmtAssign luvar luexpr) =
     indent ind ++ dumpUVariable (unLoc luvar) ++
         " = " ++ dumpUExpr (unLoc luexpr) ++ ";"
 -- UStmtCompound
-dumpUStmt ind comment (UStmtCompound lustmts) =
-    indent (ind-1) ++ "{ -- " ++ comment ++ "\n" ++
-        dumpLUStmts ind lustmts ++ indent (ind-1) ++
-        "} -- " ++ comment
+dumpUStmt ind (UStmtCompound lustmts) =
+    indent ind ++ "{\n" ++ dumpLUStmts (ind+1) lustmts ++
+        indent ind ++ "}"
 -- UStmtFun
-dumpUStmt ind _ (UStmtFun ufunc) =
+dumpUStmt ind (UStmtFun ufunc) =
     indent ind ++ dumpUFuncCall ufunc ++ ";"
 -- UStmtIf
-dumpUStmt ind _ (UStmtIf lucond ifstmt m_elsestmt) =
+dumpUStmt ind (UStmtIf lucond ifstmt m_elsestmt) =
     indent ind ++ "if(" ++ dumpUCond (unLoc lucond) ++
-        ")\n" ++ dumpUStmt (ind+1) "if-clause" (unLoc ifstmt) ++
+        ")" ++ dumpComp (ind+1) "" (unLoc ifstmt) ++
         case m_elsestmt of
              Just elsestmt ->
-                 "\n" ++ indent ind ++ "else" ++ "\n" ++
-                     dumpUStmt (ind+1) "else-clause" (unLoc elsestmt)
+                 " else" ++ dumpComp (ind+1) "" (unLoc elsestmt)
              Nothing -> ""
 -- UStmtWhile
-dumpUStmt ind _ (UStmtWhile lucond lustmt) =
+dumpUStmt ind (UStmtWhile lucond lustmt) =
     indent ind ++ "while(" ++ dumpUCond (unLoc lucond) ++
-        ")\n" ++ dumpUStmt (ind+1) "while-clause" (unLoc lustmt)
+        ")" ++ dumpComp (ind+1) "" (unLoc lustmt)
 -- UStmtReturn
-dumpUStmt ind _ (UStmtReturn m_luexpr) =
+dumpUStmt ind (UStmtReturn m_luexpr) =
     indent ind ++ "return " ++
         case m_luexpr of
              Just luexpr -> dumpUExpr (unLoc luexpr) ++ ";"
@@ -192,7 +191,17 @@ dumpUStmt ind _ (UStmtReturn m_luexpr) =
 
 dumpLUStmts :: Int -> [LUStmt] -> String
 dumpLUStmts ind lustmts =
-    foldl (\buf t -> buf ++ dumpUStmt ind "" (unLoc t) ++ "\n") "" lustmts
+    foldl (\buf t -> buf ++ dumpUStmt ind (unLoc t) ++ "\n") "" lustmts
+
+dumpComp :: Int -> String -> UStmt -> String
+dumpComp ind "" (UStmtCompound lustmts) =
+    " {\n" ++ dumpLUStmts ind lustmts ++ indent (ind-1) ++ "}"
+dumpComp ind "" ustmt =
+    "\n" ++ dumpUStmt ind ustmt
+dumpComp ind fun (UStmtCompound lustmts) =
+    indent (ind-1) ++ "{ -- " ++ fun ++ "\n" ++ dumpLUStmts ind lustmts ++
+        indent (ind-1) ++ "} -- " ++ fun
+dumpComp _ _ _ = panic "UnTypedAst.dumpComp got unexpected input"
 
 -- ---------------------------
 type LUExpr = Located UExpr

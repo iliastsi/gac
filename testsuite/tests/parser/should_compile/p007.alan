@@ -1,0 +1,10 @@
+hello() : proc
+   c : int;	
+{
+  (* this is a block *)
+  {
+	c = 40+2;
+	c = 6*7;;
+ { c = 5;}
+  {}}
+}
