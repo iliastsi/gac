@@ -1,0 +1,21 @@
+# default building dir
+/dist/
+/src/Setup
+/src/Setup.o
+/src/Setup.hi
+
+# vim swap and backup files
+*.swp
+*~
+*.pyc
+/testsuite/timeout/install-inplace/
+
+# autoconf generated files
+/autom4te\.cache/
+/config\.log
+/config\.status
+/Makefile
+/src/Makefile
+/src/config\.h
+/src/gac\.cabal
+/src/versions\.h
