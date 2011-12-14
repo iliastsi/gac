@@ -1,5 +1,5 @@
 The Glorious Alan Compiler
-============================
+==========================
 
 This is the source tree for GAC, a compiler for
 the Alan programming language.
@@ -12,11 +12,9 @@ For more information, visit:
 Getting the Source
 ==================
 
-  The recommended way is to get the repos using mercurial
+  The recommended way is to get the repos using git
 
-    $ hg clone http://foss.ntua.gr/hg/private/gac
-
-  Of course right now this repo is password protected!!
+    $ git clone https://github.com/iliastsi/gac.git
 
 
 Building & Installing

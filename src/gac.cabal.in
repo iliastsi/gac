@@ -15,8 +15,8 @@ Cabal-Version: >= 1.6
 Tested-With: GHC
 
 source-repository head
-    type:     mercurial
-    location: http://foss.ntua.gr/hg/private/gac
+    type:     git
+    location: https://github.com/iliastsi/gac.git
 
 
 Executable gac
