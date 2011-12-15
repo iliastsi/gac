@@ -385,14 +385,10 @@ typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
        then do
            (AType ptr_type) <- return $ getPointer (AType var_type)
            let lexpr' = L aeloc texpr
-           case test expr_type TTypeInt of
-             Just Eq ->
-                 case test var_type (TTypePtr ptr_type) of
-                      Just Eq ->
-                          return (L loc $ AVariable (TVarArray (L var_loc tvar) lexpr') ptr_type)
-                      Nothing ->
-                          panic "test in TypeCheck.typeCheckVariable had to return Eq"
-             Nothing ->
+           case (test expr_type TTypeInt, test var_type (TTypePtr ptr_type)) of
+             (Just Eq, Just Eq) ->
+                 return (L loc $ AVariable (TVarArray (L var_loc tvar) lexpr') ptr_type)
+             _ ->
                  panic "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
            return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)

@@ -15,7 +15,6 @@
 
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
-    - Use case with tuples (instead of nested cases)
 
 ** Error Messages:
     - When report int overflow we see only the positive number
