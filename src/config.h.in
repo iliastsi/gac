@@ -1,48 +1,7 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if building universal (internal helper macro) */
-#undef AC_APPLE_UNIVERSAL_BUILD
-
-/* Define to 1 if your processor stores words of floats with the most
-   significant byte first */
-#undef FLOAT_WORDS_BIGENDIAN
-
 /* Define to 1 if you have /bin/sh. */
 #undef HAVE_BIN_SH
-
-/* Define to 1 if you have the <inttypes.h> header file. */
-#undef HAVE_INTTYPES_H
-
-/* Define to 1 if you need -ldl to get dlopen(). */
-#undef HAVE_LIBDL
-
-/* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
-
-/* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
-
-/* Define to 1 if you have the <stdlib.h> header file. */
-#undef HAVE_STDLIB_H
-
-/* Define to 1 if you have the <strings.h> header file. */
-#undef HAVE_STRINGS_H
-
-/* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#undef HAVE_SYS_STAT_H
-
-/* Define to 1 if you have the <sys/types.h> header file. */
-#undef HAVE_SYS_TYPES_H
-
-/* Define to 1 if you have the <unistd.h> header file. */
-#undef HAVE_UNISTD_H
-
-/* Define to 1 if C symbols have a leading underscore added by the compiler.
-   */
-#undef LEADING_UNDERSCORE
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -61,57 +20,3 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* The size of `char', as computed by sizeof. */
-#undef SIZEOF_CHAR
-
-/* The size of `double', as computed by sizeof. */
-#undef SIZEOF_DOUBLE
-
-/* The size of `float', as computed by sizeof. */
-#undef SIZEOF_FLOAT
-
-/* The size of `int', as computed by sizeof. */
-#undef SIZEOF_INT
-
-/* The size of `long', as computed by sizeof. */
-#undef SIZEOF_LONG
-
-/* The size of `short', as computed by sizeof. */
-#undef SIZEOF_SHORT
-
-/* The size of `unsigned char', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED_CHAR
-
-/* The size of `unsigned int', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED_INT
-
-/* The size of `unsigned long', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED_LONG
-
-/* The size of `unsigned short', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED_SHORT
-
-/* The size of `void *', as computed by sizeof. */
-#undef SIZEOF_VOID_P
-
-/* Define to 1 if you have the ANSI C header files. */
-#undef STDC_HEADERS
-
-/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
-   significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined AC_APPLE_UNIVERSAL_BUILD
-# if defined __BIG_ENDIAN__
-#  define WORDS_BIGENDIAN 1
-# endif
-#else
-# ifndef WORDS_BIGENDIAN
-#  undef WORDS_BIGENDIAN
-# endif
-#endif
-
-/* Number of bits in a file offset, on hosts where this is settable. */
-#undef _FILE_OFFSET_BITS
-
-/* Define for large files, on AIX-style hosts. */
-#undef _LARGE_FILES

@@ -2,19 +2,13 @@
 #define VERSIONS_H
 
 /* Project Name */
-#define PROJECT_NAME "@ProjectName@"
+#define PROJECT_NAME "@PACKAGE_NAME@"
 
 /* Program Name */
 #define PROG_NAME "@PACKAGE_TARNAME@"
 
 /* Project Version */
-#define PROJECT_VERSION "@ProjectVersion@"
-
-/* Build Platform */
-#define BUILD_PLATFORM "@BuildPlatform@"
-
-/* Host Platform */
-#define HOST_PLATFORM "@HostPlatform@"
+#define PROJECT_VERSION "@PACKAGE_VERSION@"
 
 /* Target Architecture */
 #define TARGET_ARCH "@TargetArch_CPP@"

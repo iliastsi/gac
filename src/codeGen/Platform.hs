@@ -57,7 +57,7 @@ defaultTargetArch = ArchX86
 #elif   x86_64_TARGET_ARCH
 defaultTargetArch = ArchX86_64
 #else
-#error "Platform.buildArch: undefined"
+#error "Platform.targetArch: undefined"
 #endif
 
 -- | Move the evil TARGET_OS #ifdefs into Haskell land

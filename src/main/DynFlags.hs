@@ -763,8 +763,6 @@ compilerInfo :: [(String, Printable)]
 compilerInfo =
     [("Project name",               String PROJECT_NAME)
     ,("Project version",            String PROJECT_VERSION)
-    ,("Build platform",             String BUILD_PLATFORM)
-    ,("Host platform",              String HOST_PLATFORM)
     ,("Target platform",            String TARGET_PLATFORM)
     ,("Have native code generator", String "NO")
     ,("Have llvm code generator",   String "NO")
