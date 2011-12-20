@@ -220,6 +220,9 @@ dnl ** check for patch
 dnl if GNU patch is named gpatch, look for it first
 AC_PATH_PROGS(PatchCmd,gpatch patch, patch)
 
+dnl ** Find the path to gzip
+AC_PATH_PROGS(GZipCmd,gzip,gzip)
+
 dnl ** check for ghc-pkg command
 FP_PROG_GHC_PKG
 

@@ -1,0 +1,518 @@
+.TH GAC 1 "2011-11-17" "Alan FP Suite" "Glorious Alan Compiler"
+.SH NAME
+GAC \- the Glorious Alan Compiler
+
+
+.SH SYNOPSIS
+.B gac
+.RI [ option | filename ]...
+
+
+.SH DESCRIPTION
+This manual page documents briefly the
+.B gac
+commands.
+
+.PP
+Each of GAC's command line options is classified as either
+.IR mode " or " dynamic .
+
+.PP
+Common suffixes of file names for Alan are:
+.TP
+.B .alan
+Alan source code; compile
+
+
+.SH OPTIONS
+
+
+.SS Help and verbosity options
+.nh
+\-?  \-help  \-n  \-v  \-v\fIn\fP  \-V  \-\-supported\-extensions \-\-info  \-\-version  \-\-numeric\-version  \-\-print\-libdir  \-ferror\-spans
+.hy
+
+.SS Which phases to run
+.nh
+\-S  \-c
+.hy
+
+.SS Redirecting output
+.nh
+\-o \fIfilename\fP  \-odir \fIdir\fP  \-osuf \fIsuffix\fP  \-outputdir \fIdir\fP  
+.hy
+
+.SS Keeping intermediate files
+.nh
+\-keep\-llvm\-file or
+                 \-keep\-llvm\-files  \-keep\-s\-file or
+                 \-keep\-s\-files  \-keep\-tmp\-files  
+.hy
+
+.SS Temporary files
+.nh
+\-tmpdir  
+.hy
+
+.SS Recompilation checking
+.nh
+\-fforce\-recomp \-fno\-force\-recomp  
+.hy
+
+.SS Language options
+.nh
+\-XNoForwardDeclarations \-XForwardDeclarations
+.hy
+
+.SS Warnings
+.nh
+\-W \-w \-Wall \-Werror \-Wwarn \-fwarn\-unreachable\-code \-fno\-warn\-unreachable\-code \-fwarn\-unused\-function \-fno\-warn\-unused\-function \-fwarn\-unused\-parameter \-fno\-warn\-unused\-parameter \-fwarn\-unused\-result \-fno\-warn\-unused\-result \-fwarn\-unused\-variable \-fno\-warn\-unused\-variable \-fwarn\-uninitialized \-fno\-warn\-uninitialized \-fwarn\-type\-overflows \-fno\-warn\-type\-overflows \-fwarn\-warnings\-deprecations \-fno\-warn\-warnings\-deprecations \-fwarn\-deprecations \-fno\-warn\-deprecations \-fwarn\-deprecated\-flags \-fno\-warn\-deprecated\-flags
+.hy
+
+.SS Optimisation levels
+.nh
+\-O \-O0  \-O\fIn\fP
+.hy
+
+.SS Individual optimisations
+.nh
+\-fcse \-fno\-cse \-fregs\-graph \-fno\-regs\-graph
+.hy
+
+.SS Code generation options
+.nh
+\-fasm   \-fllvm   \-fno\-code
+.hy
+
+.SS Linking options
+.nh
+\-shared  \-l\fIlib\fP  \-L\fIdir\fP  \-no\-link
+.hy
+
+.SS Replacing phases
+.nh
+\-pgma \fIcmd\fP  \-pgml \fIcmd\fP  \-pgmlo \fIcmd\fP  \-pgmlc \fIcmd\fP
+.hy
+
+.SS Forcing options to particular phases
+.nh
+\-opta \fIoption\fP  \-optl \fIoption\fP  \-optlo \fIoption\fP  \-optlc \fIoption\fP
+.hy
+
+.SS Compiler debugging options
+.nh
+\-ddump\-asm  \-ddump\-llvm  \-ddump\-parsed
+.hy
+
+
+
+.SH HELP AND VERBOSITY OPTIONS
+
+.TP
+\fB\-?\fP 
+help
+.rj
+[mode]
+
+.TP
+\fB\-help\fP 
+help
+.rj
+[mode]
+
+.TP
+\fB\-n\fP 
+do a dry run
+.rj
+[dynamic]
+
+.TP
+\fB\-v\fP 
+verbose mode (equivalent to \fB\-v3\fP)
+.rj
+[dynamic]
+
+.TP
+\fB\-v\fP\fIn\fP 
+set verbosity level
+.rj
+[dynamic]
+
+.TP
+\fB\-V\fP 
+display GAC version
+.rj
+[mode]
+
+.TP
+\fB\-\-supported\-extensions\fP
+display the supported language extensions
+.rj
+[mode]
+
+.TP
+\fB\-\-info\fP 
+display information about the compiler
+.rj
+[mode]
+
+.TP
+\fB\-\-version\fP 
+display GAC version
+.rj
+[mode]
+
+.TP
+\fB\-\-numeric\-version\fP 
+display GAC version (numeric only)
+.rj
+[mode]
+
+.TP
+\fB\-\-print\-libdir\fP 
+display GAC library directory
+.rj
+[mode]
+
+.TP
+\fB\-ferror\-spans\fP 
+output full span in error messages
+.rj
+[dynamic]
+
+
+.SH WHICH PHASES TO RUN
+
+.TP
+\fB\-S\fP 
+Stop after generating assembly (\f(CR.s\fP file)
+.rj
+[mode]
+
+.TP
+\fB\-c\fP 
+Do not link
+.rj
+[dynamic]
+
+
+.SH REDIRECTING OUTPUT
+
+.TP
+\fB\-o\fP \fIfilename\fP 
+set output filename
+.rj
+[dynamic]
+
+.TP
+\fB\-odir\fP \fIdir\fP 
+set directory for object files
+.rj
+[dynamic]
+
+.TP
+\fB\-osuf\fP \fIsuffix\fP 
+set the output file suffix
+.rj
+[dynamic]
+
+.TP
+\fB\-outputdir\fP \fIdir\fP 
+set output directory
+.rj
+[dynamic]
+
+
+.SH KEEPING INTERMEDIATE FILES
+
+.TP
+\fB\-keep\-llvm\-file\fP or
+                 \fB\-keep\-llvm\-files\fP 
+retain intermediate LLVM \f(CR.ll\fP files
+.rj
+[dynamic]
+
+.TP
+\fB\-keep\-s\-file\fP or
+                 \fB\-keep\-s\-files\fP 
+retain intermediate \f(CR.s\fP files
+.rj
+[dynamic]
+
+.TP
+\fB\-keep\-tmp\-files\fP 
+retain all intermediate temporary files
+.rj
+[dynamic]
+
+
+.SH TEMPORARY FILES
+
+.TP
+\fB\-tmpdir\fP 
+set the directory for temporary files
+.rj
+[dynamic]
+
+
+
+.SH RECOMPILATION CHECKING
+
+.TP
+\fB\-fforce\-recomp\fP 
+Turn off recompilation checking; implied by any \fB\-ddump\-X\fP option
+.rj
+[dynamic]
+
+
+.SH LANGUAGE OPTIONS
+
+.TP
+\fB\-XForwardDeclarations\fP 
+Enable forward declaration for functions
+.rj
+[dynamic]
+
+
+.SH WARNINGS
+
+.TP
+\fB\-W\fP 
+enable normal warnings
+.rj
+[dynamic]
+
+.TP
+\fB\-w\fP 
+disable all warnings
+.rj
+[dynamic]
+
+.TP
+\fB\-Wall\fP 
+enable almost all warnings (details in )
+.rj
+[dynamic]
+
+.TP
+\fB\-Werror\fP 
+make warnings fatal
+.rj
+[dynamic]
+
+.TP
+\fB\-Wwarn\fP 
+make warnings non-fatal
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-unreachable\-code\fP 
+warn if the compiler detects that code will never be executed
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-unused\-function\fP 
+warn whenever a static function is unused
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-unused\-parameter\fP 
+warn whenever a function parameter is unused aside from its declaration
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-unused\-result\fP 
+warn whenever a caller of a function does not use its return value
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-unused\-variable\fP 
+warn whenever a local variable is unused aside from its declaration
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-uninitialized\fP 
+warn if a variable is used without first being initialized
+.rj
+[dynamic]
+
+.TP
+\fB\-fwarn\-type\-overflows\fP 
+warn whenever constant values overflows the limited range of the specific data type
+.rj
+[dynamic]
+
+
+.SH OPTIMISATION LEVELS
+
+.TP
+\fB\-O\fP 
+Enable default optimisation (level 1)
+.rj
+[dynamic]
+
+.TP
+\fB\-O\fP\fIn\fP 
+Set optimisation level \fIn\fP
+.rj
+[dynamic]
+
+
+.SH INDIVIDUAL OPTIMISATIONS
+
+.TP
+\fB\-fcse\fP 
+Turn on common sub-expression elimination. Implied by \fB\-O\fP.
+.rj
+[dynamic]
+
+.TP
+\fB\-fregs\-graph\fP 
+Turn on register allocation via graph coloring optimisation. Implied by \fB\-O2\fP.
+.rj
+[dynamic]
+
+
+.SH CODE GENERATION OPTIONS
+
+.TP
+\fB\-fasm\fP 
+Use the native code generator
+.rj
+[dynamic]
+
+.TP
+\fB\-fllvm\fP 
+Compile via LLVM
+.rj
+[dynamic]
+
+.TP
+\fB\-fno\-code\fP 
+Omit code generation
+.rj
+[dynamic]
+
+
+.SH LINKING OPTIONS
+
+.TP
+\fB\-shared\fP 
+Generate a shared library (as opposed to an executable)
+.rj
+[dynamic]
+
+.TP
+\fB\-l\fP\fIlib\fP 
+Link in library \fIlib\fP
+.rj
+[dynamic]
+
+.TP
+\fB\-L\fP\fIdir\fP 
+Add \fIdir\fP to the list of directories searched for libraries
+.rj
+[dynamic]
+
+.TP
+\fB\-no\-link\fP 
+Omit linking
+.rj
+[dynamic]
+
+
+.SH REPLACING PHASES
+
+.TP
+\fB\-pgma\fP \fIcmd\fP 
+Use \fIcmd\fP as the assembler
+.rj
+[dynamic]
+
+.TP
+\fB\-pgml\fP \fIcmd\fP 
+Use \fIcmd\fP as the linker
+.rj
+[dynamic]
+
+.TP
+\fB\-pgmlo\fP \fIcmd\fP 
+Use \fIcmd\fP as the llvm optimizer
+.rj
+[dynamic]
+
+.TP
+\fB\-pgmlc\fP \fIcmd\fP 
+Use \fIcmd\fP as the llvm compiler
+.rj
+[dynamic]
+
+
+.SH FORCING OPTIONS TO PARTICULAR PHASES
+
+.TP
+\fB\-opta\fP \fIoption\fP 
+pass \fIoption\fP to the assembler
+.rj
+[dynamic]
+
+.TP
+\fB\-optl\fP \fIoption\fP 
+pass \fIoption\fP to the linker
+.rj
+[dynamic]
+
+.TP
+\fB\-optlo\fP \fIoption\fP 
+pass \fIoption\fP to the LLVM optimiser
+.rj
+[dynamic]
+
+.TP
+\fB\-optlc\fP \fIoption\fP 
+pass \fIoption\fP to the LLVM compiler
+.rj
+[dynamic]
+
+
+.SH COMPILER DEBUGGING OPTIONS
+
+.TP
+\fB\-ddump\-asm\fP 
+Dump assembly
+.rj
+[dynamic]
+
+.TP
+\fB\-ddump\-llvm\fP 
+Dump LLVM intermediate code
+.rj
+[dynamic]
+
+.TP
+\fB\-ddump\-parsed\fP 
+Dump parse tree
+.rj
+[dynamic]
+
+
+.SH FILES
+.I /usr/lib
+
+.SH COPYRIGHT
+
+Copyright 2011, Tsitsimpis Ilias.
+.br
+All rights reserved.
+
+
+.SH AUTHOR
+Tsitsimpis Ilias
+
+.\" End
