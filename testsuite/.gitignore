@@ -1,0 +1,7 @@
+# testsuite temp files #
+########################
+*.pyc
+*.comp.stderr
+*.run.stderr
+*.normalised
+/timeout/install-inplace/
