@@ -39,24 +39,24 @@ Alan source code; compile
 
 .SS Redirecting output
 .nh
-\-o \fIfilename\fP  \-odir \fIdir\fP  \-osuf \fIsuffix\fP  \-outputdir \fIdir\fP  
+\-o \fIfilename\fP  \-odir \fIdir\fP  \-osuf \fIsuffix\fP  \-outputdir \fIdir\fP
 .hy
 
 .SS Keeping intermediate files
 .nh
 \-keep\-llvm\-file or
                  \-keep\-llvm\-files  \-keep\-s\-file or
-                 \-keep\-s\-files  \-keep\-tmp\-files  
+                 \-keep\-s\-files  \-keep\-tmp\-files
 .hy
 
 .SS Temporary files
 .nh
-\-tmpdir  
+\-tmpdir
 .hy
 
 .SS Recompilation checking
 .nh
-\-fforce\-recomp \-fno\-force\-recomp  
+\-fforce\-recomp \-fno\-force\-recomp
 .hy
 
 .SS Language options
@@ -109,37 +109,37 @@ Alan source code; compile
 .SH HELP AND VERBOSITY OPTIONS
 
 .TP
-\fB\-?\fP 
+\fB\-?\fP
 help
 .rj
 [mode]
 
 .TP
-\fB\-help\fP 
+\fB\-help\fP
 help
 .rj
 [mode]
 
 .TP
-\fB\-n\fP 
+\fB\-n\fP
 do a dry run
 .rj
 [dynamic]
 
 .TP
-\fB\-v\fP 
+\fB\-v\fP
 verbose mode (equivalent to \fB\-v3\fP)
 .rj
 [dynamic]
 
 .TP
-\fB\-v\fP\fIn\fP 
+\fB\-v\fP\fIn\fP
 set verbosity level
 .rj
 [dynamic]
 
 .TP
-\fB\-V\fP 
+\fB\-V\fP
 display GAC version
 .rj
 [mode]
@@ -151,31 +151,31 @@ display the supported language extensions
 [mode]
 
 .TP
-\fB\-\-info\fP 
+\fB\-\-info\fP
 display information about the compiler
 .rj
 [mode]
 
 .TP
-\fB\-\-version\fP 
+\fB\-\-version\fP
 display GAC version
 .rj
 [mode]
 
 .TP
-\fB\-\-numeric\-version\fP 
+\fB\-\-numeric\-version\fP
 display GAC version (numeric only)
 .rj
 [mode]
 
 .TP
-\fB\-\-print\-libdir\fP 
+\fB\-\-print\-libdir\fP
 display GAC library directory
 .rj
 [mode]
 
 .TP
-\fB\-ferror\-spans\fP 
+\fB\-ferror\-spans\fP
 output full span in error messages
 .rj
 [dynamic]
@@ -184,13 +184,13 @@ output full span in error messages
 .SH WHICH PHASES TO RUN
 
 .TP
-\fB\-S\fP 
+\fB\-S\fP
 Stop after generating assembly (\f(CR.s\fP file)
 .rj
 [mode]
 
 .TP
-\fB\-c\fP 
+\fB\-c\fP
 Do not link
 .rj
 [dynamic]
@@ -199,25 +199,25 @@ Do not link
 .SH REDIRECTING OUTPUT
 
 .TP
-\fB\-o\fP \fIfilename\fP 
+\fB\-o\fP \fIfilename\fP
 set output filename
 .rj
 [dynamic]
 
 .TP
-\fB\-odir\fP \fIdir\fP 
+\fB\-odir\fP \fIdir\fP
 set directory for object files
 .rj
 [dynamic]
 
 .TP
-\fB\-osuf\fP \fIsuffix\fP 
+\fB\-osuf\fP \fIsuffix\fP
 set the output file suffix
 .rj
 [dynamic]
 
 .TP
-\fB\-outputdir\fP \fIdir\fP 
+\fB\-outputdir\fP \fIdir\fP
 set output directory
 .rj
 [dynamic]
@@ -227,20 +227,20 @@ set output directory
 
 .TP
 \fB\-keep\-llvm\-file\fP or
-                 \fB\-keep\-llvm\-files\fP 
+                 \fB\-keep\-llvm\-files\fP
 retain intermediate LLVM \f(CR.ll\fP files
 .rj
 [dynamic]
 
 .TP
 \fB\-keep\-s\-file\fP or
-                 \fB\-keep\-s\-files\fP 
+                 \fB\-keep\-s\-files\fP
 retain intermediate \f(CR.s\fP files
 .rj
 [dynamic]
 
 .TP
-\fB\-keep\-tmp\-files\fP 
+\fB\-keep\-tmp\-files\fP
 retain all intermediate temporary files
 .rj
 [dynamic]
@@ -249,7 +249,7 @@ retain all intermediate temporary files
 .SH TEMPORARY FILES
 
 .TP
-\fB\-tmpdir\fP 
+\fB\-tmpdir\fP
 set the directory for temporary files
 .rj
 [dynamic]
@@ -259,7 +259,7 @@ set the directory for temporary files
 .SH RECOMPILATION CHECKING
 
 .TP
-\fB\-fforce\-recomp\fP 
+\fB\-fforce\-recomp\fP
 Turn off recompilation checking; implied by any \fB\-ddump\-X\fP option
 .rj
 [dynamic]
@@ -268,7 +268,7 @@ Turn off recompilation checking; implied by any \fB\-ddump\-X\fP option
 .SH LANGUAGE OPTIONS
 
 .TP
-\fB\-XForwardDeclarations\fP 
+\fB\-XForwardDeclarations\fP
 Enable forward declaration for functions
 .rj
 [dynamic]
@@ -277,73 +277,73 @@ Enable forward declaration for functions
 .SH WARNINGS
 
 .TP
-\fB\-W\fP 
+\fB\-W\fP
 enable normal warnings
 .rj
 [dynamic]
 
 .TP
-\fB\-w\fP 
+\fB\-w\fP
 disable all warnings
 .rj
 [dynamic]
 
 .TP
-\fB\-Wall\fP 
+\fB\-Wall\fP
 enable almost all warnings (details in )
 .rj
 [dynamic]
 
 .TP
-\fB\-Werror\fP 
+\fB\-Werror\fP
 make warnings fatal
 .rj
 [dynamic]
 
 .TP
-\fB\-Wwarn\fP 
+\fB\-Wwarn\fP
 make warnings non-fatal
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-unreachable\-code\fP 
+\fB\-fwarn\-unreachable\-code\fP
 warn if the compiler detects that code will never be executed
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-unused\-function\fP 
+\fB\-fwarn\-unused\-function\fP
 warn whenever a static function is unused
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-unused\-parameter\fP 
+\fB\-fwarn\-unused\-parameter\fP
 warn whenever a function parameter is unused aside from its declaration
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-unused\-result\fP 
+\fB\-fwarn\-unused\-result\fP
 warn whenever a caller of a function does not use its return value
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-unused\-variable\fP 
+\fB\-fwarn\-unused\-variable\fP
 warn whenever a local variable is unused aside from its declaration
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-uninitialized\fP 
+\fB\-fwarn\-uninitialized\fP
 warn if a variable is used without first being initialized
 .rj
 [dynamic]
 
 .TP
-\fB\-fwarn\-type\-overflows\fP 
+\fB\-fwarn\-type\-overflows\fP
 warn whenever constant values overflows the limited range of the specific data type
 .rj
 [dynamic]
@@ -352,13 +352,13 @@ warn whenever constant values overflows the limited range of the specific data t
 .SH OPTIMISATION LEVELS
 
 .TP
-\fB\-O\fP 
+\fB\-O\fP
 Enable default optimisation (level 1)
 .rj
 [dynamic]
 
 .TP
-\fB\-O\fP\fIn\fP 
+\fB\-O\fP\fIn\fP
 Set optimisation level \fIn\fP
 .rj
 [dynamic]
@@ -367,13 +367,13 @@ Set optimisation level \fIn\fP
 .SH INDIVIDUAL OPTIMISATIONS
 
 .TP
-\fB\-fcse\fP 
+\fB\-fcse\fP
 Turn on common sub-expression elimination. Implied by \fB\-O\fP.
 .rj
 [dynamic]
 
 .TP
-\fB\-fregs\-graph\fP 
+\fB\-fregs\-graph\fP
 Turn on register allocation via graph coloring optimisation. Implied by \fB\-O2\fP.
 .rj
 [dynamic]
@@ -382,19 +382,19 @@ Turn on register allocation via graph coloring optimisation. Implied by \fB\-O2\
 .SH CODE GENERATION OPTIONS
 
 .TP
-\fB\-fasm\fP 
+\fB\-fasm\fP
 Use the native code generator
 .rj
 [dynamic]
 
 .TP
-\fB\-fllvm\fP 
+\fB\-fllvm\fP
 Compile via LLVM
 .rj
 [dynamic]
 
 .TP
-\fB\-fno\-code\fP 
+\fB\-fno\-code\fP
 Omit code generation
 .rj
 [dynamic]
@@ -403,25 +403,25 @@ Omit code generation
 .SH LINKING OPTIONS
 
 .TP
-\fB\-shared\fP 
+\fB\-shared\fP
 Generate a shared library (as opposed to an executable)
 .rj
 [dynamic]
 
 .TP
-\fB\-l\fP\fIlib\fP 
+\fB\-l\fP\fIlib\fP
 Link in library \fIlib\fP
 .rj
 [dynamic]
 
 .TP
-\fB\-L\fP\fIdir\fP 
+\fB\-L\fP\fIdir\fP
 Add \fIdir\fP to the list of directories searched for libraries
 .rj
 [dynamic]
 
 .TP
-\fB\-no\-link\fP 
+\fB\-no\-link\fP
 Omit linking
 .rj
 [dynamic]
@@ -430,25 +430,25 @@ Omit linking
 .SH REPLACING PHASES
 
 .TP
-\fB\-pgma\fP \fIcmd\fP 
+\fB\-pgma\fP \fIcmd\fP
 Use \fIcmd\fP as the assembler
 .rj
 [dynamic]
 
 .TP
-\fB\-pgml\fP \fIcmd\fP 
+\fB\-pgml\fP \fIcmd\fP
 Use \fIcmd\fP as the linker
 .rj
 [dynamic]
 
 .TP
-\fB\-pgmlo\fP \fIcmd\fP 
+\fB\-pgmlo\fP \fIcmd\fP
 Use \fIcmd\fP as the llvm optimizer
 .rj
 [dynamic]
 
 .TP
-\fB\-pgmlc\fP \fIcmd\fP 
+\fB\-pgmlc\fP \fIcmd\fP
 Use \fIcmd\fP as the llvm compiler
 .rj
 [dynamic]
@@ -457,25 +457,25 @@ Use \fIcmd\fP as the llvm compiler
 .SH FORCING OPTIONS TO PARTICULAR PHASES
 
 .TP
-\fB\-opta\fP \fIoption\fP 
+\fB\-opta\fP \fIoption\fP
 pass \fIoption\fP to the assembler
 .rj
 [dynamic]
 
 .TP
-\fB\-optl\fP \fIoption\fP 
+\fB\-optl\fP \fIoption\fP
 pass \fIoption\fP to the linker
 .rj
 [dynamic]
 
 .TP
-\fB\-optlo\fP \fIoption\fP 
+\fB\-optlo\fP \fIoption\fP
 pass \fIoption\fP to the LLVM optimiser
 .rj
 [dynamic]
 
 .TP
-\fB\-optlc\fP \fIoption\fP 
+\fB\-optlc\fP \fIoption\fP
 pass \fIoption\fP to the LLVM compiler
 .rj
 [dynamic]
@@ -484,19 +484,19 @@ pass \fIoption\fP to the LLVM compiler
 .SH COMPILER DEBUGGING OPTIONS
 
 .TP
-\fB\-ddump\-asm\fP 
+\fB\-ddump\-asm\fP
 Dump assembly
 .rj
 [dynamic]
 
 .TP
-\fB\-ddump\-llvm\fP 
+\fB\-ddump\-llvm\fP
 Dump LLVM intermediate code
 .rj
 [dynamic]
 
 .TP
-\fB\-ddump\-parsed\fP 
+\fB\-ddump\-parsed\fP
 Dump parse tree
 .rj
 [dynamic]
