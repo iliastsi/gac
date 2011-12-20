@@ -27,18 +27,18 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 ARCHIVE = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
+
 .PHONY: all
 all:
 	$(MAKE) -C src $@
+	$(MAKE) $(builddir)/$(PACKAGE_TARNAME)
+
 
 ##### Install gac #####
+#######################
 .PHONY: install
 install: all
-	@echo "#!/bin/sh"                                        >  gac_shell
-	@echo "exedir=\"$(libdir)/lib\""                         >> gac_shell
-	@echo "executablename=\"$$""exedir/$(PACKAGE_TARNAME)\"" >> gac_shell
-	@echo "topdir=\"$(libdir)\""                             >> gac_shell
-	@echo "exec \"$$""executablename\" -B\"$$""topdir\" $$""{1+\"$$""@\"}" >> gac_shell
+	$(call shell-wrapper,'gac_shell',$(libdir)/lib,$(libdir))
 	$(INSTALL_PROG) -D gac_shell $(bindir)/$(PACKAGE_TARNAME)
 	$(RM) gac_shell
 	$(INSTALL_PROG) -D $(builddir)/build/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME) \
@@ -52,7 +52,6 @@ install: all
 	@echo "\n\nInstallation of $(ARCHIVE) was successful."
 	@echo "To use, add $(bindir) to your PATH."
 
-
 .PHONY: uninstall
 uninstall:
 	$(RM) $(bindir)/$(PACKAGE_TARNAME)
@@ -60,7 +59,9 @@ uninstall:
 	$(RM) -r $(docdir)
 	$(RM) $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
 
+
 ##### Distribute gac #####
+##########################
 .PHONY: dist
 dist:
 	@echo "Cleaning all the generated files.."
@@ -89,7 +90,9 @@ distcheck: dist
 	@echo "Cleaning temp files.."
 	$(RM) -r $(ARCHIVE)
 
+
 ##### Clean build dir #####
+###########################
 .PHONY: clean
 clean:
 	$(MAKE) -C src $@
@@ -104,7 +107,9 @@ distclean: clean
 maintainer-clean: distclean
 	$(RM) -r autom4te.cache
 
+
 ##### Test gac #####
+####################
 .PHONY: test
 test:
 	$(MAKE) -C testsuite/tests CLEANUP=1 OUTPUT_SUMMARY=../../testsuite_summary.txt fast
@@ -112,3 +117,21 @@ test:
 .PHONY: fulltest
 fulltest:
 	$(MAKE) -C testsuite/tests CLEANUP=1 OUTPUT_SUMMARY=../../testsuite_summary.txt
+
+
+#### Shell Wrapper ####
+#######################
+# $1 shell name
+# $2 exedir
+# $3 topdir
+define shell-wrapper
+  @echo '#!/bin/sh'                                      > $1
+  @echo 'executable="$2/$(PACKAGE_TARNAME)"'            >> $1
+  @echo 'topdir="$3"'                                   >> $1
+  @echo 'exec "$$executable" -B"$$topdir" $${1+"$$@"}'  >> $1
+endef
+
+$(builddir)/$(PACKAGE_TARNAME):
+	$(call shell-wrapper,'gac_shell',$(builddir)/build/$(PACKAGE_TARNAME),$(builddir))
+	$(INSTALL_PROG) -D gac_shell $(builddir)/$(PACKAGE_TARNAME)
+	$(RM) gac_shell

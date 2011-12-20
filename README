@@ -31,7 +31,7 @@ Quick start:  the following gives you a default build:
     $ make
 
 These steps give you the default build (an executable file
-named gac, placed in dist/build/gac) which includes everything
+named gac, placed in dist/) which includes everything
 optimised and built in various ways.
 It can take a long time.  To customise the build, see the file
 HACKING.

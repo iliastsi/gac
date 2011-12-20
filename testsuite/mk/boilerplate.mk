@@ -54,7 +54,7 @@ endef
 
 ifeq "$(TEST_AC)" ""
 
-TEST_AC := $(abspath $(TOP)/../install/bin/gac)
+TEST_AC := $(abspath $(TOP)/../dist/gac)
 
 ifneq "$(wildcard $(TEST_AC) $(TEST_AC).exe)" ""
 IN_TREE_COMPILER = YES
