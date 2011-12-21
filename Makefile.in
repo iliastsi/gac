@@ -96,9 +96,9 @@ distcheck: dist
 	@echo "Unpacking the tar.."
 	tar xzf $(ARCHIVE).tar.gz
 	@echo "Configuring the dist package.."
-	(cd $(ARCHIVE) && ./configure --prefix=`pwd`/install)
+	(cd $(ARCHIVE) && ./configure)
 	@echo "Compiling the dist package.."
-	$(MAKE) -C $(ARCHIVE) install
+	$(MAKE) -C $(ARCHIVE) all
 	@echo "Testing the dist package.."
 	$(MAKE) -C $(ARCHIVE) test
 	@echo "Cleaning temp files.."
