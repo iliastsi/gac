@@ -29,16 +29,30 @@ ARCHIVE = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
 
 .PHONY: all
-all:
-	$(MAKE) -C src $@
-	$(MAKE) $(builddir)/$(PACKAGE_TARNAME)
+all: inplace
 
+
+#### Build gac ####
+###################
+.PHONY: build
+build:
+	$(MAKE) -C src $@
+
+.PHONY: inplace
+inplace: build $(builddir)/$(PACKAGE_TARNAME)
+	$(INSTALL_PROG) -D $(builddir)/build/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME) \
+			$(builddir)/inplace/lib/$(PACKAGE_TARNAME)
+
+$(builddir)/$(PACKAGE_TARNAME):
+	$(call shell-wrapper,'gac_shell',$(builddir)/inplace)
+	$(INSTALL_PROG) -D gac_shell $(builddir)/$(PACKAGE_TARNAME)
+	$(RM) gac_shell
 
 ##### Install gac #####
 #######################
 .PHONY: install
-install: all
-	$(call shell-wrapper,'gac_shell',$(libdir)/lib,$(libdir))
+install: build
+	$(call shell-wrapper,'gac_shell',$(libdir))
 	$(INSTALL_PROG) -D gac_shell $(bindir)/$(PACKAGE_TARNAME)
 	$(RM) gac_shell
 	$(INSTALL_PROG) -D $(builddir)/build/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME) \
@@ -122,16 +136,10 @@ fulltest:
 #### Shell Wrapper ####
 #######################
 # $1 shell name
-# $2 exedir
-# $3 topdir
+# $2 topdir
 define shell-wrapper
   @echo '#!/bin/sh'                                      > $1
-  @echo 'executable="$2/$(PACKAGE_TARNAME)"'            >> $1
-  @echo 'topdir="$3"'                                   >> $1
+  @echo 'executable="$2/lib/$(PACKAGE_TARNAME)"'        >> $1
+  @echo 'topdir="$2"'                                   >> $1
   @echo 'exec "$$executable" -B"$$topdir" $${1+"$$@"}'  >> $1
 endef
-
-$(builddir)/$(PACKAGE_TARNAME):
-	$(call shell-wrapper,'gac_shell',$(builddir)/build/$(PACKAGE_TARNAME),$(builddir))
-	$(INSTALL_PROG) -D gac_shell $(builddir)/$(PACKAGE_TARNAME)
-	$(RM) gac_shell
