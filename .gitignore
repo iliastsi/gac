@@ -5,10 +5,6 @@
 /src/Setup.o
 /src/Setup.hi
 
-# default installing dir #
-##########################
-/install/
-
 # vim swap and backup files #
 #############################
 *.swp
