@@ -17,7 +17,7 @@
 -- But this is not the case, the type checker will figure out a type and return
 -- an expression with this specific type, so the type we really want is
 --      typeCheckExpr :: exists a . UExpr -> TcM (TExpr a)
--- 
+--
 -- Haskell doesn't allow this type to be written this way; we need to package
 -- up the existential type in a data type. Like so:
 --      data AExpr = forall a . AExpr (TExpr a) (TType a)
@@ -39,6 +39,7 @@ import Outputable (panic)
 import DynFlags
 
 import Data.Int
+import Data.Char
 import Control.Monad
 
 
@@ -272,7 +273,7 @@ typeCheckExpr (L loc (UExprInt i)) = do
     return (L loc $ AExpr (TExprInt i') (TTypeInt))
 -- UExprChar
 typeCheckExpr (L loc (UExprChar c)) = do
-    return (L loc $ AExpr (TExprChar (toEnum (fromEnum c))) (TTypeChar))
+    return (L loc $ AExpr (TExprChar (fromIntegral (ord c))) (TTypeChar))
 -- UExprString
 typeCheckExpr (L loc (UExprString s)) = do
     return (L loc $ AExpr (TExprString s) (TTypePtr TTypeChar))

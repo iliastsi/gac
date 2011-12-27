@@ -36,6 +36,7 @@ import ErrUtils
 import DynFlags
 
 import Data.Char
+import Data.Word (Word8)
 
 }
 
@@ -253,7 +254,7 @@ data ParseResult a
     = POk PState a
     | PFailed Messages
 
-data PState = PState { 
+data PState = PState {
     buffer	        :: String,
     dflags          :: DynFlags,
     messages        :: Messages,
@@ -349,10 +350,17 @@ data AlexInput = AI SrcLoc String Char
 alexInputPrevChar :: AlexInput -> Char
 alexInputPrevChar (AI _ _ c) = c
 
-alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
-alexGetChar (AI _   []     _) = Nothing
-alexGetChar (AI loc (x:xs) _) = Just (x, AI (advanceSrcLoc loc x) xs x)
+alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)
+alexGetByte (AI _   []    _) = Nothing
+alexGetByte (AI loc (c:s) _) =
+    let loc' = advanceSrcLoc loc c
+    in loc' `seq` Just (fromIntegral (ord c), AI loc' s c)
 
+-- for compat with Alex 2.x:
+alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
+alexGetChar i = case alexGetByte i of
+                    Nothing     -> Nothing
+                    Just (b,i') -> Just (chr (fromIntegral b), i')
 
 -- create a parse state
 --
