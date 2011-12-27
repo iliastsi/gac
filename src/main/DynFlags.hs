@@ -241,7 +241,7 @@ defaultDynFlags =
         pgm_lc              = panic "defaultDynFlags: No pgm_lc",
         pgm_T               = panic "defaultDynFlags: No pgm_T",
         -- end of initSynTools values
- 
+
         filesToClean        = panic "defaultDynFlags: No filesToClean",
         dirsToClean         = panic "defaultDynFlags: No dirsToClean",
 

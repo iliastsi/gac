@@ -19,7 +19,7 @@ AC_INIT([The Glorious Alan Compilation System], [0.6], [iliastsi@hotmail.com], [
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])
 
 dnl ----------------------------------------------------------
-dnl ** Find unixy sort and find commands, 
+dnl ** Find unixy sort and find commands,
 dnl ** which are needed by FP_SETUP_PROJECT_VERSION
 
 # First off, a distrib sanity check..
@@ -45,7 +45,7 @@ dnl * Project specific configuration options
 dnl --------------------------------------------------------------
 
 dnl ** Tell the make system which OS we are using
-dnl $OSTYPE is set by the operating system to "msys" or "cygwin" or something 
+dnl $OSTYPE is set by the operating system to "msys" or "cygwin" or something
 AC_SUBST(OSTYPE)
 
 
@@ -258,7 +258,7 @@ if test x"$ac_cv_env_LFLAGS_set" != x
 then
         LFLAGS=$ac_cv_env_LFLAGS_value
 else
-        LFLAGS="--ghc" 
+        LFLAGS="--ghc"
 fi
 AC_SUBST([LFLAGS])
 

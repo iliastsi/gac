@@ -120,7 +120,7 @@ dumpUDef ind (UDefArr ludef lsize) =
 dumpLUDefs :: Int -> [LUDef] -> String
 dumpLUDefs ind ludefs =
     foldl (\buf t -> buf ++ dumpUDef ind (unLoc t) ++ "\n") "" ludefs
-            
+
 -- ---------------------------
 type LUParam = Located UParam
 
@@ -132,7 +132,7 @@ instance Show UParam where
 
 dumpUParam :: UParam -> String
 dumpUParam (UParam lide mode lutype) =
-    dumpIde (unLoc lide) ++ " : " ++ dumpMode mode ++ " " ++ 
+    dumpIde (unLoc lide) ++ " : " ++ dumpMode mode ++ " " ++
         dumpUType (unLoc lutype)
 
 dumpLUParams :: [LUParam] -> String

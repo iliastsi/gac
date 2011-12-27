@@ -12,10 +12,10 @@ The GAC Developer's Wiki
   Quick Start for developers
 
      http://courses.softlab.ntua.gr/compilers/
-   
+
      This page will get you up and running with compilers
      course and Alan language in no time:
-  
+
 
   Coding conventions
 
@@ -23,8 +23,8 @@ The GAC Developer's Wiki
 
      This wiki page explains the ground rules for code that is intended
      to go into the mainline compiler source.
-  
-  
+
+
 Mailing lists
 -------------
 

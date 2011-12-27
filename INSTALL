@@ -17,7 +17,7 @@ running on, and a couple of other interesting pieces of trivia.
 Now run:
 
         make
-        make install 
+        make install
 
 Bug reports/suggestions for improvement to the installation
 procedure/setup (as well as other GAC related troubles you're

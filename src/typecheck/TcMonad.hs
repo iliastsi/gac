@@ -3,7 +3,7 @@
 --
 -- The TcMonad is a State Monad that keeps track of symbol table
 -- and errors during the semantic analysis
--- 
+--
 --------------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
