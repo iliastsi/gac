@@ -1,0 +1,5 @@
+char_error() : proc
+  b : byte;
+{
+  b = 'ab';
+}

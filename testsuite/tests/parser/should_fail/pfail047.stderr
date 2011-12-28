@@ -1,0 +1,6 @@
+pfail047.alan:4:7: Error: Parse error on input `''
+	Cannot parse char `''
+
+pfail047.alan:4:10: Error: Parse error on input `''
+	Cannot parse char `''
+

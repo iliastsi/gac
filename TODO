@@ -1,7 +1,6 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
 ** Fix in Lexer:
-    - Add error messages when include more than one char in \'
     - Support strings in other languages than English
 
 ** Fix Parser:
