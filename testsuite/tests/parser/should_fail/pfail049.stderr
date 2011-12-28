@@ -1,0 +1,3 @@
+pfail049.alan:3:16: Error: Parse error on input `$'
+	Cannot parse char `$'
+

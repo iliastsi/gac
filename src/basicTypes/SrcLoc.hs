@@ -75,6 +75,8 @@ import {-# Source #-} Outputable(panic)
 
 -- Uncomment this if use advanceSrcLoc with '\t'
 --import Data.Bits
+import Data.Word (Word8)
+import Data.Char (ord)
 
 
 -- -------------------------------------------------------------------
@@ -121,16 +123,19 @@ srcLocCol :: SrcLoc -> Int
 srcLocCol (SrcLoc _ _ c) = c
 srcLocCol (UnhelpfulLoc _) = panic "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'"
 
--- | Move the 'SrcLoc' down by one line if the character is a newline,
--- to the next 8-char tabstop if it is a tab, and across by one
--- character in any other case
-advanceSrcLoc :: SrcLoc -> Char -> SrcLoc
-advanceSrcLoc (SrcLoc f l _) '\n' = SrcLoc f  (l + 1) 1
-advanceSrcLoc (SrcLoc f l _) '\r' = SrcLoc f  l 1
---advanceSrcLoc (SrcLoc f l c) '\t' =
---    SrcLoc f  l (((((c - 1) `shiftR` 3) + 1) `shiftL` 3) + 1)
-advanceSrcLoc (SrcLoc f l c) _    = SrcLoc f  l (c + 1)
-advanceSrcLoc loc            _    = loc -- Better than nothing
+-- | Move the 'SrcLoc' according to a UTF-8 encoded Word8
+-- Move by one line if the character is a newline,
+-- to the next 8-char tabstop if it is a tab,
+-- and across by one character in any other case
+advanceSrcLoc :: SrcLoc -> Word8 -> SrcLoc
+advanceSrcLoc loc@(SrcLoc f l c) w
+    | w >= 0x80 && w < 0xC0        = loc
+    | w == fromIntegral (ord '\n') = SrcLoc f (l+1) 1
+    | w == fromIntegral (ord '\r') = SrcLoc f l     1
+--    | w == fromIntegral (ord '\t') =
+--        SrcLoc f l (((((c - 1) `shiftR` 3) + 1) `shiftL` 3) + 1)
+    | otherwise = SrcLoc f l (c+1)
+advanceSrcLoc loc _ = loc -- Better than nothing
 
 -- | Convert SrcLoc to String
 showSrcLoc :: SrcLoc -> String
