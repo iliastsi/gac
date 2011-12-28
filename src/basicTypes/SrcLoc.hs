@@ -73,7 +73,8 @@ module SrcLoc (
 import Util
 import {-# Source #-} Outputable(panic)
 
-import Data.Bits
+-- Uncomment this if use advanceSrcLoc with '\t'
+--import Data.Bits
 
 
 -- -------------------------------------------------------------------
@@ -126,8 +127,8 @@ srcLocCol (UnhelpfulLoc _) = panic "SrcLoc.srcLocCol can't handle `UnhelpfulLoc'
 advanceSrcLoc :: SrcLoc -> Char -> SrcLoc
 advanceSrcLoc (SrcLoc f l _) '\n' = SrcLoc f  (l + 1) 1
 advanceSrcLoc (SrcLoc f l _) '\r' = SrcLoc f  l 1
-advanceSrcLoc (SrcLoc f l c) '\t' = SrcLoc f  l (((((c - 1) `shiftR` 3) + 1)
-                                                  `shiftL` 3) + 1)
+--advanceSrcLoc (SrcLoc f l c) '\t' =
+--    SrcLoc f  l (((((c - 1) `shiftR` 3) + 1) `shiftL` 3) + 1)
 advanceSrcLoc (SrcLoc f l c) _    = SrcLoc f  l (c + 1)
 advanceSrcLoc loc            _    = loc -- Better than nothing
 

@@ -4,7 +4,6 @@
     - Support strings in other languages than English
 
 ** Fix Parser:
-    - Express "this should be between spaces"
     - Add the grammar rule to write `<string-literal>[<int>]>'
 
 ** Fix in configure.ac

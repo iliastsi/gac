@@ -1,0 +1,12 @@
+pfail048.alan:4:2: Error: Parse error on input `$'
+	Cannot parse char `$'
+
+pfail048.alan:4:12: Error: Parse error on input `$'
+	Cannot parse char `$'
+
+pfail048.alan:6:7: Error: Parse error on input `@'
+	Cannot parse char `@'
+
+pfail048.alan:6:17: Error: Parse error on input `@'
+	Cannot parse char `@'
+

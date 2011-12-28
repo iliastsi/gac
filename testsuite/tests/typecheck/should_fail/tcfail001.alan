@@ -1,5 +1,5 @@
 hello () : proc
-	foo : int;
+  foo : int;
 {
-	foo = 5262147483648;
+  foo = 5262147483648;
 }
