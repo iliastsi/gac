@@ -387,8 +387,8 @@ alexGetChar i = case alexGetByte i of
                             (AI _ _ _ []) ->
                                 Just (chr (fromIntegral b), i')
                             otherwise     ->
-                                panic $ "Alex version 2.x doesn't support UTF8. "
-                                        ++ "Please compile with Alex version 3.x"
+                                panic $ "Alex version 2.x doesn't support UTF8."
+                                        ++ "\n\tPlease compile with Alex version 3.x"
 
 -- create a parse state
 --

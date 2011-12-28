@@ -2451,7 +2451,7 @@ fi;
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $fptools_cv_happy_version" >&5
 $as_echo "$fptools_cv_happy_version" >&6; }
-fp_version1=$fptools_cv_happy_version; fp_version2=1.18
+fp_version1=$fptools_cv_happy_version; fp_version2=1.18.4
 fp_save_IFS=$IFS; IFS='.'
 while test x"$fp_version1" != x || test x"$fp_version2" != x
 do
@@ -2472,7 +2472,7 @@ do
 done
 IFS=$fp_save_IFS
 if test "$fp_num1" -lt "$fp_num2"; then :
-  as_fn_error $? "Happy version 1.18 or later is required to compile GAC." "$LINENO" 5
+  as_fn_error $? "Happy version 1.18.4 or later is required to compile GAC." "$LINENO" 5
 fi
 HappyVersion=$fptools_cv_happy_version;
 
@@ -2570,7 +2570,7 @@ fi;
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $fptools_cv_alex_version" >&5
 $as_echo "$fptools_cv_alex_version" >&6; }
-fp_version1=$fptools_cv_alex_version; fp_version2=2.3.5
+fp_version1=$fptools_cv_alex_version; fp_version2=2.3.3
 fp_save_IFS=$IFS; IFS='.'
 while test x"$fp_version1" != x || test x"$fp_version2" != x
 do
@@ -2591,7 +2591,7 @@ do
 done
 IFS=$fp_save_IFS
 if test "$fp_num1" -lt "$fp_num2"; then :
-  as_fn_error $? "Alex version 2.3.5 or later is required to compile GAC." "$LINENO" 5
+  as_fn_error $? "Alex version 2.3.3 or later is required to compile GAC." "$LINENO" 5
 fi
 AlexVersion=$fptools_cv_alex_version;
 

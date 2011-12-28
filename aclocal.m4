@@ -95,8 +95,8 @@ else
 fi;
 changequote([, ])dnl
 ])
-FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.18],
-  [AC_MSG_ERROR([Happy version 1.18 or later is required to compile GAC.])])[]
+FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.18.4],
+  [AC_MSG_ERROR([Happy version 1.18.4 or later is required to compile GAC.])])[]
 HappyVersion=$fptools_cv_happy_version;
 AC_SUBST(HappyVersion)
 ])
@@ -133,8 +133,8 @@ else
 fi;
 changequote([, ])dnl
 ])
-FP_COMPARE_VERSIONS([$fptools_cv_alex_version],[-lt],[2.3.5],
-  [AC_MSG_ERROR([Alex version 2.3.5 or later is required to compile GAC.])])[]
+FP_COMPARE_VERSIONS([$fptools_cv_alex_version],[-lt],[2.3.3],
+  [AC_MSG_ERROR([Alex version 2.3.3 or later is required to compile GAC.])])[]
 AlexVersion=$fptools_cv_alex_version;
 AC_SUBST(AlexVersion)
 ])
