@@ -27,9 +27,9 @@ import System.Exit
 import System
 import System.FilePath
 import Data.List
-import System.IO
 import Data.Maybe
 import Control.Monad (when)
+import qualified Data.ByteString.Lazy as BS
 
 
 -- ---------------------------
@@ -114,16 +114,13 @@ main'' postLoadMode dflags0 srcs objs = do
 -- the produced object file (if any)
 driverParse :: PostLoadMode -> DynFlags -> String -> IO (Maybe String)
 driverParse postLoadMode dflags filename = do
-    handle <- openFile filename ReadMode
-    contents <- hGetContents handle
+    contents <- BS.readFile filename
     let p_state = mkPState dflags contents (mkSrcLoc filename 1 1)
     case unP parser p_state of
          PFailed msg        -> do
-             hClose handle
              printMessages dflags msg
              exitFailure
          POk p_state' luast -> do
-             hClose handle
              when (dopt Opt_D_dump_parsed dflags) $
                     printDumpedAst (unLoc luast)
              let p_messages = getPMessages p_state'

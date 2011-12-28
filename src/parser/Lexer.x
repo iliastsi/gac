@@ -34,9 +34,12 @@ module Lexer (
 import SrcLoc
 import ErrUtils
 import DynFlags
+import Outputable (panic)
 
 import Data.Char
 import Data.Word (Word8)
+import qualified Data.ByteString.Lazy.Char8 as BSC
+import qualified Codec.Binary.UTF8.String as Codec
 
 }
 
@@ -52,63 +55,63 @@ $hexit = [$digit a-f A-F]
 
 tokens :-
 
-$white+             ;
+$white+         ;
 
 <0> {
-  byte              { token ITbyte }
-  return            { token ITreturn }
-  else              { token ITelse }
-  while             { token ITwhile }
-  false             { token ITfalse }
-  true              { token ITtrue }
-  if                { token ITif }
-  int               { token ITint }
-  proc              { token ITproc }
-  reference         { token ITreference }
+  byte          { token ITbyte }
+  return        { token ITreturn }
+  else          { token ITelse }
+  while         { token ITwhile }
+  false         { token ITfalse }
+  true          { token ITtrue }
+  if            { token ITif }
+  int           { token ITint }
+  proc          { token ITproc }
+  reference     { token ITreference }
 
-  $alpha $id*       { lex_id_tok }
-  $digit+           { lex_int_tok }
+  $alpha $id*   { lex_id_tok }
+  $digit+       { lex_int_tok }
   \' ($char|@special) \'
-                    { lex_char_tok }
+                { lex_char_tok }
   \" ($char|\'|@special)* \"
-                    { lex_string_tok }
+                { lex_string_tok }
 
-  "="               { token ITassign }
-  "+"               { token ITplus }
-  "-"               { token ITminus }
-  "*"               { token ITtimes }
-  "/"               { token ITdiv }
-  "%"               { token ITmod }
-  "!"               { token ITnot }
-  "&"               { token ITand }
-  "|"               { token ITor }
-  "=="              { token ITequal }
-  "!="              { token ITnotequal }
-  "<"               { token ITlt }
-  ">"               { token ITgt }
-  "<="              { token ITle }
-  ">="              { token ITge }
-  "("               { token IToparen }
-  ")"               { token ITcparen }
-  "["               { token ITobrack }
-  "]"               { token ITcbrack }
-  "{"               { token ITocurly }
-  "}"               { token ITccurly }
-  ","               { token ITcomma }
-  ":"               { token ITcolon }
-  ";"               { token ITsemi }
+  "="           { token ITassign }
+  "+"           { token ITplus }
+  "-"           { token ITminus }
+  "*"           { token ITtimes }
+  "/"           { token ITdiv }
+  "%"           { token ITmod }
+  "!"           { token ITnot }
+  "&"           { token ITand }
+  "|"           { token ITor }
+  "=="          { token ITequal }
+  "!="          { token ITnotequal }
+  "<"           { token ITlt }
+  ">"           { token ITgt }
+  "<="          { token ITle }
+  ">="          { token ITge }
+  "("           { token IToparen }
+  ")"           { token ITcparen }
+  "["           { token ITobrack }
+  "]"           { token ITcbrack }
+  "{"           { token ITocurly }
+  "}"           { token ITccurly }
+  ","           { token ITcomma }
+  ":"           { token ITcolon }
+  ";"           { token ITsemi }
 
-  "*)"              { errorMsg ("You are trying to close the comments without having opened them first") }
+  "*)"          { errorMsg ("You are trying to close the comments without having opened them first") }
 }
 
-"--" .*             ;
-"(*"                { embedComment }
+"--" .*         ;
+"(*"            { embedComment }
 <comments> {
-  "*)"              { unembedComment }
-  .                 ;
+  "*)"          { unembedComment }
+  .             ;
 }
 
-.                   { unknownChar }
+.               { unknownChar }
 
 
 {
@@ -162,7 +165,7 @@ data Token
 -- Lexer actions
 
 -- Position -> Buffer -> Length -> P Token
-type Action = SrcSpan -> String -> Int -> P (Located Token)
+type Action = SrcSpan -> BSC.ByteString -> Int -> P (Located Token)
 
 token :: Token -> Action
 token t span _buf _len = return (L span t)
@@ -177,21 +180,25 @@ begin :: Int -> Action
 begin code = skip `andBegin` code
 
 lex_id_tok :: Action
-lex_id_tok span buf len = return (L span (ITid (take len buf)))
+lex_id_tok span buf len = do
+    let ide = take len $ BSC.unpack buf
+    ide `seq` return $ L span (ITid ide)
 
 lex_int_tok :: Action
 lex_int_tok span buf len = do
-    let num_str = take len buf
-        num     = read num_str
-    return (L span (ITdigit num))
+    case BSC.readInteger buf of
+        Just (num, _) -> num `seq` return $ L span (ITdigit num)
+        Nothing       -> panic "Lexer.lex_int_tok did not return an integer"
 
 lex_string_tok :: Action
-lex_string_tok span buf len = return (L span (ITstring tok_string))
-    where tok_string = escape (take (len-2) (tail buf))
+lex_string_tok span buf len = do
+    let tok_string = escape $ take (len-2) $ tail (BSC.unpack buf)
+    tok_string `seq` return $ L span (ITstring tok_string)
 
 lex_char_tok :: Action
-lex_char_tok span buf len = return (L span (ITchar c))
-    where c = head $ escape (take (len-2) (tail buf))
+lex_char_tok span buf len = do
+    let c = head $ escape $ take (len-2) $ tail (BSC.unpack buf)
+    c `seq` return $ L span (ITchar c)
 
 -- strip out special characters from strings
 escape :: String -> String
@@ -221,30 +228,35 @@ unembedComment span buf len = do
         else lexToken
 
 unknownChar :: Action
-unknownChar span buf len =
-    errorMsg ("Cannot parse char `" ++ take 1 buf ++ "'") span buf len
+unknownChar span buf len = do
+    let unk_c = [BSC.head buf]
+    unk_c `seq` errorMsg ("Cannot parse char `" ++ unk_c ++ "'") span buf len
 
 -- -------------------------------------------------------------------
 -- Warnings and Errors
 
 warnMsg :: String -> Action
 warnMsg msg span buf len = do
-    addPWarning span (take len buf) msg
+    let tok = take len $ BSC.unpack buf
+    tok `seq` addPWarning span tok msg
     lexToken
 
 warnThen :: String -> Action -> Action
 warnThen msg action span buf len = do
-    addPWarning span (take len buf) msg
+    let tok = take len $ BSC.unpack buf
+    tok `seq` addPWarning span tok msg
     action span buf len
 
 errorMsg :: String -> Action
 errorMsg msg span buf len = do
-    addPError span (take len buf) msg
+    let tok = take len $ BSC.unpack buf
+    tok `seq` addPError span tok msg
     lexToken
 
 errorThen :: String -> Action -> Action
 errorThen msg action span buf len = do
-    addPError span (take len buf) msg
+    let tok = take len $ BSC.unpack buf
+    tok `seq` addPError span tok msg
     action span buf len
 
 -- -------------------------------------------------------------------
@@ -255,7 +267,7 @@ data ParseResult a
     | PFailed Messages
 
 data PState = PState {
-    buffer	        :: String,
+    buffer	        :: BSC.ByteString,
     dflags          :: DynFlags,
     messages        :: Messages,
     last_loc        :: SrcSpan, -- pos of previous token
@@ -307,10 +319,10 @@ getPState = P $ \s -> POk s s
 
 getInput :: P AlexInput
 getInput = P $ \s@(PState{loc=loc, buffer=buffer, prev=prev}) ->
-                    POk s (AI loc buffer prev)
+                    POk s (AI loc buffer prev [])
 
 setInput :: AlexInput -> P ()
-setInput (AI loc buf prev) = P $ \s ->
+setInput (AI loc buf prev _) = P $ \s ->
                     POk s{loc=loc, buffer=buf, prev=prev} ()
 
 getLexState :: P Int
@@ -345,26 +357,42 @@ getCommState :: P Int
 getCommState = P $ \s@(PState{comment_state=comment_state}) ->
                     POk s comment_state
 
-data AlexInput = AI SrcLoc String Char
+data AlexInput =
+    AI SrcLoc           -- current position,
+       BSC.ByteString    -- current input string,
+       Char             -- previous char
+       [Word8]          -- rest of the bytes for the current char
 
 alexInputPrevChar :: AlexInput -> Char
-alexInputPrevChar (AI _ _ c) = c
+alexInputPrevChar (AI _ _ c _) = c
 
 alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)
-alexGetByte (AI _   []    _) = Nothing
-alexGetByte (AI loc (c:s) _) =
-    let loc' = advanceSrcLoc loc c
-    in loc' `seq` Just (fromIntegral (ord c), AI loc' s c)
+alexGetByte (AI loc buf prev (r:rs)) =
+        Just (r, AI loc buf prev rs)
+alexGetByte (AI loc buf _prev [])
+    | BSC.null buf  = Nothing
+    | otherwise =
+        let c      = BSC.head buf
+            (r:rs) = Codec.encode [c]
+            buf'   = BSC.tail buf
+            loc'   = advanceSrcLoc loc c
+        in c `seq` loc' `seq` Just (r, AI loc' buf' c rs)
 
 -- for compat with Alex 2.x:
 alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
 alexGetChar i = case alexGetByte i of
                     Nothing     -> Nothing
-                    Just (b,i') -> Just (chr (fromIntegral b), i')
+                    Just (b,i') ->
+                        case i' of
+                            (AI _ _ _ []) ->
+                                Just (chr (fromIntegral b), i')
+                            otherwise     ->
+                                panic $ "Alex version 2.x doesn't support UTF8. "
+                                        ++ "Please compile with Alex version 3.x"
 
 -- create a parse state
 --
-mkPState :: DynFlags -> String -> SrcLoc -> PState
+mkPState :: DynFlags -> BSC.ByteString -> SrcLoc -> PState
 mkPState flags buf loc =
   PState {
     buffer          = buf,
@@ -406,7 +434,7 @@ srcParseFail msg = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
 lexError :: String -> P a
 lexError str = do
     loc <- getSrcLoc
-    (AI end buf _) <- getInput
+    (AI end buf _ _) <- getInput
     reportLexError loc end buf str
 
 -- -------------------------------------------------------------------
@@ -415,7 +443,7 @@ lexError str = do
 
 lexToken :: P (Located Token)
 lexToken = do
-    inp@(AI loc1 buf _) <- getInput
+    inp@(AI loc1 buf _ _) <- getInput
     sc <- getLexState
     case alexScan inp sc of
         AlexEOF -> do
@@ -425,22 +453,24 @@ lexToken = do
                then errorThen ("You forgot to close the comments")
                         (\_ _ _ -> return (L span ITeof)) span buf 0
                else return (L span ITeof)
-        AlexError (AI loc2 buf2 _) ->
+        AlexError (AI loc2 buf2 _ _) ->
             reportLexError loc1 loc2 buf2 "Unknown lexical error"
         AlexSkip inp2 _ -> do
             setInput inp2
             lexToken
-        AlexToken inp2@(AI end _ _) len t -> do
+        AlexToken inp2@(AI end _ _ []) len t -> do
             setInput inp2
             let span = mkSrcSpan loc1 end
-            span `seq` setLastToken span (take len buf)
+            span `seq` setLastToken span (take len $ BSC.unpack buf)
             t (mkSrcSpan loc1 end) buf len
+        AlexToken _ _ _ -> panic $ "AlexToken in Lexer.lexToken didn't eat all the"
+                                ++ "bytes for the current char"
 
-reportLexError :: SrcLoc -> SrcLoc -> String -> String -> P a
+reportLexError :: SrcLoc -> SrcLoc -> BSC.ByteString -> String -> P a
 reportLexError loc1 loc2 buf str
-    | null buf  = failLocMsgP loc1 loc2 (str ++ " at end of input")
+    | BSC.null buf  = failLocMsgP loc1 loc2 (str ++ " at end of input")
     | otherwise =
-        let c = head buf
+        let c = BSC.head buf
         in
         failLocMsgP loc1 loc2 (str ++ " at character " ++ show c)
 

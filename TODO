@@ -1,10 +1,8 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
-** Use a faster Type than String for reading from file
-    - Use `readFile' instead of `hGetContents'
-
 ** Fix in Lexer:
     - Add error messages when include more than one char in \'
+    - Support strings in other languages than English
 
 ** Fix Parser:
     - Express "this should be between spaces"
@@ -15,6 +13,7 @@
 
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
+    - Should we handle `byte' type as `short int'?
 
 ** Error Messages:
     - When report int overflow we see only the positive number
