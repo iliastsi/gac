@@ -273,7 +273,6 @@ data PState = PState {
     last_loc        :: SrcSpan, -- pos of previous token
     last_tok        :: !String, -- string of the previous token
     loc             :: SrcLoc,  -- current loc (end of token + 1)
-    prev            :: !Char,   -- previous char
 	lex_state       :: !Int,
     comment_state   :: !Int
   }
@@ -318,12 +317,12 @@ getPState :: P PState
 getPState = P $ \s -> POk s s
 
 getInput :: P AlexInput
-getInput = P $ \s@(PState{loc=loc, buffer=buffer, prev=prev}) ->
-                    POk s (AI loc buffer prev [])
+getInput = P $ \s@(PState{loc=loc, buffer=buffer}) ->
+                    POk s (AI loc buffer [])
 
 setInput :: AlexInput -> P ()
-setInput (AI loc buf prev _) = P $ \s ->
-                    POk s{loc=loc, buffer=buf, prev=prev} ()
+setInput (AI loc buf _) = P $ \s ->
+                    POk s{loc=loc, buffer=buf} ()
 
 getLexState :: P Int
 getLexState = P $ \s@(PState{lex_state=lex_state}) ->
@@ -359,36 +358,38 @@ getCommState = P $ \s@(PState{comment_state=comment_state}) ->
 
 data AlexInput =
     AI SrcLoc           -- current position,
-       BSC.ByteString    -- current input string,
-       Char             -- previous char
+       BSC.ByteString   -- current input string,
        [Word8]          -- rest of the bytes for the current char
 
 alexInputPrevChar :: AlexInput -> Char
-alexInputPrevChar (AI _ _ c _) = c
+alexInputPrevChar _ =
+    panic $ "Lexer.alexInputPrevChar supposed to be undefined."
+            ++ "\n\tWe don't use patterns with a left-context."
 
 alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)
-alexGetByte (AI loc buf prev (r:rs)) =
-        Just (r, AI loc buf prev rs)
-alexGetByte (AI loc buf _prev [])
+alexGetByte (AI loc buf (r:rs)) =
+        Just (r, AI loc buf rs)
+alexGetByte (AI loc buf [])
     | BSC.null buf  = Nothing
     | otherwise =
         let c      = BSC.head buf
             (r:rs) = Codec.encode [c]
             buf'   = BSC.tail buf
             loc'   = advanceSrcLoc loc c
-        in c `seq` loc' `seq` Just (r, AI loc' buf' c rs)
+        in c `seq` loc' `seq` Just (r, AI loc' buf' rs)
 
 -- for compat with Alex 2.x:
 alexGetChar :: AlexInput -> Maybe (Char, AlexInput)
-alexGetChar i = case alexGetByte i of
-                    Nothing     -> Nothing
-                    Just (b,i') ->
-                        case i' of
-                            (AI _ _ _ []) ->
-                                Just (chr (fromIntegral b), i')
-                            otherwise     ->
-                                panic $ "Alex version 2.x doesn't support UTF-8."
-                                        ++ "\n\tPlease compile with Alex version 3.x"
+alexGetChar i =
+    case alexGetByte i of
+        Nothing     -> Nothing
+        Just (b,i') ->
+            case i' of
+                (AI _ _ []) ->
+                    Just (chr (fromIntegral b), i')
+                otherwise     ->
+                    panic $ "Alex version 2.x doesn't support UTF-8."
+                            ++ "\n\tPlease compile with Alex version 3.x"
 
 -- create a parse state
 --
@@ -401,7 +402,6 @@ mkPState flags buf loc =
     last_loc        = mkSrcSpan loc loc,
     last_tok        = "",
     loc             = loc,
-    prev            = '\n',
     lex_state       = 0,
     comment_state   = 0
   }
@@ -434,7 +434,7 @@ srcParseFail msg = P $ \PState{messages=ms, last_loc=span, last_tok=tok} ->
 lexError :: String -> P a
 lexError str = do
     loc <- getSrcLoc
-    (AI end buf _ _) <- getInput
+    (AI end buf _) <- getInput
     reportLexError loc end buf str
 
 -- -------------------------------------------------------------------
@@ -443,7 +443,7 @@ lexError str = do
 
 lexToken :: P (Located Token)
 lexToken = do
-    inp@(AI loc1 buf _ _) <- getInput
+    inp@(AI loc1 buf _) <- getInput
     sc <- getLexState
     case alexScan inp sc of
         AlexEOF -> do
@@ -453,18 +453,19 @@ lexToken = do
                then errorThen ("You forgot to close the comments")
                         (\_ _ _ -> return (L span ITeof)) span buf 0
                else return (L span ITeof)
-        AlexError (AI loc2 buf2 _ _) ->
+        AlexError (AI loc2 buf2 _) ->
             reportLexError loc1 loc2 buf2 "Unknown lexical error"
         AlexSkip inp2 _ -> do
             setInput inp2
             lexToken
-        AlexToken inp2@(AI end _ _ []) len t -> do
+        AlexToken inp2@(AI end _ []) len t -> do
             setInput inp2
             let span = mkSrcSpan loc1 end
             span `seq` setLastToken span (take len $ BSC.unpack buf)
             t (mkSrcSpan loc1 end) buf len
-        AlexToken _ _ _ -> panic $ "AlexToken in Lexer.lexToken didn't eat all the"
-                                ++ "bytes for the current char"
+        AlexToken _ _ _ ->
+            panic $ "AlexToken in Lexer.lexToken didn't eat all the"
+                    ++ "bytes for the current char"
 
 reportLexError :: SrcLoc -> SrcLoc -> BSC.ByteString -> String -> P a
 reportLexError loc1 loc2 buf str
