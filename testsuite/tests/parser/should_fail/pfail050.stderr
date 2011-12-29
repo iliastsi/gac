@@ -1,0 +1,17 @@
+pfail050.alan:8:13: Error: Parse error on input `''
+	Cannot parse char `''
+
+pfail050.alan:8:14: Error: Parse error on input `φ'
+	Cannot parse char `φ'
+
+pfail050.alan:8:15: Error: Parse error on input `''
+	Cannot parse char `''
+
+==================== Parser ====================
+utf8_chars() : proc
+{ -- utf8_chars
+  writeString("Ηλίαςν");
+  writeByte();
+} -- utf8_chars
+
+

@@ -221,7 +221,7 @@ instance Show UExpr where
 dumpUExpr :: UExpr -> String
 dumpUExpr (UExprInt i)    = show i
 dumpUExpr (UExprChar c)   = show c
-dumpUExpr (UExprString s) = show s
+dumpUExpr (UExprString s) = "\"" ++ escape s ++ "\""
 dumpUExpr (UExprVar v)    = dumpUVariable v
 dumpUExpr (UExprFun f)    = dumpUFuncCall f
 dumpUExpr (UExprMinus e)  = "-" ++ dumpUExpr (unLoc e)
@@ -233,6 +233,17 @@ dumpLUExprs [] = ""
 dumpLUExprs (luexpr:luexprs) =
     dumpUExpr (unLoc luexpr) ++
         (foldl (\buf t -> buf ++ ", " ++ dumpUExpr (unLoc t)) "" luexprs)
+
+escape :: String -> String
+escape ('\n' : s) = '\\' : 'n'  : escape s
+escape ('\t' : s) = '\\' : 't'  : escape s
+escape ('\r' : s) = '\\' : 'r'  : escape s
+escape ('\0' : s) = '\\' : '0'  : escape s
+escape ('\\' : s) = '\\' : '\\' : escape s
+escape ('\'' : s) = '\\' : '\'' : escape s
+escape ('\"' : s) = '\\' : '\"' : escape s
+escape ( x   : s) = x : escape s
+escape [] = []
 
 -- ---------------------------
 type LUCond = Located UCond

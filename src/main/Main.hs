@@ -29,7 +29,7 @@ import System.FilePath
 import Data.List
 import Data.Maybe
 import Control.Monad (when)
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString as BS
 
 
 -- ---------------------------

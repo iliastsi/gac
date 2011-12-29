@@ -38,20 +38,24 @@ import Outputable (panic)
 
 import Data.Char
 import Data.Word (Word8)
-import qualified Data.ByteString.Lazy as BS
-import qualified Data.ByteString.Lazy.Char8 as BSC
-import qualified Codec.Binary.UTF8.String as Codec
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.UTF8 as BSU
 
 }
 
 
-$digit = 0-9
-$alpha = [a-z A-Z]
-$id = [$alpha \_ $digit]
-$char = $printable # [\'\"\\]
-$hexit = [$digit a-f A-F]
+$digit     = 0-9
+$alpha     = [a-z A-Z]
+$non_print = [\' \" \\]
+$engl      = [\32-\126] # $non_print
+$all       = $printable # $non_print
+$hexit     = [$digit a-f A-F]
 
-@special = \\n | \\t | \\r | \\0 | \\\\ | \\\' | \\\" | \\x $hexit $hexit
+@special = \\\' | \\\" | \\\\ | \\$all | \\x $hexit $hexit
+@id      = $alpha [$alpha \_ $digit]*
+@char    = \' ($engl|@special) \'
+@string  = \" ($all|@special)* \"
 
 
 tokens :-
@@ -70,12 +74,10 @@ $white+         ;
   proc          { token ITproc }
   reference     { token ITreference }
 
-  $alpha $id*   { lex_id_tok }
+  @id           { lex_id_tok }
   $digit+       { lex_int_tok }
-  \' ($char|@special) \'
-                { lex_char_tok }
-  \" ($char|\'|@special)* \"
-                { lex_string_tok }
+  @char         { lex_char_tok }
+  @string       { lex_string_tok }
 
   "="           { token ITassign }
   "+"           { token ITplus }
@@ -166,7 +168,7 @@ data Token
 -- Lexer actions
 
 -- Position -> Buffer -> Length -> P Token
-type Action = SrcSpan -> BSC.ByteString -> Int -> P (Located Token)
+type Action = SrcSpan -> BS.ByteString -> Int -> P (Located Token)
 
 token :: Token -> Action
 token t span _buf _len = return (L span t)
@@ -182,7 +184,7 @@ begin code = skip `andBegin` code
 
 lex_id_tok :: Action
 lex_id_tok span buf len = do
-    let ide = take len $ BSC.unpack buf
+    let ide = BSU.toString $ BSU.take (fromIntegral len) buf
     ide `seq` return $ L span (ITid ide)
 
 lex_int_tok :: Action
@@ -193,12 +195,12 @@ lex_int_tok span buf len = do
 
 lex_string_tok :: Action
 lex_string_tok span buf len = do
-    let tok_string = escape $ take (len-2) $ tail (BSC.unpack buf)
+    let tok_string = escape $ BSU.toString $ BSU.take (fromIntegral (len-2)) $ BSU.drop 1 buf
     tok_string `seq` return $ L span (ITstring tok_string)
 
 lex_char_tok :: Action
 lex_char_tok span buf len = do
-    let c = head $ escape $ take (len-2) $ tail (BSC.unpack buf)
+    let c = head $ escape $ BSU.toString $ BSU.take (fromIntegral (len-2)) $ BSU.drop 1 buf
     c `seq` return $ L span (ITchar c)
 
 -- strip out special characters from strings
@@ -230,33 +232,36 @@ unembedComment span buf len = do
 
 unknownChar :: Action
 unknownChar span buf len = do
-    let unk_c = [BSC.head buf]
-    unk_c `seq` errorMsg ("Cannot parse char `" ++ unk_c ++ "'") span buf len
+    case BSU.decode buf of
+        Just (c,_) ->
+            c `seq` errorMsg ("Cannot parse char `" ++ [c] ++ "'") span buf len
+        Nothing ->
+            panic "Lexer.unknownChar decode returned Nothing"
 
 -- -------------------------------------------------------------------
 -- Warnings and Errors
 
 warnMsg :: String -> Action
 warnMsg msg span buf len = do
-    let tok = take len $ BSC.unpack buf
+    let tok = BSU.toString $ BSU.take (fromIntegral len) buf
     tok `seq` addPWarning span tok msg
     lexToken
 
 warnThen :: String -> Action -> Action
 warnThen msg action span buf len = do
-    let tok = take len $ BSC.unpack buf
+    let tok = BSU.toString $ BSU.take (fromIntegral len) buf
     tok `seq` addPWarning span tok msg
     action span buf len
 
 errorMsg :: String -> Action
 errorMsg msg span buf len = do
-    let tok = take len $ BSC.unpack buf
+    let tok = BSU.toString $ BSU.take (fromIntegral len) buf
     tok `seq` addPError span tok msg
     lexToken
 
 errorThen :: String -> Action -> Action
 errorThen msg action span buf len = do
-    let tok = take len $ BSC.unpack buf
+    let tok = BSU.toString $ BSU.take (fromIntegral len) buf
     tok `seq` addPError span tok msg
     action span buf len
 
@@ -268,13 +273,13 @@ data ParseResult a
     | PFailed Messages
 
 data PState = PState {
-    buffer	        :: BSC.ByteString,
+    buffer          :: BS.ByteString,
     dflags          :: DynFlags,
     messages        :: Messages,
     last_loc        :: SrcSpan, -- pos of previous token
     last_tok        :: !String, -- string of the previous token
     loc             :: SrcLoc,  -- current loc (end of token + 1)
-	lex_state       :: !Int,
+    lex_state       :: !Int,
     comment_state   :: !Int
   }
 
@@ -359,7 +364,7 @@ getCommState = P $ \s@(PState{comment_state=comment_state}) ->
 
 data AlexInput =
     AI SrcLoc           -- current position,
-       BSC.ByteString   -- current input string,
+       BS.ByteString   -- current input string,
 
 alexInputPrevChar :: AlexInput -> Char
 alexInputPrevChar _ =
@@ -368,7 +373,7 @@ alexInputPrevChar _ =
 
 alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)
 alexGetByte (AI loc buf)
-    | BSC.null buf  = Nothing
+    | BS.null buf  = Nothing
     | otherwise =
         let w    = BS.head buf
             buf' = BS.tail buf
@@ -390,7 +395,7 @@ alexGetChar i =
 
 -- create a parse state
 --
-mkPState :: DynFlags -> BSC.ByteString -> SrcLoc -> PState
+mkPState :: DynFlags -> BS.ByteString -> SrcLoc -> PState
 mkPState flags buf loc =
   PState {
     buffer          = buf,
@@ -458,16 +463,14 @@ lexToken = do
         AlexToken inp2@(AI end _) len t -> do
             setInput inp2
             let span = mkSrcSpan loc1 end
-            span `seq` setLastToken span (take len $ BSC.unpack buf)
+            span `seq` setLastToken span (BSU.toString $ BSU.take (fromIntegral len) buf)
             t (mkSrcSpan loc1 end) buf len
 
-reportLexError :: SrcLoc -> SrcLoc -> BSC.ByteString -> String -> P a
-reportLexError loc1 loc2 buf str
-    | BSC.null buf  = failLocMsgP loc1 loc2 (str ++ " at end of input")
-    | otherwise =
-        let c = BSC.head buf
-        in
-        failLocMsgP loc1 loc2 (str ++ " at character " ++ show c)
+reportLexError :: SrcLoc -> SrcLoc -> BS.ByteString -> String -> P a
+reportLexError loc1 loc2 buf str =
+    case BSU.decode buf of
+        Just (c,_) -> failLocMsgP loc1 loc2 (str ++ " at character " ++ show c)
+        Nothing    -> failLocMsgP loc1 loc2 (str ++ " at end of input")
 
 lexer :: (Located Token -> P a) -> P a
 lexer cont = do

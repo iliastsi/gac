@@ -1,0 +1,6 @@
+utf8() : proc
+{
+(* θέλουμε να ελέγξουμε την υποστήριξη utf8 encoded string *)
+  writeString("Έχουμε υποστήριξη UTF-8\n");
+  writeString("Γιούπι!!!");
+}
