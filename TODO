@@ -1,8 +1,5 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
-** Fix in Lexer:
-    - Support strings in other languages than English
-
 ** Fix Parser:
     - Add the grammar rule to write `<string-literal>[<int>]>'
 
@@ -12,6 +9,8 @@
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
     - Should we handle `byte' type as `short int'?
+    - Use `+/- <expr>' only when <expr> is of type int
+    - Operations (+,-,==,etc) should apply only between ints/chars
 
 ** Error Messages:
     - When report int overflow we see only the positive number
@@ -35,5 +34,3 @@
 
 1.0 : Add native code back end
       Implement native code libraries
-
-1.1 : Add c back end
