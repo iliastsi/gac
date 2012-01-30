@@ -70,15 +70,15 @@ data TStmt
 type LTExpr a = Located (TExpr a)
 
 data TExpr a where
-    TExprInt    :: Int32                               -> TExpr Int32
-    TExprChar   :: Word8                               -> TExpr Word8
-    TExprString :: String                              -> TExpr (Ptr Word8)
+    TExprInt    :: Int32        -> TExpr Int32
+    TExprChar   :: Word8        -> TExpr Word8
+    TExprString :: String       -> TExpr (Ptr Word8)
     -- ^ use createStringNul llvm instruction to store this
     -- and then getElementPtr to convert it into Ptr Word8
-    TExprVar    :: TVariable a                         -> TExpr a
-    TExprFun    :: TFuncCall a                         -> TExpr a
-    TExprMinus  :: LTExpr a                            -> TExpr a
-    TExprOp     :: LTExpr a    -> LOp      -> LTExpr a -> TExpr a
+    TExprVar    :: TVariable a  -> TExpr a
+    TExprFun    :: TFuncCall a  -> TExpr a
+    TExprMinus  :: LTExpr a     -> TExpr a
+    TExprOp     :: LTExpr a -> LOp -> LTExpr a -> TExpr a
 
 type LAExpr = Located AExpr
 

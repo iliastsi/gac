@@ -49,10 +49,6 @@ typeCheckAst :: Located UAst -> TcM (Located TAst)
 typeCheckAst = typeCheckDef
 
 
-unknown_expr :: TExpr ()
-unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
-
-
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
 typeCheckDef :: Located UDef -> TcM (Located ADef)
@@ -310,12 +306,41 @@ typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
        then return (L loc $ AExpr unknown_expr TTypeUnknown)
        else do
-           case test tt1 tt2 of
-                Just Eq -> do
-                    return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
-                Nothing -> do
-                    tcOpExprErr luexpr (AType tt1) (AType tt2)
-                    return (L loc $ AExpr unknown_expr TTypeUnknown)
+           int_or_byte <- isIntOrByte luexpr (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
+           if int_or_byte
+              then do
+                  case test tt1 tt2 of
+                       Just Eq -> do
+                           return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
+                       Nothing -> do
+                           tcOpExprErr luexpr (AType tt1) (AType tt2)
+                           return (L loc $ AExpr unknown_expr TTypeUnknown)
+              else do
+                  return (L loc $ AExpr unknown_expr TTypeUnknown)
+
+-- ---------------------------
+-- Check if expressions is of either type int or char
+isIntOrByte :: (Show a) => Located a -> UExpr -> AType ->
+                UExpr -> AType -> TcM Bool
+isIntOrByte luexpr ue1 at1 ue2 at2 = do
+    int_or_byte1 <- isIntOrByte' luexpr ue1 at1
+    if int_or_byte1
+       then isIntOrByte' luexpr ue2 at2
+       else return False
+
+isIntOrByte' :: (Show a) => Located a -> UExpr -> AType -> TcM Bool
+isIntOrByte' (L loc uexpr) ue at = do
+    if at == (AType TTypeInt) || at == (AType TTypeChar)
+       then return True
+       else do
+           addTypeError loc (show uexpr)
+                ("Expected `int' or `byte' but expression `" ++
+                show ue ++ "' is of type `" ++ show at ++ "'")
+           return False
+
+-- Return an expression with unknown type
+unknown_expr :: TExpr ()
+unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
 
 -- ---------------------------
 -- Error when the types of expressions on TExprOp are different
@@ -355,12 +380,17 @@ typeCheckCond lucond@(L loc (UCondOp lue1 lop lue2)) = do
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
        then return (L loc TCondFalse)
        else do
-           case test tt1 tt2 of
-                Just Eq -> do
-                    return (L loc $ TCondOp lae1 lop lae2)
-                Nothing -> do
-                    tcOpCondErr lucond (AType tt1) (AType tt2)
-                    return (L loc TCondFalse)
+           int_or_byte <- isIntOrByte lucond (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
+           if int_or_byte
+              then do
+                  case test tt1 tt2 of
+                       Just Eq -> do
+                           return (L loc $ TCondOp lae1 lop lae2)
+                       Nothing -> do
+                           tcOpCondErr lucond (AType tt1) (AType tt2)
+                           return (L loc TCondFalse)
+              else do
+                  return (L loc TCondFalse)
 -- UCondLog
 typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
     ltc1 <- typeCheckCond luc1
@@ -410,7 +440,7 @@ typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
              _ ->
                  panic "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
-           return (L loc $ AVariable (TVar "unknown" TTypeUnknown) TTypeUnknown)
+           return (L loc $ AVariable unknown_var TTypeUnknown)
 
 -- ---------------------------
 -- Check if a given AType is of TTypePtr
@@ -422,6 +452,10 @@ atypeIsArray _ = False
 getPointer :: AType -> AType
 getPointer (AType (TTypePtr p)) = (AType p)
 getPointer _ = panic "TypeCheck.getPointer got unexpected input"
+
+-- Return a variable with unknown type
+unknown_var :: TVariable ()
+unknown_var = (TVar "unknown" TTypeUnknown)
 
 -- ---------------------------
 -- Error when the array index expression is not of type of int

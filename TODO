@@ -8,7 +8,6 @@
 
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
-    - Operations (+,-,==,etc) should apply only between ints/chars
 
 ** Error Messages:
     - When report int overflow we see only the positive number

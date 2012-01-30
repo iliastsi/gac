@@ -1,0 +1,9 @@
+conditions() : proc
+{
+  if(true | false)
+    writeString("What???\n");
+  if(4 < 3)
+    writeString("What???\n");
+  if('a' < 'e')
+    writeString("Right ;)\n");
+}

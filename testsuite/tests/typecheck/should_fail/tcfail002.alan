@@ -1,0 +1,10 @@
+condition() : proc
+  foo : byte[16];
+{
+  if(3<'a')
+    writeString("Oops\n");
+  if("foo" == "yes")
+    writeString("Oops\n");
+
+  foo = "I got " + "42\n";
+}

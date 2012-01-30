@@ -235,7 +235,7 @@ if test x"$ac_cv_env_HFLAGS_set" != x
 then
         HFLAGS=$ac_cv_env_HFLAGS_value
 else
-        HFLAGS="-Wall -O2"
+        HFLAGS="-Wall -O2 -dno-debug-output"
 fi
 AC_SUBST([HFLAGS])
 

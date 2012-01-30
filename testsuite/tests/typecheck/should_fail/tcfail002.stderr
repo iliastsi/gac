@@ -1,0 +1,10 @@
+tcfail002.alan:4:6: Error: Type mismatch at `3 < 'a''
+	First argument of `<' is of type `int'
+	Second argument of `<' is of type `byte'
+
+tcfail002.alan:6:6: Error: Type mismatch at `"foo" == "yes"'
+	Expected `int' or `byte' but expression `"foo"' is of type `array of byte'
+
+tcfail002.alan:9:9: Error: Type mismatch at `"I got " + "42\n"'
+	Expected `int' or `byte' but expression `"I got "' is of type `array of byte'
+
