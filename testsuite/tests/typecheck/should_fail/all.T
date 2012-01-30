@@ -1,2 +1,2 @@
 
-test('tcfail001', normal, compile_fail, ['-Wall -Werror'])
+test('tcfail001', normal, compile_fail, [''])

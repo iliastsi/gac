@@ -1,3 +1,6 @@
-tcfail001.alan:4:9: Warning: Type overflow at `5262147483648'
-	Integer has been rounded to `812546048'
+tcfail001.alan:8:10: Error: Type mismatch at `+'a''
+	Expected `int' but expression is of type `byte'
+
+tcfail001.alan:9:10: Error: Type mismatch at `-'a''
+	Expected `int' but expression is of type `byte'
 

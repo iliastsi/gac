@@ -61,6 +61,7 @@ data Op
     | OpGT
     | OpLE
     | OpGE
+  deriving Eq
 
 instance Show Op where
     show = dumpOp
@@ -212,7 +213,7 @@ data UExpr
     | UExprString String
     | UExprVar UVariable
     | UExprFun UFuncCall
-    | UExprMinus LUExpr
+    | UExprSign LOp LUExpr
     | UExprOp LUExpr LOp LUExpr
 
 instance Show UExpr where
@@ -224,7 +225,8 @@ dumpUExpr (UExprChar c)   = show c
 dumpUExpr (UExprString s) = "\"" ++ escape s ++ "\""
 dumpUExpr (UExprVar v)    = dumpUVariable v
 dumpUExpr (UExprFun f)    = dumpUFuncCall f
-dumpUExpr (UExprMinus e)  = "-" ++ dumpUExpr (unLoc e)
+dumpUExpr (UExprSign o e) =
+    dumpOp (unLoc o) ++ dumpUExpr (unLoc e)
 dumpUExpr (UExprOp a o b) =
     dumpUExpr (unLoc a) ++ " " ++ dumpOp (unLoc o) ++ " " ++ dumpUExpr (unLoc b)
 

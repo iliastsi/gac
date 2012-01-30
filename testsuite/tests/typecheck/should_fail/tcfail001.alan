@@ -1,5 +1,10 @@
-hello () : proc
+sign() : proc
   foo : int;
+  char : byte;
 {
-  foo = 5262147483648;
+  foo = +42;
+  foo = -42;
+  char = 'a';
+  char = +'a';
+  char = -'a';
 }

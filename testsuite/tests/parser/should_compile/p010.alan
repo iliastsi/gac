@@ -1,0 +1,6 @@
+sign() : proc
+  foo : int;
+{
+  foo = +3;
+  foo = -foo;
+}

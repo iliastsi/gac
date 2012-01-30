@@ -1,0 +1,4 @@
+tc001.alan:4:8: Warning: Overflow in implicit constant conversion at `2147483648'
+	Integer has been rounded to `-2147483648'
+
+

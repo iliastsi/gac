@@ -1,0 +1,9 @@
+==================== Parser ====================
+sign() : proc
+  foo : int;
+{ -- sign
+  foo = +3;
+  foo = -foo;
+} -- sign
+
+

@@ -1,3 +1,0 @@
-tc002.alan:4:9: Warning: Type overflow at `2147483648'
-	Integer has been rounded to `-2147483648'
-

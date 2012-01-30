@@ -1,5 +1,6 @@
 hello () : proc
 	foo : int;
 {
-	foo = 2147483648;
+	foo = 2147483648;  -- overflow
+	foo = -2147483648; -- no overflow
 }

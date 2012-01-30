@@ -48,6 +48,11 @@ import Control.Monad
 typeCheckAst :: Located UAst -> TcM (Located TAst)
 typeCheckAst = typeCheckDef
 
+
+unknown_expr :: TExpr ()
+unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
+
+
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
 typeCheckDef :: Located UDef -> TcM (Located ADef)
@@ -282,20 +287,26 @@ typeCheckExpr (L loc (UExprVar v)) = do
     (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
     return (L loc $ AExpr (TExprVar tvar) ttype)
 -- UExprFun
-typeCheckExpr(L loc (UExprFun f)) = do
+typeCheckExpr (L loc (UExprFun f)) = do
     (L _ (AFuncCall tfun ttype)) <- typeCheckFunc (L loc f)
     return (L loc $ AExpr (TExprFun tfun) ttype)
--- UExprMinus
-typeCheckExpr (L loc (UExprMinus luexpr)) = do
-    (L teloc (AExpr texpr ttype)) <- typeCheckExpr luexpr
-    return (L loc $ AExpr (TExprMinus (L teloc texpr)) ttype)
+-- UExprSign
+typeCheckExpr luexpr@(L loc (UExprSign lop lue1)) = do
+    (L l1 aexpr@(AExpr te1 tt1)) <- typeCheckExpr lue1
+    if (AType tt1) /= (AType TTypeInt)
+       then do
+           tcSignExprErr luexpr (AType tt1)
+           return (L loc $ AExpr unknown_expr TTypeUnknown)
+       else do
+           if (unLoc lop) == OpPlus
+              then return (L loc aexpr)
+              else return (L loc $ AExpr (TExprMinus (L l1 te1)) tt1)
 -- UExprOp
 typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
     (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
     (L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
     let lte1 = L l1 te1
         lte2 = L l2 te2
-        unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
        then return (L loc $ AExpr unknown_expr TTypeUnknown)
        else do
@@ -315,6 +326,13 @@ tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
          show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
          "' is of type `" ++ show stype ++ "'")
 tcOpExprErr _ _ _ = panic "TypeCheck.tcOpExprErr got unexpected input"
+
+-- Error when type of expression in UExprSign is different than integer
+tcSignExprErr :: Located UExpr -> AType -> TcM ()
+tcSignExprErr (L loc uexpr@(UExprSign _ _)) etype =
+    addTypeError loc (show uexpr)
+        ("Expected `int' but expression is of type `" ++ show etype ++ "'")
+tcSignExprErr _ _ = panic "TypeCheck.tcSignExprErr got unexpected input"
 
 
 -- -------------------------------------------------------------------

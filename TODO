@@ -8,8 +8,6 @@
 
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
-    - Should we handle `byte' type as `short int'?
-    - Use `+/- <expr>' only when <expr> is of type int
     - Operations (+,-,==,etc) should apply only between ints/chars
 
 ** Error Messages:

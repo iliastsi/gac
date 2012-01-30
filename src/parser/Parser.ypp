@@ -243,9 +243,9 @@ expr :: { Located UExpr }
     | '(' expr error                {% missing ')' }
     | '(' error                     {% notValidExpr }
     | funcall                       { L1 $ let f = unLoc $1 in UExprFun f }
-    | '+' expr %prec SIGN           { LL $ let e = unLoc $2 in e}
+    | '+' expr %prec SIGN           { LL $ UExprSign (sL (getLoc $1) OpPlus) $2 }
     | '+' error %prec SIGN          {% notValidExpr }
-    | '-' expr %prec SIGN           { LL $ UExprMinus $2 }
+    | '-' expr %prec SIGN           { LL $ UExprSign (sL (getLoc $1) OpMinus) $2 }
     | '-' error %prec SIGN          {% notValidExpr }
     | expr '+' expr                 { LL $ UExprOp $1 (sL (getLoc $2) OpPlus) $3 }
     | expr '+' error                {% notValidExpr }
