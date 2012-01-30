@@ -147,5 +147,5 @@ instance Show MsgCode where
     show UnreachError        = "Unreachable code"
     show (RedefError ide)    = "Conflicting definitions for `" ++ ide ++ "'"
     show (NoRetError ide)    = "Control reaches end of non-proc function `" ++ ide ++ "'"
-    show (OverflowError buf) = "Type overflow at `" ++ buf ++ "'"
+    show (OverflowError buf) = "Overflow in implicit constant conversion at `" ++ buf ++ "'"
     show UnknownError        = "Unknown Error :@"
