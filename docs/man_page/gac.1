@@ -1,20 +1,29 @@
-.TH GAC 1 "2011-11-17" "Alan FP Suite" "Glorious Alan Compiler"
+.\" This is the man page for gac (1)
+.\" Lines starting with `.\"' will be ignored
+.\" In order to be fully parametrized we introduce four variables
+.\" which will be replaced by autoconfig and Makefile during installation
+.\" This are:
+.\"   `$PACKAGE_NAME' (default is `The Glorious Alan Compilation System')
+.\"   `$PACKAGE_TARNAME' (default is `gac')
+.\"   `$PACKAGE_TARNAME_U' (default is `GAC', U is for upper case)
+.\"   `$PACKAGE_VERSION'
+.TH $PACKAGE_TARNAME_U 1 "2011-11-17" "$PACKAGE_TARNAME-$PACKAGE_VERSION" "Alan FP Suite"
 .SH NAME
-GAC \- the Glorious Alan Compiler
+$PACKAGE_TARNAME_U \- $PACKAGE_NAME
 
 
 .SH SYNOPSIS
-.B gac
+.B $PACKAGE_TARNAME
 .RI [ option | filename ]...
 
 
 .SH DESCRIPTION
 This manual page documents briefly the
-.B gac
+.B $PACKAGE_TARNAME
 commands.
 
 .PP
-Each of GAC's command line options is classified as either
+Each of $PACKAGE_TARNAME_U's command line options is classified as either
 .IR mode " or " dynamic .
 
 .PP
@@ -140,7 +149,7 @@ set verbosity level
 
 .TP
 \fB\-V\fP
-display GAC version
+display $PACKAGE_TARNAME_U version
 .rj
 [mode]
 
@@ -158,19 +167,19 @@ display information about the compiler
 
 .TP
 \fB\-\-version\fP
-display GAC version
+display $PACKAGE_TARNAME_U version
 .rj
 [mode]
 
 .TP
 \fB\-\-numeric\-version\fP
-display GAC version (numeric only)
+display $PACKAGE_TARNAME_U version (numeric only)
 .rj
 [mode]
 
 .TP
 \fB\-\-print\-libdir\fP
-display GAC library directory
+display $PACKAGE_TARNAME_U library directory
 .rj
 [mode]
 
