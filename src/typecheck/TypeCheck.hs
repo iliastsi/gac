@@ -182,9 +182,9 @@ typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
     (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts
     return (does_ret, L loc $ TStmtCompound ltstmts)
 -- UStmtFun
-typeCheckStmt _ (L loc (UStmtFun f)) = do
-    (L _ afunc) <- typeCheckFunc (L loc f)
-    return (False, L loc $ TStmtFun afunc)
+typeCheckStmt _ (L loc (UStmtFun lf)) = do
+    alfunc <- typeCheckFunc lf
+    return (False, L loc $ TStmtFun alfunc)
 -- UStmtIf
 typeCheckStmt ret_type (L loc (UStmtIf lucond lustmt1 m_lustmt2)) = do
     ltcond <- typeCheckCond lucond

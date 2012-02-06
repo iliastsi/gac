@@ -1,0 +1,10 @@
+opExprErr() : proc
+  i : int;
+  b : byte;
+  a : int [5];
+{
+  i = i+6;
+  i = 6 + b*8;
+  i = a[5] + 'a';
+  a = a + a;
+}

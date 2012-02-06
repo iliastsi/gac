@@ -1,0 +1,8 @@
+arrayParamErr() : proc
+  foo(foo : byte []) : proc
+  {
+    writeString(foo);
+  }
+{
+  foo("42\n");
+}

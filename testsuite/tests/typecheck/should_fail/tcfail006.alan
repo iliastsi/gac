@@ -1,0 +1,10 @@
+AssignErr() : proc
+  i : int;
+  b : byte;
+  a : int [5];
+{
+  i = 42;
+  i = 'a';
+  b = i+6;
+  a = i;
+}

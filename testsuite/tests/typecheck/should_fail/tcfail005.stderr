@@ -1,0 +1,4 @@
+tcfail005.alan:4:5: Error: Type mismatch at `return 5;'
+	Incopatible return type of function `foo'
+	Expected `byte' but instead function returned `int'
+

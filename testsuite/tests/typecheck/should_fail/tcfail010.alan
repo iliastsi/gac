@@ -1,0 +1,12 @@
+funParams() : proc
+  foo(i:int, b:byte) : proc
+  {
+    return;
+  }
+{
+  foo(42);
+  foo(42, 'a');
+  foo(42, 'a', 42);
+  foo(42, 42);
+  foo('a', 42);
+}

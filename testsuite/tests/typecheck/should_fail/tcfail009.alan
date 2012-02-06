@@ -1,0 +1,8 @@
+arrays() : proc
+  i : int;
+  a : int [5];
+{
+  i = a['a'] + 4;
+  i = a['a' + 3];
+  a[4] = i[3];
+}

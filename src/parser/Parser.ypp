@@ -198,7 +198,7 @@ stmt :: { Located UStmt }
     | lvalue '=' error              {% notValidExpr }
     | ID error                      {% missing '=' }
     | compoundstmt                  { $1 }
-    | funcall ';'                   { LL $ UStmtFun (unLoc $1) }
+    | funcall ';'                   { LL $ UStmtFun $1 }
     | funcall error                 {% missing ';' }
     | IF '(' cond ')' stmt          { LL $ UStmtIf $3 $5 Nothing}
     | IF '(' cond ')' stmt ELSE stmt

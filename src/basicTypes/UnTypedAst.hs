@@ -149,7 +149,7 @@ data UStmt
     = UStmtNothing
     | UStmtAssign LUVariable LUExpr
     | UStmtCompound [LUStmt]
-    | UStmtFun UFuncCall
+    | UStmtFun LUFuncCall
     | UStmtIf LUCond LUStmt (Maybe LUStmt)
     | UStmtWhile LUCond LUStmt
     | UStmtReturn (Maybe LUExpr)
@@ -169,8 +169,8 @@ dumpUStmt ind (UStmtCompound lustmts) =
     indent ind ++ "{\n" ++ dumpLUStmts (ind+1) lustmts ++
         indent ind ++ "}"
 -- UStmtFun
-dumpUStmt ind (UStmtFun ufunc) =
-    indent ind ++ dumpUFuncCall ufunc ++ ";"
+dumpUStmt ind (UStmtFun lufunc) =
+    indent ind ++ dumpUFuncCall (unLoc lufunc) ++ ";"
 -- UStmtIf
 dumpUStmt ind (UStmtIf lucond ifstmt m_elsestmt) =
     indent ind ++ "if(" ++ dumpUCond (unLoc lucond) ++
@@ -301,6 +301,8 @@ dumpUType (UTypePtr utype) =
     dumpUType utype ++ "[]"
 
 -- ---------------------------
+type LUFuncCall = Located UFuncCall
+
 data UFuncCall = UFuncCall LIde [LUExpr]
 
 instance Show UFuncCall where

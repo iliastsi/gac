@@ -1,0 +1,11 @@
+tcfail009.alan:5:7: Error: Type mismatch at `a['a']'
+	Array index `'a'' has to be of type `int'
+
+tcfail009.alan:6:9: Error: Type mismatch at `'a' + 3'
+	First argument of `+' is of type `byte'
+	Second argument of `+' is of type `int'
+
+tcfail009.alan:7:10: Error: Type mismatch at `i[3]'
+	Incompatible type of expression `i'
+	Expected `array' but expression is of type `int'
+

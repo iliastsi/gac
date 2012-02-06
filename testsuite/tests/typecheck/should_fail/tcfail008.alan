@@ -1,0 +1,11 @@
+opCondErr() : proc
+  i : int;
+  a : int [5];
+{
+  if(i<5)
+    writeString("yes");
+  if(a<a)
+    writeString("no");
+  if(i!='a')
+    writeString("no");
+}

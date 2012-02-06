@@ -1,0 +1,9 @@
+tcfail006.alan:7:3: Error: Type mismatch at `i = 'a';'
+	Lvalue is of type `int' but Rvalue is of type `byte'
+
+tcfail006.alan:8:3: Error: Type mismatch at `b = i + 6;'
+	Lvalue is of type `byte' but Rvalue is of type `int'
+
+tcfail006.alan:9:3: Error: Type mismatch at `a = i;'
+	Lvalue is of type `array of int' but Rvalue is of type `int'
+

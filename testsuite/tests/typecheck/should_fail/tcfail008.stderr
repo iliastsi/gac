@@ -1,0 +1,7 @@
+tcfail008.alan:7:6: Error: Type mismatch at `a < a'
+	Expected `int' or `byte' but expression `a' is of type `array of int'
+
+tcfail008.alan:9:6: Error: Type mismatch at `i != 'a''
+	First argument of `!=' is of type `int'
+	Second argument of `!=' is of type `byte'
+

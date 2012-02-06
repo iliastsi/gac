@@ -61,7 +61,7 @@ data TStmt
     = TStmtNothing
     | TStmtAssign LAVariable LAExpr
     | TStmtCompound [LTStmt]
-    | TStmtFun AFuncCall
+    | TStmtFun LAFuncCall
     | TStmtIf LTCond LTStmt (Maybe LTStmt)
     | TStmtWhile LTCond LTStmt
     | TStmtReturn (Maybe LAExpr)

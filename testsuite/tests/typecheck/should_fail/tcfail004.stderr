@@ -1,0 +1,3 @@
+tcfail004.alan:2:7-19: Error: Type mismatch at `foo :  byte[]'
+	Array parameters have to be passed by reference
+

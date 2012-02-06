@@ -1,0 +1,8 @@
+retStmtErr() : proc
+  foo() : byte
+  {
+    return 5;
+  }
+{
+  foo();
+}
