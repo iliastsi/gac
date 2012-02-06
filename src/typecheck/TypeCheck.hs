@@ -179,7 +179,7 @@ typeCheckStmt _ lustmt@(L loc (UStmtAssign luvar luexpr)) = do
                     return (False, L loc TStmtNothing)
 -- UStmtCompound
 typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
-    (does_ret, ltstmts) <- tcCompoundStmt loc ret_type lustmts
+    (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts
     return (does_ret, L loc $ TStmtCompound ltstmts)
 -- UStmtFun
 typeCheckStmt _ (L loc (UStmtFun f)) = do
@@ -215,16 +215,15 @@ typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
 
 -- ---------------------------
 -- Type Check compound stmts
--- As first argument (SrcSpan) we have to srcspan of the compound stmt
--- As second argument (AType) we have the return type of the block
-tcCompoundStmt :: SrcSpan -> AType -> [Located UStmt] -> TcM (Bool, [Located TStmt])
-tcCompoundStmt _ _ [] = do
+-- As first argument (AType) we have the return type of the block
+tcCompoundStmt :: AType -> [Located UStmt] -> TcM (Bool, [Located TStmt])
+tcCompoundStmt _ [] = do
     return (False, [])
-tcCompoundStmt loc ret_type (lustmt:lustmts) = do
+tcCompoundStmt ret_type (lustmt:lustmts) = do
     (r1, ltstmt)  <- typeCheckStmt ret_type lustmt
     if not r1
        then do
-           (r2, ltstmts) <- tcCompoundStmt loc ret_type lustmts
+           (r2, ltstmts) <- tcCompoundStmt ret_type lustmts
            return (r2, ltstmt:ltstmts)
        else do
            if null lustmts
@@ -232,7 +231,7 @@ tcCompoundStmt loc ret_type (lustmt:lustmts) = do
                   return (True, [ltstmt])
               else do
                   let unreach_start = srcSpanStart (getLoc (head lustmts))
-                      unreach_end   = srcSpanEnd loc
+                      unreach_end   = srcSpanEnd (getLoc (last lustmts))
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
                   return (True, [ltstmt])

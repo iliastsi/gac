@@ -338,7 +338,7 @@ showSrcSpan (SrcSpanOneLine name line scol ecol) =
         if (ecol - scol) <= 1 then "" else "-" ++ show (ecol-1) ++ ":"
 showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
     let ecol' = if ecol == 0 then ecol else (ecol-1) in
-    name ++ ":" ++ show sline ++ "," ++ show (scol-1) ++ "-" ++
+    name ++ ":" ++ show sline ++ "," ++ show scol ++ "-" ++
         show eline ++ "," ++ show ecol' ++ ":"
 showSrcSpan (SrcSpanPoint name line col) =
     name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
