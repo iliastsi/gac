@@ -1,0 +1,3 @@
+tcfail003.alan:6,3-9,3: Error: Control reaches end of non-proc function `foo2'
+	Function `foo2' is of type `int'
+

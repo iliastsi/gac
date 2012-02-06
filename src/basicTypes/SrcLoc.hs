@@ -341,7 +341,8 @@ showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
     name ++ ":" ++ show sline ++ "," ++ show scol ++ "-" ++
         show eline ++ "," ++ show ecol' ++ ":"
 showSrcSpan (SrcSpanPoint name line col) =
-    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
+    let col' = if col == 0 then col else (col-1) in
+    name ++ ":" ++ show line ++ ":" ++ show col' ++ ":"
 
 
 

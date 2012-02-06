@@ -60,7 +60,7 @@ typeCheckDef (L loc (UDefFun lide [] lutype ludefs lustmt)) = do
     ladefs <- mapM typeCheckDef ludefs
     (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
     when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
-            tcNoRetErr (unLoc lide) (getLoc ltstmt)
+            tcNoRetErr loc (unLoc lide) (AType ftype)
     rawCloseScopeM
     return (L loc $ ADef (TDefFunE fname (L type_loc ftype) ladefs ltstmt) ftype)
 -- UDefFun
@@ -73,7 +73,7 @@ typeCheckDef (L loc (UDefFun lide lupar lutype ludefs lustmt)) = do
     ladefs <- mapM typeCheckDef ludefs
     (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
     when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
-            tcNoRetErr (unLoc lide) (getLoc ltstmt)
+            tcNoRetErr loc (unLoc lide) (AType ftype)
     rawCloseScopeM
     return (L loc $ ADef (TDefFun fname (L par_loc tpar) (L type_loc ftype) ladefs ltstmt)
                             (TTypeFunc ptype ftype))
@@ -112,11 +112,11 @@ tcCheckIntOverflow (L loc origin) rounded = do
 
 -- ---------------------------
 -- Error when functions doesn't return a value
-tcNoRetErr :: Ide -> SrcSpan -> TcM ()
-tcNoRetErr ide loc = do
+tcNoRetErr :: SrcSpan -> Ide -> AType -> TcM ()
+tcNoRetErr loc ide ftype = do
     -- we have to take the end of statements location
-    let loc' = srcLocSpan (srcSpanEnd loc)
-    addNoRetError loc' ide ""
+    addNoRetError loc ide
+      ("Function `" ++ ide ++ "' is of type `" ++ show ftype ++ "'")
 
 
 -- -------------------------------------------------------------------
@@ -154,7 +154,7 @@ typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
 tcArrayParamErr :: Located UParam -> TcM ()
 tcArrayParamErr (L loc uparam) =
     addTypeError loc (show uparam)
-        ("Array parameters have to be passed by reference")
+      ("Array parameters have to be passed by reference")
 
 
 -- -------------------------------------------------------------------
@@ -241,8 +241,8 @@ tcCompoundStmt ret_type (lustmt:lustmts) = do
 tcAssignErr :: Located UStmt -> AType -> AType -> TcM ()
 tcAssignErr (L loc ustmt@(UStmtAssign _ _)) vtype etype =
     addTypeError loc (show ustmt)
-        ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
-         show etype ++ "'")
+      ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
+       show etype ++ "'")
 tcAssignErr _ _ _ = panic "TypeCheck.tcAssignErr got unexpected input"
 
 -- Error when we have unreachable code on a block
@@ -257,9 +257,9 @@ tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
 tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
     fun_name <- getNameM
     addTypeError loc (show ustmt)
-        ("Incopatible return type of function `" ++ fun_name ++
-         "'\n\tExpected `" ++ show exptype ++
-         "' but instead function returned `" ++ show acttype ++ "'")
+      ("Incopatible return type of function `" ++ fun_name ++
+       "'\n\tExpected `" ++ show exptype ++
+       "' but instead function returned `" ++ show acttype ++ "'")
 tcRetStmtErr _ _ _ = panic "TypeCheck.tcRetStmtErr got unexpected input"
 
 
@@ -334,8 +334,8 @@ isIntOrByte' (L loc uexpr) ue at = do
        then return True
        else do
            addTypeError loc (show uexpr)
-                ("Expected `int' or `byte' but expression `" ++
-                show ue ++ "' is of type `" ++ show at ++ "'")
+             ("Expected `int' or `byte' but expression `" ++
+              show ue ++ "' is of type `" ++ show at ++ "'")
            return False
 
 -- Return an expression with unknown type
@@ -347,16 +347,16 @@ unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
     addTypeError loc (show uexpr)
-        ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
-         show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
-         "' is of type `" ++ show stype ++ "'")
+      ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
+       show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
+       "' is of type `" ++ show stype ++ "'")
 tcOpExprErr _ _ _ = panic "TypeCheck.tcOpExprErr got unexpected input"
 
 -- Error when type of expression in UExprSign is different than integer
 tcSignExprErr :: Located UExpr -> AType -> TcM ()
 tcSignExprErr (L loc uexpr@(UExprSign _ _)) etype =
     addTypeError loc (show uexpr)
-        ("Expected `int' but expression is of type `" ++ show etype ++ "'")
+      ("Expected `int' but expression is of type `" ++ show etype ++ "'")
 tcSignExprErr _ _ = panic "TypeCheck.tcSignExprErr got unexpected input"
 
 
@@ -402,9 +402,9 @@ typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
 tcOpCondErr :: Located UCond -> AType -> AType -> TcM ()
 tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
     addTypeError loc (show ucond)
-        ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
-         show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
-         "' is of type `" ++ show stype ++ "'")
+      ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
+       show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
+       "' is of type `" ++ show stype ++ "'")
 tcOpCondErr _ _ _ = panic "TypeCheck.tcOpCondErr got unexpected input"
 
 
@@ -462,16 +462,16 @@ unknown_var = (TVar "unknown" TTypeUnknown)
 tcIntExprErr :: Located UVariable -> TcM ()
 tcIntExprErr (L loc (uvar@(UVarArray _ lexpr))) =
     addTypeError loc (show uvar)
-        ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
+      ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
 tcIntExprErr _ = panic "TypeCheck.tcIntExprErr got unexpected input"
 
 -- Error when variable is not of type `array'
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
 tcArrayVarErr (L loc uarr@(UVarArray luvar _)) var_type =
     addTypeError loc (show uarr)
-        ("Incompatible type of expression `" ++ show (unLoc luvar) ++
-         "'\n\tExpected `array' but expression is of type `" ++
-         show var_type ++ "'")
+      ("Incompatible type of expression `" ++ show (unLoc luvar) ++
+       "'\n\tExpected `array' but expression is of type `" ++
+       show var_type ++ "'")
 tcArrayVarErr _ _ = panic "TypeCheck.tcArrayVarErr got unexpected input"
 
 
@@ -538,13 +538,13 @@ tcFunPar' _ _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
 tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
 tcParLenErr (L loc ufunc@(UFuncCall lide _)) pars_len type_len =
     addTypeError loc (show ufunc)
-        ("The function `" ++ (unLoc lide) ++ "' is applied to " ++
-         show pars_len ++ " parameters but its type has " ++ show type_len)
+      ("The function `" ++ (unLoc lide) ++ "' is applied to " ++
+       show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
     addTypeError loc (show uexpr)
-        ("Incompatible type of argument " ++ show count ++ " of function `" ++
-         ide ++"'\n\tExpected `" ++ show exptype ++
-         "' but argument is of type `" ++ show acttype ++ "'")
+      ("Incompatible type of argument " ++ show count ++ " of function `" ++
+       ide ++"'\n\tExpected `" ++ show exptype ++
+       "' but argument is of type `" ++ show acttype ++ "'")

@@ -1,0 +1,13 @@
+noRetErr() : proc
+  foo1() : proc
+  {
+    writeString("In foo1\n");
+  }
+  foo2() : int
+  {
+    writeString("In foo2\n");
+  }
+{
+  foo1();
+  foo2();
+}
