@@ -3,4 +3,5 @@ hello () : proc
 {
 	foo = 2147483648;  -- overflow
 	foo = -2147483648; -- no overflow
+	foo = -2147483649; -- overflow
 }

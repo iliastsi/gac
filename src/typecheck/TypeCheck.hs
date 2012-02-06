@@ -287,6 +287,8 @@ typeCheckExpr (L loc (UExprFun f)) = do
     (L _ (AFuncCall tfun ttype)) <- typeCheckFunc (L loc f)
     return (L loc $ AExpr (TExprFun tfun) ttype)
 -- UExprSign
+typeCheckExpr (L loc (UExprSign (L _ OpMinus) (L _ (UExprInt i)))) = do
+    typeCheckExpr (L loc (UExprInt (-i)))
 typeCheckExpr luexpr@(L loc (UExprSign lop lue1)) = do
     (L l1 aexpr@(AExpr te1 tt1)) <- typeCheckExpr lue1
     if (AType tt1) /= (AType TTypeInt)

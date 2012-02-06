@@ -10,8 +10,6 @@
     - Outermost function has to take no arguments
 
 ** Error Messages:
-    - When report int overflow we see only the positive number
-      (though we fail to check the lower bound, for negatives)
     - We have to check for 0-sized array definitions
 
 
