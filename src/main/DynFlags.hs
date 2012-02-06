@@ -577,15 +577,15 @@ minusWOpts :: [DynFlag]
 minusWOpts =
     standarWarnings ++
     [ Opt_WarnUnreachableCode
-    , Opt_WarnUnusedParameter
+    , Opt_WarnUnusedFunction
     , Opt_WarnUnusedVariable
+    , Opt_WarnUnusedParameter
     , Opt_WarnUnitialized
     ]
 
 minusWallOpts :: [DynFlag]
 minusWallOpts = minusWOpts ++
-    [ Opt_WarnUnusedFunction
-    , Opt_WarnUnusedResult
+    [ Opt_WarnUnusedResult
     , Opt_WarnTypeOverflows
     ]
 

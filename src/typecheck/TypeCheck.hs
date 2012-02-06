@@ -247,9 +247,10 @@ tcAssignErr _ _ _ = panic "TypeCheck.tcAssignErr got unexpected input"
 
 -- Error when we have unreachable code on a block
 tcUnreachableErr :: SrcSpan -> TcM ()
-tcUnreachableErr loc =
-    addUnreachWarning loc
-        ("Dead code has been eliminated")
+tcUnreachableErr loc = do
+    flags <- getDynFlags
+    when (dopt Opt_WarnUnreachableCode flags) $
+        addUnreachWarning loc ("Dead code has been eliminated")
 
 -- Error when the return type is different from the one in function header
 tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()

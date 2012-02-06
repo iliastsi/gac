@@ -1,0 +1,9 @@
+tc003.alan:5:5-25: Warning: Unreachable code
+	Dead code has been eliminated
+
+tc003.alan:14:5-26: Warning: Unreachable code
+	Dead code has been eliminated
+
+tc003.alan:38,3-39,36: Warning: Unreachable code
+	Dead code has been eliminated
+

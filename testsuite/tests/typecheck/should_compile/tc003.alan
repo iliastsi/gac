@@ -1,0 +1,40 @@
+unreachable_code() : proc
+  foo1() : proc
+  {
+    return;
+    writeString("foo\n");
+  }
+
+  foo2() : proc
+  {
+    if(true)
+      return;
+    else
+      return;
+    writeString("foo2\n"); }
+
+  foo3() : proc
+  {
+    if(true)
+      return;
+    else
+      writeString("false\n");
+    writeString("foo3\n");
+  }
+
+  foo4() : proc
+  {
+    while(true)
+      return;
+    writeString("foo4\n");
+  }
+{
+  foo1();
+  foo2();
+  foo3();
+  foo4();
+  return;
+
+  writeString("False\n");
+  writeString("unreachable_code\n");
+}
