@@ -1,0 +1,12 @@
+tcfail012.alan:6:11: Error: Not in scope `a'
+	Each undeclared identifier is reported only once for each function it appears in
+
+tcfail012.alan:9:3: Error: Not in scope `a'
+	Each undeclared identifier is reported only once for each function it appears in
+
+tcfail012.alan:11:9: Error: Not in scope `b'
+	Each undeclared identifier is reported only once for each function it appears in
+
+tcfail012.alan:13:3: Error: Not in scope `fun'
+	Each undeclared identifier is reported only once for each function it appears in
+

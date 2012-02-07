@@ -1,0 +1,15 @@
+undefined() : proc
+  foo : int;
+
+  fun2() : proc
+  {
+    foo = a;
+  }
+{
+  a = 4;
+  foo = a + 5;
+  foo = b + 6;
+
+  fun(42, 43);
+  fun(42, 43, 44);
+}
