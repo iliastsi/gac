@@ -139,9 +139,9 @@ advanceSrcLoc loc _ = loc -- Better than nothing
 
 -- | Convert SrcLoc to String
 showSrcLoc :: SrcLoc -> String
-showSrcLoc (UnhelpfulLoc str) = str ++ ":"
+showSrcLoc (UnhelpfulLoc str) = str
 showSrcLoc (SrcLoc name line col)   =
-    name ++ ":" ++ show line ++ ":" ++ show col ++ ":"
+    name ++ ":" ++ show line ++ ":" ++ show col
 
 
 -- -------------------------------------------------------------------
@@ -332,17 +332,17 @@ srcSpanFileName_maybe _                                       = Nothing
 
 -- | Convert SrcSpan to String
 showSrcSpan :: SrcSpan -> String
-showSrcSpan (UnhelpfulSpan str) = str ++ ":"
+showSrcSpan (UnhelpfulSpan str) = str
 showSrcSpan (SrcSpanOneLine name line scol ecol) =
     name ++ ":" ++ show line ++ ":" ++ show scol ++
-        if (ecol - scol) <= 1 then "" else "-" ++ show (ecol-1) ++ ":"
+        if (ecol - scol) <= 1 then "" else "-" ++ show (ecol-1)
 showSrcSpan (SrcSpanMultiLine name sline scol eline ecol) =
     let ecol' = if ecol == 0 then ecol else (ecol-1) in
     name ++ ":" ++ show sline ++ "," ++ show scol ++ "-" ++
-        show eline ++ "," ++ show ecol' ++ ":"
+        show eline ++ "," ++ show ecol'
 showSrcSpan (SrcSpanPoint name line col) =
     let col' = if col == 0 then col else (col-1) in
-    name ++ ":" ++ show line ++ ":" ++ show col' ++ ":"
+    name ++ ":" ++ show line ++ ":" ++ show col'
 
 
 
@@ -355,22 +355,13 @@ instance Ord SrcSpan where
         (srcSpanStart a `compare` srcSpanStart b) `thenCmp`
         (srcSpanEnd   a `compare` srcSpanEnd   b)
 
-instance Show SrcSpan where
-    show (UnhelpfulSpan str) = str ++ ":"
-    show other_span          =
-        let file = srcSpanFile other_span
-            line = show $ srcSpanStartLine other_span
-            col  = show $ srcSpanStartCol  other_span
-        in
-        file ++ ":" ++ line ++ ":" ++ col ++ ":"
-
 
 -- -------------------------------------------------------------------
 -- Attaching SrcSpans to things
 
 -- | We attach SrcSpans to lots of things, so let's have a datatype for it
 data Located e = L SrcSpan e
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
 unLoc :: Located e -> e
 unLoc (L _ e) = e

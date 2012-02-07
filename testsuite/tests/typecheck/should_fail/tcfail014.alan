@@ -1,0 +1,25 @@
+redefError() : proc
+  foo : int;
+
+  fun() : proc
+    foo : int;
+  {
+    foo = 5;
+  }
+
+  fun(i : int) : proc
+  {
+    return;
+  }
+
+  fun2() : proc
+    fun2(i : int) : proc
+    {}
+  {}
+{
+  fun();
+  fun(5);
+  fun2();
+  fun2(5);
+  foo = 7;
+}

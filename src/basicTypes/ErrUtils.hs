@@ -105,7 +105,7 @@ showMsg dflags Msg{msgSeverity=sev,msgSpan=mspan,msgContext=code,msgExtraInfo=ex
         loc    = if dopt Opt_ErrorSpans dflags
                     then showSrcSpan mspan
                     else showSrcLoc (srcSpanStart mspan)
-    in loc ++ " " ++ show sev ++ ": " ++ show code ++ extra'
+    in loc ++ ": " ++ show sev ++ ": " ++ show code ++ extra'
 
 
 -- -------------------------------------------------------------------

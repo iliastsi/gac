@@ -123,8 +123,8 @@ addUnreachWarning loc msg =
 
 addRedefError :: Ide -> SrcSpan -> SrcSpan -> TcM ()
 addRedefError ide curr prev = do
-    let msg = ("Bound at: " ++ show prev ++ "\n\t" ++
-               "          " ++ show curr)
+    let msg = ("Bound at: " ++ showSrcSpan prev ++ "\n\t" ++
+               "          " ++ showSrcSpan curr)
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg curr (RedefError ide) msg) msgs) } ()
 

@@ -1,0 +1,7 @@
+redefError() : proc
+  foo : int;
+  foo : byte;
+{
+  foo = 5;
+  foo = 'a';
+}

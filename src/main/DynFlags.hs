@@ -80,7 +80,6 @@ data DynFlag
     | Opt_WarnIsError       -- -Werror; makes warnings fatal
     | Opt_WarnUnreachableCode
     | Opt_WarnUnusedFunction
-    | Opt_WarnUnusedParameter
     | Opt_WarnUnusedResult
     | Opt_WarnUnusedVariable
     | Opt_WarnUnitialized
@@ -528,7 +527,6 @@ fFlags :: [FlagSpec DynFlag]
 fFlags = [
   ( "warn-unreachable-code",        Opt_WarnUnreachableCode, nop),
   ( "warn-unused-function",         Opt_WarnUnusedFunction, nop),
-  ( "warn-unused-parameter",        Opt_WarnUnusedParameter, nop),
   ( "warn-unused-result",           Opt_WarnUnusedResult, nop),
   ( "warn-unused-variable",         Opt_WarnUnusedVariable, nop),
   ( "warn-uninitialized",           Opt_WarnUnitialized, nop),
@@ -579,7 +577,6 @@ minusWOpts =
     [ Opt_WarnUnreachableCode
     , Opt_WarnUnusedFunction
     , Opt_WarnUnusedVariable
-    , Opt_WarnUnusedParameter
     , Opt_WarnUnitialized
     ]
 

@@ -1,0 +1,14 @@
+tcfail014.alan:10:3-5: Error: Conflicting definitions for `fun'
+	Bound at: tcfail014.alan:4:3-5
+	          tcfail014.alan:10:3-5
+
+tcfail014.alan:16:5-8: Error: Conflicting definitions for `fun2'
+	Bound at: tcfail014.alan:15:3-6
+	          tcfail014.alan:16:5-8
+
+tcfail014.alan:20:3-7: Error: Type mismatch at `fun()'
+	The function `fun' is applied to 0 parameters but its type has 1
+
+tcfail014.alan:23:3-9: Error: Type mismatch at `fun2(5)'
+	The function `fun2' is applied to 1 parameters but its type has 0
+

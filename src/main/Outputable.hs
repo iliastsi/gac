@@ -44,7 +44,7 @@ printWarns = printErrs
 
 printLocErrs :: [Located String] -> IO ()
 printLocErrs =
-    mapM_ (\(L loc msg) -> hPutStrLn stderr (show loc ++ " " ++ msg))
+    mapM_ (\(L loc msg) -> hPutStrLn stderr (showSrcSpan loc ++ " " ++ msg))
 
 printLocWarns :: [Located String] -> IO ()
 printLocWarns = printLocErrs
