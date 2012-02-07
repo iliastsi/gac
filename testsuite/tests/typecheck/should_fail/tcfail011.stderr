@@ -1,0 +1,12 @@
+tcfail011.alan:2:3: Error: Array definition error at `a : int[-15];'
+	Array size must be a positive integer
+
+tcfail011.alan:3:3: Error: Array definition error at `b : int[-1000000000000000];'
+	Array size must be a positive integer
+
+tcfail011.alan:4:3: Error: Array definition error at `c : int[0];'
+	Array size must be a positive integer
+
+tcfail011.alan:5:12: Warning: Overflow in implicit constant conversion at `10000000000000000'
+	Integer has been rounded to `1874919424'
+

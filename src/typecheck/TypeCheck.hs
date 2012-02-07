@@ -39,6 +39,7 @@ import Outputable (panic)
 import DynFlags
 
 import Data.Int
+import Data.Word
 import Data.Char
 import Control.Monad
 
@@ -91,24 +92,27 @@ tcVarDef (L loc (UDefVar lide lutype)) type_fn = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
     return (L loc $ ADef (TDefVar lide' (L type_loc ftype)) ftype)
-tcVarDef (L loc (UDefArr ludef lsize)) type_fn = do
+tcVarDef ludef@(L loc (UDefArr luarr lsize)) type_fn = do
     let type_fn' = type_fn . (\(AType ttype) -> AType (TTypePtr ttype))
-    (L var_loc (ADef var_def var_type)) <- tcVarDef ludef type_fn'
+    (L var_loc (ADef var_def var_type)) <- tcVarDef luarr type_fn'
     let size'  = fromIntegral (unLoc lsize)
         lsize' = L (getLoc lsize) size'
-    tcCheckIntOverflow lsize size'
+    tcCheckArraySize ludef lsize size'
     return (L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
--- Check for integer overflows
-tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
-tcCheckIntOverflow (L loc origin) rounded = do
+-- Check if array size is positive
+tcCheckArraySize :: Located UDef -> Located Integer -> Word32 -> TcM ()
+tcCheckArraySize (L ldef udef) (L loc origin) rounded = do
     flags <- getDynFlags
     let max_bound = toInteger (maxBound :: Int32)
-        min_bound = toInteger (minBound :: Int32)
-    when ((origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
-            addOverflowWarn loc (show origin)
-                ("Integer has been rounded to `" ++ show rounded ++ "'")
+    if origin <= 0
+       then addArrSizeError ldef (show udef)
+              ("Array size must be a positive integer")
+       else do
+           when ((origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
+               addOverflowWarn loc (show origin)
+                 ("Integer has been rounded to `" ++ show rounded ++ "'")
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -343,6 +347,16 @@ isIntOrByte' (L loc uexpr) ue at = do
 -- Return an expression with unknown type
 unknown_expr :: TExpr ()
 unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
+
+-- Check for integer overflows
+tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
+tcCheckIntOverflow (L loc origin) rounded = do
+    flags <- getDynFlags
+    let max_bound = toInteger (maxBound :: Int32)
+        min_bound = toInteger (minBound :: Int32)
+    when ((origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
+            addOverflowWarn loc (show origin)
+                ("Integer has been rounded to `" ++ show rounded ++ "'")
 
 -- ---------------------------
 -- Error when the types of expressions on TExprOp are different

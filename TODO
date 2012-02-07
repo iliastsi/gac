@@ -9,9 +9,6 @@
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
 
-** Error Messages:
-    - We have to check for 0-sized array definitions
-
 
     Releases
 ~~~~~~~~~~~~~~~~~~~

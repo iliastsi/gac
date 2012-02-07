@@ -43,6 +43,7 @@ data MsgCode
   | RedefError    String  -- function/variable redefinition
   | NoRetError    String  -- missing return statement
   | OverflowError String  -- type overflow error (ie ints > 32 bits)
+  | ArrSizeError  String  -- array definition errors
   | UnknownError
 
 data Severity
@@ -148,4 +149,5 @@ instance Show MsgCode where
     show (RedefError ide)    = "Conflicting definitions for `" ++ ide ++ "'"
     show (NoRetError ide)    = "Control reaches end of non-proc function `" ++ ide ++ "'"
     show (OverflowError buf) = "Overflow in implicit constant conversion at `" ++ buf ++ "'"
+    show (ArrSizeError buf)  = "Array definition error at `" ++ buf ++ "'"
     show UnknownError        = "Unknown Error :@"

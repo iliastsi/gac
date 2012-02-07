@@ -183,6 +183,7 @@ localdef :: { Located UDef }
 vardef :: { Located UDef }
     : vardef2 ';'                   { $1 }
     | vardef2 '[' DIGIT ']' ';'     { LL $ let (L digit_span (ITdigit d)) = $3 in UDefArr $1 (sL digit_span d) }
+    | vardef2 '[' '-' DIGIT ']' ';' { LL $ let (L digit_span (ITdigit d)) = $4 in UDefArr $1 (sL digit_span (-d)) }
     | vardef2 '[' DIGIT ']' error   {% missing ';' }
     | vardef2 '[' DIGIT error       {% missing ']' }
     | vardef2 '[' error             {% srcParseFail "Array size must be a positive integer" }

@@ -102,6 +102,9 @@ data UDef
     | UDefVar LIde LUType
     | UDefArr LUDef (Located Integer)
 
+instance Show UDef where
+    show = dumpUDef 0
+
 dumpUDef :: Int -> UDef -> String
 -- UDefFun
 dumpUDef ind (UDefFun lide luparams lutype ludefs lustmt) =

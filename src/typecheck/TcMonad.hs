@@ -14,7 +14,7 @@ module TcMonad (
     getTcState, getDynFlags, getTable, getUnique, setTable,
     mkTcState, addTypeWarning, addTypeError, addScopeError,
     addUnreachWarning, addNoRetError, addOverflowWarn,
-    getTcMessages,
+    addArrSizeError, getTcMessages,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
@@ -138,6 +138,12 @@ addOverflowWarn :: SrcSpan -> String -> String -> TcM ()
 addOverflowWarn loc constant msg =
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addWarning (mkWarnMsg loc (OverflowError constant) msg) msgs) } ()
+
+-- Array size errors
+addArrSizeError :: SrcSpan -> String -> String -> TcM()
+addArrSizeError loc expr msg =
+    TcM $ \s@(TcState{messages=msgs}) ->
+        TcOk s{ messages=(addError (mkErrMsg loc (ArrSizeError expr) msg) msgs) } ()
 
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms

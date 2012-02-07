@@ -37,7 +37,7 @@ data TDef a where
     TDefFunE :: LIde              -> LTType b -> [LADef] -> LTStmt -> TDef b
       -- variables
     TDefVar  :: LIde    -> LTType a      -> TDef a
-    TDefArr  :: LTDef a -> Located Int32 -> TDef (Ptr a)
+    TDefArr  :: LTDef a -> Located Word32 -> TDef (Ptr a)
 
 type LADef = Located ADef
 
