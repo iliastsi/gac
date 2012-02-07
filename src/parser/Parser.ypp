@@ -186,7 +186,7 @@ vardef :: { Located UDef }
     | vardef2 '[' '-' DIGIT ']' ';' { LL $ let (L digit_span (ITdigit d)) = $4 in UDefArr $1 (sL digit_span (-d)) }
     | vardef2 '[' DIGIT ']' error   {% missing ';' }
     | vardef2 '[' DIGIT error       {% missing ']' }
-    | vardef2 '[' error             {% srcParseFail "Array size must be a positive integer" }
+    | vardef2 '[' error             {% srcParseFail "Expected positive integer for array size" }
     | vardef2 error                 {% missing ';' }
 
 vardef2 :: { Located UDef }
