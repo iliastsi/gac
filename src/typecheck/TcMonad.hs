@@ -166,12 +166,14 @@ getFuncM :: Located Ide -> TcM (Maybe FunInfo)
 getFuncM lide@(L _ ide) = do
     t <- getTable
     case getFunc ide t of
-         Just fi -> return (Just fi)
+         Just fi -> do
+             updateUnusedFunM fi
+             return (Just fi)
          Nothing -> do
              addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
              -- add the function
              u <- getUnique
-             let finfo = FunInfo lide [] (AType TTypeUnknown) u
+             let finfo = FunInfo lide [] (AType TTypeUnknown) u False
              setTable (addFunc ide finfo t)
              return Nothing
 
@@ -188,13 +190,17 @@ getFuncRetTypeM = return . getFuncRetType
 -- Get variables
 getVarM :: Located Ide -> TcM (Maybe VarInfo)
 getVarM lide@(L _ ide) = do
-    mvi <- liftM (getVar ide) getTable
-    case mvi of
-         Just vi -> return (Just vi)
+    t <- getTable
+    case getVar ide t of
+         Just vi -> do
+             updateUnusedVarM vi
+             return (Just vi)
          Nothing -> do
              addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
              -- add the variable
-             _ <- addVarM lide (AType TTypeUnknown)
+             u <- getUnique
+             let vinfo = VarInfo lide (AType TTypeUnknown) u False
+             setTable (addVar ide vinfo t)
              return Nothing
 
 getVarNameM :: Maybe VarInfo -> TcM Ide
@@ -211,12 +217,12 @@ addFuncM lide@(L loc ide) pt rt = do
     case getFunc ide t of
          Nothing ->
              return ()
-         Just (FunInfo lprev _ _ _) ->
+         Just (FunInfo lprev _ _ _ _) ->
              addRedefError ide loc (getLoc lprev)
     -- we re-insert the function (in the current scope)
     -- in order to continue with the type checking
     u <- getUnique
-    let finfo = FunInfo lide pt rt u
+    let finfo = FunInfo lide pt rt u True
     setTable (addFunc ide finfo t)
     return (getFuncName (Just finfo))
 
@@ -228,10 +234,10 @@ addVarM lide@(L loc ide) vt = do
     case isVarLocal ide t of
          Nothing -> do
              u <- getUnique
-             let vinfo = VarInfo lide vt u
+             let vinfo = VarInfo lide vt u True
              setTable (addVar ide vinfo t)
              return (getVarName (Just vinfo))
-         Just (VarInfo lprev _ _) -> do
+         Just (VarInfo lprev _ _ _) -> do
              -- Here we don't re-insert the variable
              addRedefError ide loc (getLoc lprev)
              return "unknown"
@@ -242,6 +248,20 @@ updateFuncM :: [AType] -> TcM ()
 updateFuncM pt = do
     t <- getTable
     setTable (updateFunc pt t)
+
+-- ---------------------------
+-- Update VarInfo/FunInfo for unused identifiers
+updateUnusedFunM :: FunInfo -> TcM ()
+updateUnusedFunM (FunInfo _  _ _ _ False) = return ()
+updateUnusedFunM (FunInfo ln _ _ _ True)  = do
+    t <- getTable
+    setTable (updateUnusedFun (unLoc ln) t)
+
+updateUnusedVarM :: VarInfo -> TcM ()
+updateUnusedVarM (VarInfo _  _ _ False) = return ()
+updateUnusedVarM (VarInfo ln _ _ True)  = do
+    t <- getTable
+    setTable (updateUnusedVar (unLoc ln) t)
 
 -- ---------------------------
 -- Scopes

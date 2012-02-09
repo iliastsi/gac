@@ -22,6 +22,7 @@ module SymbolTable (
 
     -- ** Add to Table
     addFunc, addVar, updateFunc,
+    updateUnusedFun, updateUnusedVar,
 
     -- ** Scopes
     rawOpenScope, rawCloseScope
@@ -41,14 +42,16 @@ import qualified Data.Map as Map
 data VarInfo = VarInfo {
     varName     :: Located Ide, -- variable location and name
     varType     :: AType,       -- variable type
-    varId       :: !Int         -- variable unique id
+    varId       :: !Int,        -- variable unique id
+    varUnused   :: !Bool        -- variable is unused
   }
 
 data FunInfo = FunInfo {
     funName     :: Located Ide, -- function location and name
     funParType  :: [AType],     -- parameters types
     funRetType  :: AType,       -- return type
-    funId       :: !Int         -- function unique id
+    funId       :: !Int,        -- function unique id
+    funUnused   :: !Bool        -- function is unused
   }
 
 data Table = Table {
@@ -82,39 +85,39 @@ predefinedTable =
     Table 0 Nothing Map.empty
         (( -- Input/output
           Map.insert "writeInteger"
-                (FunInfo (lL "writeInteger") [AType TTypeInt] (AType TTypeProc) 0) .
+                (FunInfo (lL "writeInteger") [AType TTypeInt] (AType TTypeProc) 0 False) .
           Map.insert "writeByte"
-                (FunInfo (lL "writeByte") [AType TTypeChar] (AType TTypeProc) 0) .
+                (FunInfo (lL "writeByte") [AType TTypeChar] (AType TTypeProc) 0 False) .
           Map.insert "writeChar"
-                (FunInfo (lL "writeChar") [AType TTypeChar] (AType TTypeProc) 0) .
+                (FunInfo (lL "writeChar") [AType TTypeChar] (AType TTypeProc) 0 False) .
           Map.insert "writeString"
-                (FunInfo (lL "writeString") [AType (TTypePtr TTypeChar)] (AType TTypeProc) 0) .
+                (FunInfo (lL "writeString") [AType (TTypePtr TTypeChar)] (AType TTypeProc) 0 False) .
           Map.insert "readInteger"
-                (FunInfo (lL "readInteger") [] (AType TTypeInt) 0) .
+                (FunInfo (lL "readInteger") [] (AType TTypeInt) 0 False) .
           Map.insert "readByte"
-                (FunInfo (lL "readByte") [] (AType TTypeChar) 0) .
+                (FunInfo (lL "readByte") [] (AType TTypeChar) 0 False) .
           Map.insert "readChar"
-                (FunInfo (lL "readChar") [] (AType TTypeChar) 0) .
+                (FunInfo (lL "readChar") [] (AType TTypeChar) 0 False) .
           Map.insert "readString"
                 (FunInfo (lL "readString") [AType TTypeInt, AType (TTypePtr TTypeChar)]
-                                                (AType TTypeProc) 0) .
+                                                (AType TTypeProc) 0 False) .
            -- conversions
           Map.insert "extend"
-                (FunInfo (lL "extend") [AType TTypeChar] (AType TTypeInt) 0) .
+                (FunInfo (lL "extend") [AType TTypeChar] (AType TTypeInt) 0 False) .
           Map.insert "shrink"
-                (FunInfo (lL "shrink") [AType TTypeInt] (AType TTypeChar) 0) .
+                (FunInfo (lL "shrink") [AType TTypeInt] (AType TTypeChar) 0 False) .
            -- strings
           Map.insert "strlen"
-                (FunInfo (lL "strlen") [AType (TTypePtr TTypeChar)] (AType TTypeInt) 0) .
+                (FunInfo (lL "strlen") [AType (TTypePtr TTypeChar)] (AType TTypeInt) 0 False) .
           Map.insert "strcmp"
-                (FunInfo (lL "strcmp") [AType (TTypePtr TTypeChar),
-                                                AType (TTypePtr TTypeChar)] (AType TTypeInt) 0) .
+                (FunInfo (lL "strcmp") [AType (TTypePtr TTypeChar), AType (TTypePtr TTypeChar)]
+                                                (AType TTypeInt) 0 False) .
           Map.insert "strcpy"
-                (FunInfo (lL "strcpy") [AType (TTypePtr TTypeChar),
-                                                AType (TTypePtr TTypeChar)] (AType TTypeProc) 0) .
+                (FunInfo (lL "strcpy") [AType (TTypePtr TTypeChar), AType (TTypePtr TTypeChar)]
+                                                (AType TTypeProc) 0 False) .
           Map.insert "strcat"
-                (FunInfo (lL "strcat") [AType (TTypePtr TTypeChar),
-                                                AType (TTypePtr TTypeChar)] (AType TTypeProc) 0)
+                (FunInfo (lL "strcat") [AType (TTypePtr TTypeChar), AType (TTypePtr TTypeChar)]
+                                                (AType TTypeProc) 0 False)
          ) -- the end
           Map.empty
         ) "prelude"
@@ -143,15 +146,15 @@ getFunc i t =
     nested t (\Table{functions=f} -> Map.lookup i f)
 
 getFuncName :: Maybe FunInfo -> Ide
-getFuncName (Just (FunInfo n _ _ fid)) = (unLoc n) ++ "_" ++ show fid
+getFuncName (Just (FunInfo n _ _ fid _)) = (unLoc n) ++ "_" ++ show fid
 getFuncName Nothing = "unknown"
 
 getFuncParams :: Maybe FunInfo -> [AType]
-getFuncParams (Just (FunInfo _ fpt _ _)) = fpt
+getFuncParams (Just (FunInfo _ fpt _ _ _)) = fpt
 getFuncParams Nothing = []
 
 getFuncRetType :: Maybe FunInfo -> AType
-getFuncRetType (Just (FunInfo _ _ frt _)) = frt
+getFuncRetType (Just (FunInfo _ _ frt _ _)) = frt
 getFuncRetType Nothing = AType TTypeUnknown
 
 -- Get variables
@@ -160,11 +163,11 @@ getVar i t =
     nested t (\Table{variables=v} -> Map.lookup i v)
 
 getVarName :: Maybe VarInfo -> Ide
-getVarName (Just (VarInfo n _ vid)) = (unLoc n) ++ "_" ++ show vid
+getVarName (Just (VarInfo n _ vid _)) = (unLoc n) ++ "_" ++ show vid
 getVarName Nothing = "unknown"
 
 getVarType :: Maybe VarInfo -> AType
-getVarType (Just (VarInfo _ vt _)) = vt
+getVarType (Just (VarInfo _ vt _ _)) = vt
 getVarType Nothing = AType TTypeUnknown
 
 isVarLocal :: Ide -> Table -> Maybe VarInfo
@@ -186,10 +189,31 @@ updateFunc pt t@Table{name=fun_name, parent=m_parent} =
     case m_parent of
          Just parent@Table{functions=f} ->
              let parent' = parent{ functions=Map.update newVal fun_name f }
-                 newVal (FunInfo lide _ rt u) = Just (FunInfo lide pt rt u)
+                 newVal (FunInfo lide _ rt u _) = Just (FunInfo lide pt rt u True)
              in
              t{ parent=(Just parent') }
          Nothing -> panic "SymbolTable.updateFunc is not supposed to be at outermost scope"
+
+-- Update the unused `bit' of VarInfo/FunInfo
+updateUnusedFun :: Ide -> Table -> Table
+updateUnusedFun fun t@Table{parent=pt, functions=ft} =
+    case Map.updateLookupWithKey (\_ fi -> Just fi{funUnused=False}) fun ft of
+         (Just _, rf) -> t{functions=rf}
+         (Nothing, _) ->
+             case pt of
+                  Just p -> t{parent = Just (updateUnusedFun fun p)}
+                  Nothing ->
+                      panic "SymbolTable.updateUnusedFun is not supposed to be at outermost scope"
+
+updateUnusedVar :: Ide -> Table -> Table
+updateUnusedVar var t@Table{parent=pt, variables=vt} =
+    case Map.updateLookupWithKey (\_ vi -> Just vi{varUnused=False}) var vt of
+         (Just _, rv) -> t{variables=rv}
+         (Nothing, _) ->
+             case pt of
+                  Just p -> t{parent = Just (updateUnusedVar var p)}
+                  Nothing ->
+                      panic "SymbolTable.updateUnusedVar is not supposed to be at outermost scope"
 
 -- Scopes
 rawOpenScope :: Ide -> Table -> Table
