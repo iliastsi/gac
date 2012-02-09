@@ -12,9 +12,8 @@ module TcMonad (
     TcResult(..), TcState, TcM(..),
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getDynFlags, getTable, getUnique, setTable,
-    mkTcState, addTypeWarning, addTypeError, addScopeError,
-    addUnreachWarning, addNoRetError, addOverflowWarn,
-    addArrSizeError, getTcMessages,
+    mkTcState, addTypeWarning, addTypeError,
+    getTcMessages,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
@@ -101,25 +100,16 @@ mkTcState flags t =
         unique      = 1
     }
 
-addTypeWarning :: SrcSpan -> String -> String -> TcM ()
-addTypeWarning loc expr msg =
+-- Errors/Warnings
+addTypeWarning :: SrcSpan -> MsgCode -> String -> TcM ()
+addTypeWarning loc msg_code msg_extra =
     TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addWarning (mkWarnMsg loc (TypeError expr) msg) msgs) } ()
+        TcOk s{ messages=(addWarning (mkWarnMsg loc msg_code msg_extra) msgs) } ()
 
-addTypeError :: SrcSpan -> String -> String -> TcM ()
-addTypeError loc expr msg =
+addTypeError :: SrcSpan -> MsgCode -> String -> TcM ()
+addTypeError loc msg_code msg_extra =
     TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addError (mkErrMsg loc (TypeError expr) msg) msgs) } ()
-
-addScopeError :: Located Ide -> String -> TcM ()
-addScopeError (L loc ide) msg =
-    TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addError (mkErrMsg loc (ScopeError ide) msg) msgs) } ()
-
-addUnreachWarning :: SrcSpan -> String -> TcM ()
-addUnreachWarning loc msg =
-    TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addWarning (mkWarnMsg loc UnreachError msg) msgs) } ()
+        TcOk s{ messages=(addError (mkErrMsg loc msg_code msg_extra) msgs) } ()
 
 addRedefError :: Ide -> SrcSpan -> SrcSpan -> TcM ()
 addRedefError ide curr prev = do
@@ -128,22 +118,6 @@ addRedefError ide curr prev = do
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg curr (RedefError ide) msg) msgs) } ()
 
-addNoRetError :: SrcSpan -> Ide -> String -> TcM ()
-addNoRetError loc ide msg =
-    TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addError (mkErrMsg loc (NoRetError ide) msg) msgs) } ()
-
--- Warn for type overflows
-addOverflowWarn :: SrcSpan -> String -> String -> TcM ()
-addOverflowWarn loc constant msg =
-    TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addWarning (mkWarnMsg loc (OverflowError constant) msg) msgs) } ()
-
--- Array size errors
-addArrSizeError :: SrcSpan -> String -> String -> TcM()
-addArrSizeError loc expr msg =
-    TcM $ \s@(TcState{messages=msgs}) ->
-        TcOk s{ messages=(addError (mkErrMsg loc (ArrSizeError expr) msg) msgs) } ()
 
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms
@@ -163,14 +137,15 @@ getCurrDepthM = liftM getCurrDepth getTable
 -- ---------------------------
 -- Get functions
 getFuncM :: Located Ide -> TcM (Maybe FunInfo)
-getFuncM lide@(L _ ide) = do
+getFuncM lide@(L loc ide) = do
     t <- getTable
     case getFunc ide t of
          Just fi -> do
              updateUnusedFunM fi
              return (Just fi)
          Nothing -> do
-             addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
+             addTypeError loc (ScopeError ide)
+               "Each undeclared identifier is reported only once for each function it appears in"
              -- add the function
              u <- getUnique
              let finfo = FunInfo lide [] (AType TTypeUnknown) u False
@@ -189,14 +164,15 @@ getFuncRetTypeM = return . getFuncRetType
 -- ---------------------------
 -- Get variables
 getVarM :: Located Ide -> TcM (Maybe VarInfo)
-getVarM lide@(L _ ide) = do
+getVarM lide@(L loc ide) = do
     t <- getTable
     case getVar ide t of
          Just vi -> do
              updateUnusedVarM vi
              return (Just vi)
          Nothing -> do
-             addScopeError lide "Each undeclared identifier is reported only once for each function it appears in"
+             addTypeError loc (ScopeError ide)
+               "Each undeclared identifier is reported only once for each function it appears in"
              -- add the variable
              u <- getUnique
              let vinfo = VarInfo lide (AType TTypeUnknown) u False

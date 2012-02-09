@@ -37,6 +37,7 @@ import SrcLoc
 import MonadUtils
 import Outputable (panic)
 import DynFlags
+import ErrUtils (MsgCode(..))
 
 import Data.Int
 import Data.Word
@@ -107,11 +108,11 @@ tcCheckArraySize (L ldef udef) (L loc origin) rounded = do
     flags <- getDynFlags
     let max_bound = toInteger (maxBound :: Int32)
     if origin <= 0
-       then addArrSizeError ldef (show udef)
+       then addTypeError ldef (ArrSizeError $ show udef)
               ("Array size must be a positive integer")
        else do
            when ((origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
-               addOverflowWarn loc (show origin)
+               addTypeWarning loc (OverflowError $ show origin)
                  ("Integer has been rounded to `" ++ show rounded ++ "'")
 
 -- ---------------------------
@@ -119,7 +120,7 @@ tcCheckArraySize (L ldef udef) (L loc origin) rounded = do
 tcNoRetErr :: SrcSpan -> Ide -> AType -> TcM ()
 tcNoRetErr loc ide ftype = do
     -- we have to take the end of statements location
-    addNoRetError loc ide
+    addTypeError loc (NoRetError ide)
       ("Function `" ++ ide ++ "' is of type `" ++ show ftype ++ "'")
 
 
@@ -157,7 +158,7 @@ typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
 -- Error when passing an array as value
 tcArrayParamErr :: Located UParam -> TcM ()
 tcArrayParamErr (L loc uparam) =
-    addTypeError loc (show uparam)
+    addTypeError loc (TypeError $ show uparam)
       ("Array parameters have to be passed by reference")
 
 
@@ -244,7 +245,7 @@ tcCompoundStmt ret_type (lustmt:lustmts) = do
 -- Error when the types of expression and variable in an assigment are different
 tcAssignErr :: Located UStmt -> AType -> AType -> TcM ()
 tcAssignErr (L loc ustmt@(UStmtAssign _ _)) vtype etype =
-    addTypeError loc (show ustmt)
+    addTypeError loc (TypeError $ show ustmt)
       ("Lvalue is of type `" ++ show vtype ++ "' but Rvalue is of type `" ++
        show etype ++ "'")
 tcAssignErr _ _ _ = panic "TypeCheck.tcAssignErr got unexpected input"
@@ -254,13 +255,13 @@ tcUnreachableErr :: SrcSpan -> TcM ()
 tcUnreachableErr loc = do
     flags <- getDynFlags
     when (dopt Opt_WarnUnreachableCode flags) $
-        addUnreachWarning loc ("Dead code has been eliminated")
+        addTypeWarning loc UnreachError ("Dead code has been eliminated")
 
 -- Error when the return type is different from the one in function header
 tcRetStmtErr :: Located UStmt -> AType -> AType -> TcM ()
 tcRetStmtErr (L loc ustmt@(UStmtReturn _)) exptype acttype = do
     fun_name <- getNameM
-    addTypeError loc (show ustmt)
+    addTypeError loc (TypeError $ show ustmt)
       ("Incopatible return type of function `" ++ fun_name ++
        "'\n\tExpected `" ++ show exptype ++
        "' but instead function returned `" ++ show acttype ++ "'")
@@ -342,7 +343,7 @@ isIntOrByte' (L loc uexpr) ue at = do
     if at == (AType TTypeInt) || at == (AType TTypeChar)
        then return True
        else do
-           addTypeError loc (show uexpr)
+           addTypeError loc (TypeError $ show uexpr)
              ("Expected `int' or `byte' but expression `" ++
               show ue ++ "' is of type `" ++ show at ++ "'")
            return False
@@ -358,14 +359,14 @@ tcCheckIntOverflow (L loc origin) rounded = do
     let max_bound = toInteger (maxBound :: Int32)
         min_bound = toInteger (minBound :: Int32)
     when ((origin < min_bound || origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
-            addOverflowWarn loc (show origin)
+            addTypeWarning loc (OverflowError $ show origin)
                 ("Integer has been rounded to `" ++ show rounded ++ "'")
 
 -- ---------------------------
 -- Error when the types of expressions on TExprOp are different
 tcOpExprErr :: Located UExpr -> AType -> AType -> TcM ()
 tcOpExprErr (L loc uexpr@(UExprOp _ lop _)) ftype stype =
-    addTypeError loc (show uexpr)
+    addTypeError loc (TypeError $ show uexpr)
       ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
        show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
        "' is of type `" ++ show stype ++ "'")
@@ -374,7 +375,7 @@ tcOpExprErr _ _ _ = panic "TypeCheck.tcOpExprErr got unexpected input"
 -- Error when type of expression in UExprSign is different than integer
 tcSignExprErr :: Located UExpr -> AType -> TcM ()
 tcSignExprErr (L loc uexpr@(UExprSign _ _)) etype =
-    addTypeError loc (show uexpr)
+    addTypeError loc (TypeError $ show uexpr)
       ("Expected `int' but expression is of type `" ++ show etype ++ "'")
 tcSignExprErr _ _ = panic "TypeCheck.tcSignExprErr got unexpected input"
 
@@ -420,7 +421,7 @@ typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
 -- Error when the types of expressions on TCondOp are different
 tcOpCondErr :: Located UCond -> AType -> AType -> TcM ()
 tcOpCondErr (L loc ucond@(UCondOp _ lop _)) ftype stype =
-    addTypeError loc (show ucond)
+    addTypeError loc (TypeError $ show ucond)
       ("First argument of `" ++ show (unLoc lop) ++ "' is of type `" ++
        show ftype ++ "'\n\tSecond argument of `" ++ show (unLoc lop) ++
        "' is of type `" ++ show stype ++ "'")
@@ -480,14 +481,14 @@ unknown_var = (TVar "unknown" TTypeUnknown)
 -- Error when the array index expression is not of type of int
 tcIntExprErr :: Located UVariable -> TcM ()
 tcIntExprErr (L loc (uvar@(UVarArray _ lexpr))) =
-    addTypeError loc (show uvar)
+    addTypeError loc (TypeError $ show uvar)
       ("Array index `" ++ show (unLoc lexpr) ++ "' has to be of type `int'")
 tcIntExprErr _ = panic "TypeCheck.tcIntExprErr got unexpected input"
 
 -- Error when variable is not of type `array'
 tcArrayVarErr :: Located UVariable -> AType -> TcM ()
 tcArrayVarErr (L loc uarr@(UVarArray luvar _)) var_type =
-    addTypeError loc (show uarr)
+    addTypeError loc (TypeError $ show uarr)
       ("Incompatible type of expression `" ++ show (unLoc luvar) ++
        "'\n\tExpected `array' but expression is of type `" ++
        show var_type ++ "'")
@@ -556,14 +557,14 @@ tcFunPar' _ _  _  _   = panic "TypeCheck.tcFunPar got unexpected input"
 -- Error when the function parameter's number is different from the prototype
 tcParLenErr :: Located UFuncCall -> Int -> Int -> TcM ()
 tcParLenErr (L loc ufunc@(UFuncCall lide _)) pars_len type_len =
-    addTypeError loc (show ufunc)
+    addTypeError loc (TypeError $ show ufunc)
       ("The function `" ++ (unLoc lide) ++ "' is applied to " ++
        show pars_len ++ " parameters but its type has " ++ show type_len)
 
 -- Error when the function parameter's type is different from the prototype
 tcParTypeErr :: Ide -> Located UExpr -> Int -> AType -> AType -> TcM ()
 tcParTypeErr ide (L loc uexpr) count exptype acttype =
-    addTypeError loc (show uexpr)
+    addTypeError loc (TypeError $ show uexpr)
       ("Incompatible type of argument " ++ show count ++ " of function `" ++
        ide ++"'\n\tExpected `" ++ show exptype ++
        "' but argument is of type `" ++ show acttype ++ "'")
