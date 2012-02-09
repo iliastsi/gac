@@ -7,4 +7,5 @@ sign() : proc
   char = 'a';
   char = +'a';
   char = -'a';
+  foo = -('a' + 3);
 }

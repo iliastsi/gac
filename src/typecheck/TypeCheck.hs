@@ -295,7 +295,7 @@ typeCheckExpr (L loc (UExprSign (L _ OpMinus) (L _ (UExprInt i)))) = do
     typeCheckExpr (L loc (UExprInt (-i)))
 typeCheckExpr luexpr@(L loc (UExprSign lop lue1)) = do
     (L l1 aexpr@(AExpr te1 tt1)) <- typeCheckExpr lue1
-    if (AType tt1) /= (AType TTypeInt)
+    if (AType tt1) /= (AType TTypeInt) && (AType tt1) /= (AType TTypeUnknown)
        then do
            tcSignExprErr luexpr (AType tt1)
            return (L loc $ AExpr unknown_expr TTypeUnknown)
@@ -303,6 +303,9 @@ typeCheckExpr luexpr@(L loc (UExprSign lop lue1)) = do
            if (unLoc lop) == OpPlus
               then return (L loc aexpr)
               else return (L loc $ AExpr (TExprMinus (L l1 te1)) tt1)
+-- UExprParen
+typeCheckExpr (L _ (UExprParen luexpr)) =
+    typeCheckExpr luexpr
 -- UExprOp
 typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
     (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1

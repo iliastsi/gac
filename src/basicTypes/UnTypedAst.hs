@@ -217,6 +217,7 @@ data UExpr
     | UExprVar UVariable
     | UExprFun UFuncCall
     | UExprSign LOp LUExpr
+    | UExprParen LUExpr
     | UExprOp LUExpr LOp LUExpr
 
 instance Show UExpr where
@@ -230,6 +231,8 @@ dumpUExpr (UExprVar v)    = dumpUVariable v
 dumpUExpr (UExprFun f)    = dumpUFuncCall f
 dumpUExpr (UExprSign o e) =
     dumpOp (unLoc o) ++ dumpUExpr (unLoc e)
+dumpUExpr (UExprParen le) =
+    "(" ++ dumpUExpr (unLoc le) ++ ")"
 dumpUExpr (UExprOp a o b) =
     dumpUExpr (unLoc a) ++ " " ++ dumpOp (unLoc o) ++ " " ++ dumpUExpr (unLoc b)
 

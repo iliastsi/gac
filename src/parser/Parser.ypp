@@ -240,7 +240,7 @@ expr :: { Located UExpr }
     | CHAR                          { L1 $ let (ITchar i) = (unLoc $1) in UExprChar i }
     | STRING                        { L1 $ let (ITstring i) = (unLoc $1) in UExprString i }
     | lvalue                        { L1 $ let v = unLoc $1 in UExprVar v }
-    | '(' expr ')'                  { LL $ let e = unLoc $2 in e}
+    | '(' expr ')'                  { LL $ UExprParen $2 }
     | '(' expr error                {% missing ')' }
     | '(' error                     {% notValidExpr }
     | funcall                       { L1 $ let f = unLoc $1 in UExprFun f }

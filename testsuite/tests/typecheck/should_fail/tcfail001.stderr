@@ -4,3 +4,7 @@ tcfail001.alan:8:10: Error: Type mismatch at `+'a''
 tcfail001.alan:9:10: Error: Type mismatch at `-'a''
 	Expected `int' but expression is of type `byte'
 
+tcfail001.alan:10:11: Error: Type mismatch at `'a' + 3'
+	First argument of `+' is of type `byte'
+	Second argument of `+' is of type `int'
+
