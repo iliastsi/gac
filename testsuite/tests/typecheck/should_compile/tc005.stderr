@@ -1,0 +1,4 @@
+tc005.alan:3:3-6: Warning: Defined but not used: `var2'
+
+tc005.alan:5:5-8: Warning: Defined but not used: `var3'
+

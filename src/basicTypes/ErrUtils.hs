@@ -44,6 +44,8 @@ data MsgCode
   | NoRetError    String  -- missing return statement
   | OverflowError String  -- type overflow error (ie ints > 32 bits)
   | ArrSizeError  String  -- array definition errors
+  | UnusedIdError String  -- variable/function defined but not used
+  | UnusedRsError String  -- unused result
   | UnknownError
 
 data Severity
@@ -150,4 +152,6 @@ instance Show MsgCode where
     show (NoRetError ide)    = "Control reaches end of non-proc function `" ++ ide ++ "'"
     show (OverflowError buf) = "Overflow in implicit constant conversion at `" ++ buf ++ "'"
     show (ArrSizeError buf)  = "Array definition error at `" ++ buf ++ "'"
+    show (UnusedIdError buf) = "Defined but not used: `" ++ buf ++ "'"
+    show (UnusedRsError buf) = "Unused return value of function `" ++ buf ++ "'"
     show UnknownError        = "Unknown Error :@"

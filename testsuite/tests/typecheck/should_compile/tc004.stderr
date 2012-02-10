@@ -1,0 +1,4 @@
+tc004.alan:4:3-6: Warning: Defined but not used: `foo2'
+
+tc004.alan:5:5-8: Warning: Defined but not used: `foo3'
+

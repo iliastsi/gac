@@ -1,0 +1,11 @@
+unusedVar() : proc
+  var1 : int;
+  var2 : int;
+  foo1() : proc
+    var3 : int;
+  {}
+  foo2() : proc
+    foo3() : proc
+    { var1 = 42; }
+  { foo1(); }
+{}

@@ -1,0 +1,8 @@
+unusedFun() : proc
+  foo1() : proc
+  {}
+  foo2() : proc
+    foo3() : proc
+    {}
+  { foo1(); }
+{}

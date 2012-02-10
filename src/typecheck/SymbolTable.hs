@@ -17,8 +17,8 @@ module SymbolTable (
 
     -- ** Extract from Table
     getName, getCurrDepth,
-    getFunc, getFuncName, getFuncParams, getFuncRetType,
-    getVar, getVarName, getVarType, isVarLocal,
+    getLocalFuncs, getFunc, getFuncName, getFuncParams, getFuncRetType,
+    getLocalVars, getVar, getVarName, getVarType, isVarLocal,
 
     -- ** Add to Table
     addFunc, addVar, updateFunc,
@@ -141,6 +141,9 @@ getCurrDepth :: Table -> Int
 getCurrDepth Table{depth=d} = d
 
 -- Get functions
+getLocalFuncs :: Table -> [FunInfo]
+getLocalFuncs Table{functions=f} = Map.elems f
+
 getFunc :: Ide -> Table -> Maybe FunInfo
 getFunc i t =
     nested t (\Table{functions=f} -> Map.lookup i f)
@@ -158,6 +161,9 @@ getFuncRetType (Just (FunInfo _ _ frt _ _)) = frt
 getFuncRetType Nothing = AType TTypeUnknown
 
 -- Get variables
+getLocalVars :: Table -> [VarInfo]
+getLocalVars Table{variables=v} = Map.elems v
+
 getVar :: Ide -> Table -> Maybe VarInfo
 getVar i t =
     nested t (\Table{variables=v} -> Map.lookup i v)

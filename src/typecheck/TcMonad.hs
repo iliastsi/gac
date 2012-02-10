@@ -246,5 +246,21 @@ rawOpenScopeM ide =
     TcM $ \s@TcState{table=t} -> TcOk s{table=rawOpenScope ide t} ()
 
 rawCloseScopeM :: TcM ()
-rawCloseScopeM =
-    TcM $ \s@TcState{table=t} -> TcOk s{table=rawCloseScope t} ()
+rawCloseScopeM = do
+    t <- getTable
+    flags <- getDynFlags
+    when (dopt Opt_WarnUnusedFunction flags) $
+        mapM_ isUnusedFun $ getLocalFuncs t
+    when (dopt Opt_WarnUnusedVariable flags) $
+        mapM_ isUnusedVar $ getLocalVars t
+    setTable (rawCloseScope t)
+
+isUnusedVar :: VarInfo -> TcM ()
+isUnusedVar (VarInfo _ _ _ False) = return ()
+isUnusedVar (VarInfo (L loc vn) _ _ True)  =
+    addTypeWarning loc (UnusedIdError vn) ""
+
+isUnusedFun :: FunInfo -> TcM ()
+isUnusedFun (FunInfo _ _ _ _ False) = return ()
+isUnusedFun (FunInfo (L loc fn) _ _ _ True) =
+    addTypeWarning loc (UnusedIdError fn) ""
