@@ -1,12 +1,13 @@
 .\" This is the man page for gac (1)
 .\" Lines starting with `.\"' will be ignored
-.\" In order to be fully parametrized we introduce four variables
+.\" In order to be fully parametrized we introduce five variables
 .\" which will be replaced by autoconfig and Makefile during installation
 .\" This are:
 .\"   `$PACKAGE_NAME' (default is `The Glorious Alan Compilation System')
 .\"   `$PACKAGE_TARNAME' (default is `gac')
 .\"   `$PACKAGE_TARNAME_U' (default is `GAC', U is for upper case)
 .\"   `$PACKAGE_VERSION'
+.\"   `$LIBDIR' (default is `/usr/local/lib/gac')
 .TH $PACKAGE_TARNAME_U 1 "2011-11-17" "$PACKAGE_TARNAME-$PACKAGE_VERSION" "Alan FP Suite"
 .SH NAME
 $PACKAGE_TARNAME_U \- $PACKAGE_NAME
@@ -75,7 +76,7 @@ Alan source code; compile
 
 .SS Warnings
 .nh
-\-W \-w \-Wall \-Werror \-Wwarn \-fwarn\-unreachable\-code \-fno\-warn\-unreachable\-code \-fwarn\-unused\-function \-fno\-warn\-unused\-function \-fwarn\-unused\-result \-fno\-warn\-unused\-result \-fwarn\-unused\-variable \-fno\-warn\-unused\-variable \-fwarn\-uninitialized \-fno\-warn\-uninitialized \-fwarn\-type\-overflows \-fno\-warn\-type\-overflows \-fwarn\-warnings\-deprecations \-fno\-warn\-warnings\-deprecations \-fwarn\-deprecations \-fno\-warn\-deprecations \-fwarn\-deprecated\-flags \-fno\-warn\-deprecated\-flags
+\-W \-w \-Wall \-Werror \-Wwarn \-fwarn\-unreachable\-code \-fno\-warn\-unreachable\-code \-fwarn\-unused\-function \-fno\-warn\-unused\-function \-fwarn\-unused\-result \-fno\-warn\-unused\-result \-fwarn\-unused\-variable \-fno\-warn\-unused\-variable \-fwarn\-uninitialized \-fno\-warn\-uninitialized \-fwarn\-type\-overflows \-fno\-warn\-type\-overflows \-fwarn\-deprecations \-fno\-warn\-deprecations \-fwarn\-warnings\-deprecations \-fno\-warn\-warnings\-deprecations \-fwarn\-deprecated\-flags \-fno\-warn\-deprecated\-flags
 .hy
 
 .SS Optimisation levels
@@ -506,7 +507,7 @@ Dump parse tree
 
 
 .SH FILES
-.I /usr/lib
+.I $LIBDIR
 
 .SH COPYRIGHT
 
