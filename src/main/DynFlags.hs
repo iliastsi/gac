@@ -87,12 +87,7 @@ data DynFlag
     | Opt_WarnWarningsDeprecations
     | Opt_WarnDeprecatedFlags
 
-    -- optimisation opts
-    | Opt_CSE
-    | Opt_RegsGraph         -- do graph coloring register allocation
-
     -- misc opts
-    | Opt_ForceRecomp
     | Opt_DryRun            -- does not actually run any external commands
     | Opt_ErrorSpans        -- Include full span info in error messages
 
@@ -448,20 +443,13 @@ dynamic_flags =
     ---- Miscellaneous ----
   , Flag "no-auto-link-packages" (NoArg (unSetDynFlag Opt_AutoLinkPackages))
 
-    ---- recompilation checker ----
-  , Flag "no-recomp"    (NoArg (do { unSetDynFlag Opt_ForceRecomp
-                                   ; deprecate "Use -fno-force-recomp instead" }))
-  , Flag "recomp"       (NoArg (do { setDynFlag Opt_ForceRecomp
-                                   ; deprecate "Use -fforce-recomp-instead" }))
-
     ---- Debugging ----
   , Flag "ddump-asm"        (setDumpFlag Opt_D_dump_asm)
   , Flag "ddump-llvm"       (NoArg (do { setObjTarget AlcLlvm
                                        ; setDumpFlag' Opt_D_dump_llvm}))
   , Flag "ddump-parsed"     (setDumpFlag Opt_D_dump_parsed)
   , Flag "ddump-to-file"    (setDumpFlag Opt_DumpToFile)
-  , Flag "dshow-passes"     (NoArg (do forceRecompile
-                                       setVerbosity (Just 2)))
+  , Flag "dshow-passes"     (NoArg (setVerbosity (Just 2)))
 
     ---- Warning opts ----
   , Flag "W"        (NoArg (mapM_ setDynFlag    minusWOpts))
@@ -534,10 +522,7 @@ fFlags = [
   ( "warn-warnings-deprecations",   Opt_WarnWarningsDeprecations, nop),
   ( "warn-deprecations",            Opt_WarnWarningsDeprecations, nop),
   ( "warn_deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
-  ( "warn-deprecated-flags",        Opt_WarnDeprecatedFlags, nop),
-  ( "cse",                          Opt_CSE, nop),
-  ( "force-recomp",                 Opt_ForceRecomp, nop),
-  ( "regs-graph",                   Opt_RegsGraph, nop)
+  ( "warn-deprecated-flags",        Opt_WarnDeprecatedFlags, nop)
   ]
 
 supportedExtensions :: [String]
@@ -560,10 +545,7 @@ impliedFlags :: [(ExtensionFlag, TurnOnFlag, ExtensionFlag)]
 impliedFlags = []
 
 optLevelFlags :: [([Int], DynFlag)]
-optLevelFlags =
-    [ ([1,2],       Opt_CSE)
-    , ([2],         Opt_RegsGraph)
-    ]
+optLevelFlags = []
 
 standarWarnings :: [DynFlag]
 standarWarnings =
@@ -646,13 +628,6 @@ unSetExtensionFlag f = upd (\dfs -> xopt_unset dfs f)
 setDumpFlag' :: DynFlag -> DynP ()
 setDumpFlag' dump_flag = do
     setDynFlag dump_flag
-    forceRecompile
-
-forceRecompile :: DynP ()
--- Whenever we -ddump, force recompilation (by switching off the
--- recompilation checker), else you don't see the dump!
-forceRecompile = do
-    setDynFlag Opt_ForceRecomp
 
 setVerbosity :: Maybe Int -> DynP ()
 setVerbosity mb_n = upd (\dfs -> dfs{ verbosity = mb_n `orElse` 3 })

@@ -54,19 +54,16 @@ Alan source code; compile
 
 .SS Keeping intermediate files
 .nh
-\-keep\-llvm\-file or
-                 \-keep\-llvm\-files  \-keep\-s\-file or
-                 \-keep\-s\-files  \-keep\-tmp\-files
+\-keep\-llvm\-file or \-keep\-llvm\-files
+.br
+\-keep\-s\-file or \-keep\-s\-files
+.br
+\-keep\-tmp\-files
 .hy
 
 .SS Temporary files
 .nh
 \-tmpdir
-.hy
-
-.SS Recompilation checking
-.nh
-\-fforce\-recomp \-fno\-force\-recomp
 .hy
 
 .SS Language options
@@ -82,11 +79,6 @@ Alan source code; compile
 .SS Optimisation levels
 .nh
 \-O \-O0  \-O\fIn\fP
-.hy
-
-.SS Individual optimisations
-.nh
-\-fcse \-fno\-cse \-fregs\-graph \-fno\-regs\-graph
 .hy
 
 .SS Code generation options
@@ -236,15 +228,15 @@ set output directory
 .SH KEEPING INTERMEDIATE FILES
 
 .TP
-\fB\-keep\-llvm\-file\fP or
-                 \fB\-keep\-llvm\-files\fP
+\fB\-keep\-llvm\-file\fP or \fB\-keep\-llvm\-files\fP
+.br
 retain intermediate LLVM \f(CR.ll\fP files
 .rj
 [dynamic]
 
 .TP
-\fB\-keep\-s\-file\fP or
-                 \fB\-keep\-s\-files\fP
+\fB\-keep\-s\-file\fP or \fB\-keep\-s\-files\fP
+.br
 retain intermediate \f(CR.s\fP files
 .rj
 [dynamic]
@@ -261,16 +253,6 @@ retain all intermediate temporary files
 .TP
 \fB\-tmpdir\fP
 set the directory for temporary files
-.rj
-[dynamic]
-
-
-
-.SH RECOMPILATION CHECKING
-
-.TP
-\fB\-fforce\-recomp\fP
-Turn off recompilation checking; implied by any \fB\-ddump\-X\fP option
 .rj
 [dynamic]
 
@@ -364,21 +346,6 @@ Enable default optimisation (level 1)
 .TP
 \fB\-O\fP\fIn\fP
 Set optimisation level \fIn\fP
-.rj
-[dynamic]
-
-
-.SH INDIVIDUAL OPTIMISATIONS
-
-.TP
-\fB\-fcse\fP
-Turn on common sub-expression elimination. Implied by \fB\-O\fP.
-.rj
-[dynamic]
-
-.TP
-\fB\-fregs\-graph\fP
-Turn on register allocation via graph coloring optimisation. Implied by \fB\-O2\fP.
 .rj
 [dynamic]
 
