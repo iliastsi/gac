@@ -1,0 +1,2 @@
+tc006.alan:5:3-9: Warning: Unused return value of function `foo1'
+

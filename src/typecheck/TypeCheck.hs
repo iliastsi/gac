@@ -187,9 +187,14 @@ typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
     (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts
     return (does_ret, L loc $ TStmtCompound ltstmts)
 -- UStmtFun
-typeCheckStmt _ (L loc (UStmtFun lf)) = do
-    alfunc <- typeCheckFunc lf
-    return (False, L loc $ TStmtFun alfunc)
+typeCheckStmt _ (L loc (UStmtFun lf@(L _ (UFuncCall fname _)))) = do
+    lafunc@(L _ (AFuncCall _ ftype)) <- typeCheckFunc lf
+    flags <- getDynFlags
+    when ((AType ftype)/=(AType TTypeProc) &&
+          (AType ftype)/=(AType TTypeUnknown) &&
+          (dopt Opt_WarnUnusedResult flags)) $
+              addTypeWarning loc (UnusedRsError (unLoc fname)) ""
+    return (False, L loc $ TStmtFun lafunc)
 -- UStmtIf
 typeCheckStmt ret_type (L loc (UStmtIf lucond lustmt1 m_lustmt2)) = do
     ltcond <- typeCheckCond lucond
