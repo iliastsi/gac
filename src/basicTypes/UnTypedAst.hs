@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- Untyped Abstract Syntax Tree for the Alan Language
 -- This is our parser's output

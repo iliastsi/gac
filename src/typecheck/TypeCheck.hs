@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- Type check our abstruct syntax tree
 --

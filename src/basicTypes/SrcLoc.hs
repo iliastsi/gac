@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- This module contains types that relate to the position of things
 -- in source files, and allow tagging of those things with locations

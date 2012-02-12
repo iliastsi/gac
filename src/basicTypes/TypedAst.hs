@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- Typed Abstract Syntax Tree for the Alan Language
 --

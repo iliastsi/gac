@@ -12,10 +12,6 @@
 
     Releases
 ~~~~~~~~~~~~~~~~~~~
-0.6 : Add tests
-      Fix error messages
-            (better messages, check for flags)
-
 0.7 : Add llvm back end
 
 0.8 : Implement llvm libraries

@@ -3,7 +3,7 @@ dnl (run "grep '^dnl \*' configure.ac | sed -e 's/dnl / /g; s/\*\*/   +/g;'"
 dnl  (or some such) to see the outline of this file)
 dnl
 #
-# (c) Tsitsimpis Ilias 2011
+# (c) Tsitsimpis Ilias 2011-2012
 #
 # Configure script template for GAC
 #
@@ -13,7 +13,7 @@ dnl
 # see what flags are available. (Better yet, read the documentation!)
 #
 
-AC_INIT([The Glorious Alan Compilation System], [0.6], [iliastsi@hotmail.com], [gac])
+AC_INIT([The Glorious Alan Compilation System], [0.7], [iliastsi@hotmail.com], [gac])
 
 
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])

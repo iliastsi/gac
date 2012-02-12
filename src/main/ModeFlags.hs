@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- Mode flags
 -- (such as help, version, info etc.)

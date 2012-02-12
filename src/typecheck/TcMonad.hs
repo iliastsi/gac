@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- (c) Tsitsimpis Ilias, 2011
+-- (c) Tsitsimpis Ilias, 2011-2012
 --
 -- The TcMonad is a State Monad that keeps track of symbol table
 -- and errors during the semantic analysis
