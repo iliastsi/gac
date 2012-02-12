@@ -46,6 +46,7 @@ data MsgCode
   | ArrSizeError  String  -- array definition errors
   | UnusedIdError String  -- variable/function defined but not used
   | UnusedRsError String  -- unused result
+  | UninitError   String  -- uninitialized variable
   | UnknownError
 
 data Severity
@@ -145,13 +146,14 @@ instance Show Severity where
 instance Show MsgCode where
     show (ParseError "")     = "Parse error at end of file"
     show (ParseError buf)    = "Parse error on input `" ++ buf ++ "'"
-    show (ScopeError ide)    = "Not in scope `" ++ ide ++ "'"
+    show (ScopeError buf)    = "Not in scope `" ++ buf ++ "'"
     show (TypeError expr)    = "Type mismatch at `" ++ expr ++ "'"
     show UnreachError        = "Unreachable code"
-    show (RedefError ide)    = "Conflicting definitions for `" ++ ide ++ "'"
-    show (NoRetError ide)    = "Control reaches end of non-proc function `" ++ ide ++ "'"
+    show (RedefError buf)    = "Conflicting definitions for `" ++ buf ++ "'"
+    show (NoRetError buf)    = "Control reaches end of non-proc function `" ++ buf ++ "'"
     show (OverflowError buf) = "Overflow in implicit constant conversion at `" ++ buf ++ "'"
     show (ArrSizeError buf)  = "Array definition error at `" ++ buf ++ "'"
     show (UnusedIdError buf) = "Defined but not used: `" ++ buf ++ "'"
     show (UnusedRsError buf) = "Unused return value of function `" ++ buf ++ "'"
+    show (UninitError buf)   = "Variable `" ++ buf ++ "' may be used uninitialized"
     show UnknownError        = "Unknown Error :@"

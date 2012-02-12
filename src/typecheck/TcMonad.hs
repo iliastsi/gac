@@ -140,8 +140,8 @@ getFuncM :: Located Ide -> TcM (Maybe FunInfo)
 getFuncM lide@(L loc ide) = do
     t <- getTable
     case getFunc ide t of
-         Just fi -> do
-             updateUnusedFunM fi
+         Just fi@FunInfo{funName=name, funUnused=isUnused} -> do
+             when isUnused $ setTable (updateUnusedFun (unLoc name) t)
              return (Just fi)
          Nothing -> do
              addTypeError loc (ScopeError ide)
@@ -167,8 +167,8 @@ getVarM :: Located Ide -> TcM (Maybe VarInfo)
 getVarM lide@(L loc ide) = do
     t <- getTable
     case getVar ide t of
-         Just vi -> do
-             updateUnusedVarM vi
+         Just vi@VarInfo{varName=name, varUnused=isUnused} -> do
+             when isUnused $ setTable (updateUnusedVar (unLoc name) t)
              return (Just vi)
          Nothing -> do
              addTypeError loc (ScopeError ide)
@@ -224,20 +224,6 @@ updateFuncM :: [AType] -> TcM ()
 updateFuncM pt = do
     t <- getTable
     setTable (updateFunc pt t)
-
--- ---------------------------
--- Update VarInfo/FunInfo for unused identifiers
-updateUnusedFunM :: FunInfo -> TcM ()
-updateUnusedFunM (FunInfo _  _ _ _ False) = return ()
-updateUnusedFunM (FunInfo ln _ _ _ True)  = do
-    t <- getTable
-    setTable (updateUnusedFun (unLoc ln) t)
-
-updateUnusedVarM :: VarInfo -> TcM ()
-updateUnusedVarM (VarInfo _  _ _ False) = return ()
-updateUnusedVarM (VarInfo ln _ _ True)  = do
-    t <- getTable
-    setTable (updateUnusedVar (unLoc ln) t)
 
 -- ---------------------------
 -- Scopes
