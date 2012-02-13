@@ -1,5 +1,518 @@
-
 For testsuite documentation, please see:
 
     http://hackage.haskell.org/trac/ghc/wiki/Building/RunningTests
 
+===============================================================================
+****** GAC Test framework ******
+GAC includes a comprehensive testsuite for catching any regressions.
+The testsuite relies primarily on GNU Make and Python. Any version >= 2.5.2
+will do although avoid Python 2.6.1 as the testsuite tickles a bug in one of
+the included libraries.
+
+If you want to run the testsuite, then in the root of the GAC tree, typing:
+    $ make test
+will do a full testsuite run. You should expect that there are no test case
+failures as that is a quality level that all GAC developers are expected to
+maintain when they check in code.
+
+
+===============================================================================
+****** Running the Testsuite ******
+This section gives information on how to use the testsuite.
+Firstly, change from the root of the GAC source tree to:
+    $ cd testsuite/tests
+This is the root of the actual tests cases in the GAC testsuite. The
+directories above this one hold the actual testsuite framework for running the
+tests. All the commands below assume you are in this directory before running
+them.
+To run the testsuite against a GAC build in the same source tree:
+    $ make
+This is equivalent to running make test in the root of the GHC tree as
+detailed above.
+To run the testsuite against a different GAC, say gac-0.6 (this assumes the
+name specified corresponds to an executable on your path):
+    $ make TEST_AC=gac-0.6
+To run an individual test or tests (eg. tc004):
+    $ make TEST=tc004
+To make this even faster, you can also go straight to the subdirectory
+containing the test (e.g ./typecheck/should_compile/) and say 'make TEST=tc004'
+from there, which will save some time as the testsuite framework won't need to
+search as long to find the test you are referring to.
+To run several tests, you just space separate them:
+    $ make TEST="tc003 tc004"
+You can also run a whole group of related tests by changing to a subdirectory
+in the test cases tree:
+    $ cd ./parser
+    $ make
+To add specific options to the compiler:
+    $ make EXTRA_AC_OPTS='-ferror-spans'
+To save disk space you can have temporary files deleted after each test:
+    $ make CLEANUP=1
+To just clean all the tests, without running any:
+    $ make CLEANUP=1 CLEAN_ONLY=YES
+If you have python 2.5.2 or later then you can run the testsuite in parallel:
+    $ make THREADS=4
+This can be a huge time saver these days with the number of cores most people
+have.
+
+
+===============================================================================
+****** Testsuite Variables / Settings and WAYS ******
+The following variables may be set on the command line when calling make:
+TEST                 -- specific tests to run
+TEST_AC              -- compiler to use
+EXTRA_AC_OPTS        -- extra flags to send to the Haskell compiler
+EXTRA_RUNTEST_OPTS   -- extra flags to give the test driver
+CONFIG               -- use a different configuration file
+WAY                  -- just this way
+THREADS              -- number of threads to use when running the testsuite
+For example, to run the tc053 test for only the optasm way we would use:
+$ make WAY=optasm TEST=tc053
+
+The testsuite also has a concept called, ways. These refer to different
+settings in which a test case can be compiled and/or run. They correspond to
+things such as checking a test passes both when the native code generator is
+used and when the LLVM code generator is used.
+The following ways are defined (see the file config/gac for the complete list):
+normal               -- no special options
+llvm                 -- -fllvm
+optasm               -- -O -fasm
+optllvm              -- -O -fllvm
+certain ways are enabled automatically if the GAC build in the local tree
+supports them.
+
+
+===============================================================================
+****** Updating test cases when the output changes ******
+If the output of a test has changed, but the new output is still correct, you
+can automatically update the sample output to match the new output like so:
+    $ make accept TEST=<test-name>
+where <test-name> is the name of the test.
+If you want to update a whole directory of tests to accept the new output,
+simply call make accept in that directory:
+    $ cd parser/should_run
+    $ make accept
+
+
+===============================================================================
+****** Adding new test cases ******
+For adding any test case, follow these guide lines and then refer to the more
+specific examples below for a single module test case and a multiple module
+test case. All test cases should reside under the `testsuite/tests/' directory.
+From now on we assume that directory as our root.
+   1. Find the appropriate place for the test case. The GHC regression suite is
+      generally organised in a "white-box" manner: a regression which
+      originally illustrated a bug in a particular part of the compiler is
+      placed in the directory for that part. For example, typechecker
+      regression test cases go in the typechecker/ directory, parser test cases
+      go in parser/, and so on.
+     It's not always possible to find a single best place for a test case;
+     in those cases just pick one which seems reasonable.
+     Under each main directory there are usually up to three
+     subdirectories:
+          should_compile: test cases which need to compile only
+          should_fail: test cases which should fail to compile and
+          generate a particular error message
+          should_run: test cases which should compile, run with some
+          specific input, and generate a particular output.
+     We don't always divide the test cases up like this, and it's not
+     essential to do so. The directory names have no meaning as far as the
+     test driver is concerned, it is simply a convention.
+   1. Having found a suitable place for the test case, give the test case a
+      name. For regression test cases, we often just name the test case after
+      the bug number (e.g. T2047). Alternatively, follow the convention for the
+      directory in which you place the test case: for example, in typecheck/
+      should_compile, test cases are named tc001, tc002, and so on. Suppose you
+      name your test case T, then you'll have the following files:
+          *.hs
+               The source file(s) containing the test case.
+               Details on how to handle single Vs multi source
+               test cases are explained below.
+          T.stdin (for test cases that run, and optional)
+               A file to feed the test case as standard input
+               when it runs.
+          T.stdout (for test cases that run, and optional)
+               For test cases that run, this file is compared
+               against the standard output generated by the
+               program. If T.stdout does not exist, then the
+               program must not generate anything on stdout.
+          T.stderr (optional)
+               For test cases that run, this file is compared
+               against the standard error generated by the
+               program.
+               For test cases that compile only, this file is
+               compared against the standard error output of the
+               compiler, which is normalised to eliminate bogus
+               differences (eg. absolute pathnames are removed,
+               whitespace differences are ignored, etc.)
+   1. Edit all.T in the relevant directory and add a line for the test case.
+      The line is always of the form
+      test(<name>, <setup>, <test-fn>, <args...>)
+      The format of this line is explained in more detail below as it differs
+      for test case types. It allows you to say if the test case should fail to
+      compile, run fine, run but terminate with a certain exit code... ect. The
+      <args...> argument is a list argument, where the length and format of the
+      list depends on the <test-fn> you use. The choice of <test-fn> is largely
+      dependent on how complex it is to build you test case. The <test-fn>
+      specifies a build method more then anything else.
+     Note also that the all.T file is simply a python source file that
+     gets executed by the test framework. Hence any Python code in it is
+     valid.
+     Below we will look at some of the more common test case setups.
+
+***** A single module test case *****
+A single module test case is very easy. Simply name the Haskell source files
+the same as your test name (so T.hs in our running example).
+Then for a test case that should compile and run fine we would put this line in
+all.T:
+test('cgrun001', normal, compile_and_run, [''])
+For a test case that should compile but you don't want run, we would put this
+line in all.T:
+test('cg002', normal, compile, [''])
+For a test case that should fail during compilation we would put this line in
+all.T:
+test('drvfail001', normal, compile_fail, [''])
+For more detailed control of a test case, see below. \REF
+
+***** A multiple module test case *****
+A multiple module test case is slightly more complex then a single module one.
+Firstly we a concerned with how to handle the simplest form of a multiple
+module test case, that is one where the whole test case can be built in one go
+using the --make command of GHC. If you have more complex needs (like compiling
+source files that --make can't handle, and/or need to compile different modules
+with different GHC arguments, then see below)
+Then for a test case that should compile and run fine we would put this line in
+all.T:
+test(multimod001, normal, multimod_compile_and_run, \
+              [ 'Main', '-fglasgow-exts', ''])
+This example would compile a multiple module test case where the top module is
+Main.hs and -fglasgow-exts is passed to GHC when compiling.
+For a test case that should compile but you don't want run, we would put this
+line in all.T:
+test('T3286', extra_clean(['T3286b.o','T3286b.hi']),
+              multimod_compile, ['T3286', '-v0'])
+This example would compile a multiple module test case where the top module is
+T3286 and before compiling the test the files T3286b.o and T3286b.hi are
+removed.
+For a test case that should fail during compilation we would put this line in
+all.T:
+test('Over',
+     extra_clean(['OverA.hi', 'OverA.o',
+                  'OverB.hi', 'OverB.o',
+                  'OverC.hi', 'OverC.o']),
+     multimod_compile_fail,
+     ['OverD', '-no-hs-main -c -v0'])
+
+***** Advanced multiple module test cases *****
+If you have a test case that can't be built with the simpler two methods
+described above then you should try one of the methods described below. The
+build method below allows you to explicitly provide a list of source files that
+GHC should try to build. They are also built in the order you specify. This is
+useful for test cases say that use a .cmm source file or .c source file, these
+are files that GHC can build but aren't picked up by --make.
+The more advanced method comes in two forms of <test-fn>'s. The first one is
+mutlisrc_compile... and the other one is multi_.... They differ only in that
+the later method allows you to not only list individual files for GHC to
+compile but also allows you to set arguments that should be passed to GHC when
+compiling a specific file. The multisrc_compile... method only allows arguments
+to GHC to be set globally for all files. Below are some examples of how to use
+these two <test-fn>
+Then for a test case that should compile and run fine we would put this line in
+all.T:
+test('cgrun069', omit_ways(['ghci']), multisrc_compile_and_run,
+                 ['cgrun069', ['cgrun069_cmm.cmm'], ''])
+This test case relies on a .cmm file, hence it can't use the simpler
+multimod_compile_and_run <test-fn>. We also see here how we can stop a test
+case running in a certain WAY.
+For a test case that should compile but you don't want run, we would put this
+line in all.T:
+test('Check02', normal, multisrc_compile, ['Check02', ['Check02_A.hs',
+'Check02_B.hs'], '-trust base'])
+OR equivalently we could use the multi_compile version and just pass no extra
+arguments to the specific files to compile:
+test('Check02', normal, multi_compile, ['Check02', [
+                                       ('Check02_A.hs', ''),
+                                       ('Check02_B.hs', '')
+                                       ], '-trust base'])
+For a test case that should fail during compilation we would put this line in
+all.T:
+test('Check01', normal, multi_compile_fail, ['Check01', [
+                                            ('Check01_A.hs', ''),
+                                            ('Check01_B.hs', '-trust base')
+                                            ], ''])
+This test case must use the multi_compile_fail method as it relies on being
+able to compile the file Check01_B.hs with the argument '-trust base' but not
+compile any of the other files with this flag.
+
+***** Format of the test entries in all.T *****
+Each test in a test.T file is specified by a line the form
+test(<name>, <setup>, <test-fn>, <args...>)
+Where <args...> is a list of arguments.
+**** The <name> field ****
+<name> is the name of the test, in quotes (' or ").
+**** The <setup> field ****
+<setup> is a function (i.e. any callable object in Python) which allows the
+options for this test to be changed. There are many pre-defined functions which
+can be used in this field:
+    * normal don't change any options from the defaults
+    * skip skip this test
+    * skip_if_no_ghci skip unless GHCi is available
+    * skip_if_fast skip if "fast" is enabled
+    * omit_ways(ways) skip this test for certain ways
+    * only_ways(ways) do this test certain ways only
+    * extra_ways(ways) add some ways which would normally be disabled
+    * omit_compiler_types(compilers) skip this test for certain compilers
+    * only_compiler_types(compilers) do this test for certain compilers only
+    * expect_broken(bug) this test is a expected not to work due to the
+      indicated trac bug number
+    * expect_broken_for(bug, ways) as expect_broken, but only for the indicated
+      ways
+    * if_compiler_type(compiler_type, f) Do f, but only for the given compiler
+      type
+    * if_platform(plat, f) Do f, but only if we are on the specific platform
+      given
+    * if_tag(tag, f) do f if the compiler has a given tag
+    * unless_tag(tag, f) do f unless the compiler has a given tag
+    * set_stdin(file) use a different file for stdin
+    * no_stdin use no stdin at all (otherwise use /dev/null)
+    * exit_code(n) expect an exit code of 'n' from the prog
+    * extra_run_opts(opts) pass some extra opts to the prog
+    * no_clean don't clean up after this test
+    * extra_clean(files) extra files to clean after the test has completed
+    * reqlib(P) requires package P
+    * req_profiling requires profiling
+    * ignore_output don't try to compare output
+    * alone don't run this test in parallel with anything else
+    * literate look for a .lhs file instead of a .hs file
+    * c_src look for a .c file
+    * cmd_prefix(string) prefix this string to the command when run
+    * normalise_slashes convert backslashes to forward slashes before comparing
+      the output
+The following should normally not be used; instead, use the expect_broken*
+functions above so that the problem doesn't get forgotten about, and when we
+come back to look at the test later we know whether current behaviour is why we
+marked it as expected to fail:
+    * expect_fail this test is an expected failure, i.e. there is a known bug
+      in the compiler, but we don't want to fix it.
+    * expect_fail_for(ways) expect failure for certain ways
+To use more than one modifier on a test, just put them in a list. For example,
+to expect an exit code of 3 and omit way 'opt', we could use
+[ omit_ways(['opt']), exit_code(3) ]
+as the <setup> argument.
+**** The <test-fn> field ****
+<test-fn> is a function which describes how the test should be built and maybe
+run. It also determines the number of arguments for <args...>. Each function
+comes in three forms:
+    * test-fn: Compiles the program, expecting compilation to succeed.
+    * test-fn_fail: Compiles the program, expecting compilation to fail.
+    * test-fn_and_run: Compiles the program, expecting it to succeed, and then
+      runs the program.
+The test functions mostly differ in how the compile the test case. The simplest
+test functions can only compile single file test cases, while the most complex
+test function can compile a multi file test case with different flags for each
+file. The possible test functions are:
+    * compile, compile_fail, compile_and_run:
+      This is the simplest test function and can only handle compiling a single
+      module test case. The source file to compile must correspond to the
+      <name> of the test.
+     <args...> = [<extra_hc_opts>]
+     Where:
+          <extra_hc_opts>: arguments to pass to GHC when it compiles
+          your test case.
+    * multimod_compile, multimod_compile_fail, multimod_compile_and_run:
+      Compile a multi-module program using the GHC --make build system.
+     <args...> = [<topmod>, <extra_hc_opts>]
+     Where:
+          <topmod>: The top level source file for your test case.
+          <extra_hc_opts>: arguments to pass to GHC when it compiles
+          your test case.
+    * multisrc_compile, multisrc_compile_fail, multisrc_compile_and_run:
+      Compile a multi source test case. This is for cases where the GHC --make
+      build system is not enough, such as when you first need to compile a .c
+      or .cmm file before compiling the Haskell top level module.
+     <args...> = [<topmod>, [<extra_mods>], <extra_hc_opts>]
+     Where:
+          <topmod>: The top level source file for your test case.
+          [<extra_mods>]: A list of other source files that GHC
+          should compile before compiling <topmod>.
+          <extra_hc_opts>: arguments to pass to GHC when it compiles
+          your test case.
+    * multi_compile, multi_compile_fail, multi_compile_and_run:
+      This is essentially the same as multisrc_compile... but also allows
+      arguments to GHC to be set for individual files to be compiled, not just
+      globally as <extra_hc_opts> is.
+     <args...> = [<topmod>, [(<extra_mod>, <hc_opts>)], <extra_hc_opts>]
+     Where:
+          <topmod>: The top level source file for your test case.
+          [(<extra_mod>, <hc_opts>)]: A list of tuples where the
+          first element is a source file for GHC to compile and the
+          second element are arguments GHC should use to compile that
+          particular source file.
+          <extra_hc_opts>: arguments to pass to GHC when it compiles
+          your test case (applied to all source files).
+    * compile_and_run_with_prefix Same as compile_and_run, but with command to
+      use to run the execution of the result binary.
+    * multimod_compile_and_run_with_prefix Same as multimod_compile_and_run,
+      but with command to use to run the execution of the result binary.
+    * run_command Just run an arbitrary command. The output is checked against
+      T.stdout and T.stderr (unless ignore_output is used). The expected exit
+      code can be changed using exit_code(N). NB: run_command only works in the
+      normal way, so don't use only_ways with it.
+    * ghci_script Runs the current compiler, passing --interactive and using
+      the specified script as standard input.
+
+***** Sample output files *****
+Normally, the sample stdout and stderr for a test T go in the files T.stdout
+and T.stderr respectively. However, sometimes a test may generate different
+output depending on the platform, compiler, compiler version, or word-size. For
+this reason the test driver looks for sample output files using this pattern:
+T.stdout[-<compiler>][-<version>][-ws-<wordsize>][-<platform>]
+Any combination of the optional extensions may be given, but they must be in
+the order specified. The most specific output file that matches the current
+configuration will be selected; for example if the platform is i386-unknown-
+mingw32 then T.stderr-i386-unknown-mingw32 will be picked in preference to
+T.stderr.
+Another common example is to give different sample output for an older compiler
+version. For example, the sample stderr for GHC 6.8.x would go in the file
+T.stderr-ghc-6.8.
+
+***** Threaded Considerations *****
+The testsuite has fairly good support for running tests in parallel using a
+thread pool of size specified by the THREADS=<value>. This does mean you need
+to be careful when writing test cases to keep them independent of each other.
+You are usually not able to share files between test cases as they can run in
+arbitrary order and will easily conflict with each other. If you must write
+test cases that are dependent on each other, be sure to use the alone setup
+function that insures a test case runs by itself in the main testsuite thread.
+All dependent test cases should use the alone setup function. Try not to do
+this extensively though as it means we can't easily speed up the testsuite by
+throwing cores at it.
+
+
+===============================================================================
+****** Testsuite Details ******
+The testsuite is designed largely as follows, where we take the root of the
+testsuite to be testsuite/. Firstly we have the individual test cases to run.
+Each test case though can be run in multiple ways. These different ways (which
+are simply called ways) correspond to things like different optimisation
+levels, using the threaded RTS or not... ect. Some test cases can be run in any
+way while others are specific to certain ways. The general layout of the
+testsuite is this:
+    * config: Contains the definition of the different ways supported. The only
+      file of relevance here is ghc. No other Haskell compiler is actually
+      supported by the testsuite.
+    * driver: Contains the python source code that forms the testsuite
+      framework.
+    * mk: Contains the make source code that forms the testsuite framework. The
+      make part is mostly concerned with invoking the python component, which
+      does the actual work.
+    * tests: Contains the actual test cases to run.
+    * timeout: Contains a Haskell program that kills a running test case after
+      a certain amount of time. Used by the testsuite framework.
+
+***** Testsuite Implementation details *****
+The testsuite driver is just a set of Python scripts, as are all of the .T
+files in the testsuite. The driver (driver/runtests.py) first searches for all
+the .T files it can find, and then proceeds to execute each one, keeping a
+track of the number of tests run, and which ones succeeded and failed.
+The script runtests.py takes several options:
+     --config <file>
+          <file> is just a file containing Python code which is
+          executed. The purpose of this option is so that a file
+          containing settings for the configuration options can be
+          specified on the command line. Multiple --config options
+          may be given.
+     --rootdir <dir>
+          <dir> is the directory below which to search for .T files
+          to run.
+     --output-summary <file>
+          In addition to dumping the test summary to stdout, also put
+          it in <file>. (stdout also gets a lot of other output when
+          running a series of tests, so redirecting it isn't always
+          the right thing).
+     --only <test>
+          Only run tests named <test> (multiple --only options can be
+          given). Useful for running a single test from a .T file
+          containing multiple tests.
+     -e <stmt>
+          executes the Python statement <stmt> before running any
+          tests. The main purpose of this option is to allow certain
+          configuration options to be tweaked from the command line;
+          for example, the build system adds '-e config.accept=1' to
+          the command line when 'make accept' is invoked.
+Most of the code for running tests is located in driver/testlib.py. Take a
+look.
+There is a single Python class (TestConfig) containing the global configuration
+for the testsuite. It contains information such as the kind of compiler being
+used, which flags to give it, which platform we're running on, and so on. The
+idea is that each platform and compiler would have its own file containing
+assignments for elements of the configuration, which are sourced by passing the
+appropriate --config options to the test driver. For example, the GHC
+configuration is contained in the file config/ghc.
+A .T file can obviously contain arbitrary Python code, but the general idea is
+that it contains a sequence of calls to the function test(), which resides in
+testlib.py. As described above, test() takes four arguments:
+     test(<name>, <opt-fn>, <test-fn>, <args>)
+The function <opt-fn> is allowed to be any Python callable object, which takes
+a single argument of type TestOptions. TestOptions is a class containing
+options which affect the way that the current test is run: whether to skip it,
+whether to expect failure, extra options to pass to the compiler, etc. (see
+testlib.py for the definition of the TestOptions class). The idea is that the
+<opt-fn> function modifies the TestOptions object that it is passed. For
+example, to expect failure for a test, we might do this in the .T file:
+   def fn(opts):
+      opts.expect = 'fail'
+
+   test(test001, fn, compile, [''])
+so when fn is called, it sets the instance variable "expect" in the instance of
+TestOptions passed as an argument, to the value 'fail'. This indicates to the
+test driver that the current test is expected to fail.
+Some of these functions, such as the one above, are common, so rather than
+forcing every .T file to redefine them, we provide canned versions. For
+example, the provided function expect_fail does the same as fn in the example
+above. See testlib.py for all the canned functions we provide for <opt-fn>.
+The argument <test-fn> is a function which performs the test. It takes three or
+more arguments:
+      <test-fn>( <name>, <way>, ... )
+where <name> is the name of the test, <way> is the way in which it is to be run
+(eg. opt, optasm, prof, etc.), and the rest of the arguments are constructed
+from the list <args> in the original call to test(). The following <test-fn>s
+are provided at the moment:
+           compile
+           compile_fail
+           compile_and_run
+           multimod_compile
+           multimod_compile_fail
+           multimod_compile_and_run
+           multisrc_compile
+           multisrc_compile_fail
+           multisrc_compile_and_run
+           multi_compile
+           multi_compile_fail
+           multi_compile_and_run
+           run_command
+           run_command_ignore_output
+           ghci_script
+and obviously others can be defined. The function should return either 'pass'
+or 'fail' indicating that the test passed or failed respectively.
+
+***** The testsuite and version control branches *****
+It is not clear what to do with the testsuite when branching a compiler; should
+the testsuite also be branched?
+If it is not branched then we have the problem that, given a set of tests
+test(tc1, ...)
+test(tc2, ...)
+test(tc3, ...)
+if we add first one test, and then another to the HEAD
+test(tc1, ...)
+test(tc2, ...)
+test(tc3, ...)
+test(tc4, ...)
+test(tc5, ...)
+and we want to merge tc5 but not tc4 to the branch then the merge has to be
+done by hand, as the patch for tc5 depends on the patch for tc4, although most
+of the files in the patches (tc5.hs etc) are disjoint.
+On the other hand, if it is not branched then any changes in test output mean
+we need to add extra logic to the test definitions, e.g.
+test(tc5, namebase_if_compiler_lt('ghc','6.9', 'tc5-6.8'), ...)
+Currently we have decided to branch the testsuite for ghc releases
