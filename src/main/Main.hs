@@ -24,7 +24,7 @@ import ModeFlags
 import SysTools
 
 import System.Exit
-import System
+import System.Environment
 import System.FilePath
 import Data.List
 import Data.Maybe
@@ -36,7 +36,6 @@ import qualified Data.ByteString as BS
 -- Parse ModeFlags
 main :: IO ()
 main = do
-    prog_name <- getProgName
     -- 1. extract the -B flag from the args
     argv0 <- getArgs
     let (minusB_args, argv1) = partition ("-B" `isPrefixOf`) argv0
@@ -73,12 +72,12 @@ main = do
                                     ShowInfo            -> showInfo dflags1
                                     PrintWithDynFlags f -> putStrLn (f dflags1)
                            Right postLoadMode -> do
-                               main' prog_name postLoadMode dflags1 argv2
+                               main' postLoadMode dflags1 argv2
 
 -- ---------------------------
 -- Parse DynFlags
-main' :: String -> PostLoadMode -> DynFlags -> [Located String] -> IO ()
-main' prog_name postLoadMode dflags0 args = do
+main' :: PostLoadMode -> DynFlags -> [Located String] -> IO ()
+main' postLoadMode dflags0 args = do
     -- Parse the "dynamic" arguments
     -- Leftover ones are presumably files
     case parseDynamicFlags dflags0 args of
@@ -88,12 +87,12 @@ main' prog_name postLoadMode dflags0 args = do
          Right (dflags1, fileish_args, dynamicFlagWarnings) -> do
              printLocWarns dynamicFlagWarnings
              let normal_fileish_paths = map (normalise . unLoc) fileish_args
-             (srcs, objs) <- partition_args prog_name normal_fileish_paths [] []
+             (srcs, objs) <- partition_args normal_fileish_paths [] []
              if (null objs) && (length srcs == 1)
                 then do
                     main'' postLoadMode dflags1 srcs objs
                 else do
-                    printErrs [ prog_name ++ ": you must specify one alan source file"
+                    printErrs [ progName ++ ": you must specify one alan source file"
                               , usageString ]
                     exitFailure
 
@@ -158,14 +157,14 @@ driverTypeCheck _postLoadMode dflags p_messages luast = do
 -- -------------------------------------------------------------------
 -- Splitting arguments into source files and object files.
 
-partition_args :: String -> [String] -> [String] -> [String]
+partition_args :: [String] -> [String] -> [String]
                -> IO ([String], [String])
-partition_args _ [] srcs objs = return (reverse srcs, reverse objs)
-partition_args pname (arg:args) srcs objs
-  | looks_like_an_input arg = partition_args pname args (arg:srcs) objs
-  | looks_like_an_obj   arg = partition_args pname args srcs (arg:objs)
+partition_args [] srcs objs = return (reverse srcs, reverse objs)
+partition_args (arg:args) srcs objs
+  | looks_like_an_input arg = partition_args args (arg:srcs) objs
+  | looks_like_an_obj   arg = partition_args args srcs (arg:objs)
   | otherwise               = do
-      printErrs [ pname ++ ": unrecognised flags: " ++ arg
+      printErrs [ progName ++ ": unrecognised flags: " ++ arg
                 , usageString ]
       exitFailure
 

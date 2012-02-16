@@ -19,8 +19,6 @@ module Outputable (
     panic
   ) where
 
-#include "versions.h"
-
 import Bag
 import ErrUtils
 import SrcLoc
@@ -28,6 +26,8 @@ import UnTypedAst (UAst, dumpedUAst)
 import DynFlags
 
 import System.IO (hPutStrLn, stderr)
+import System.IO.Unsafe (unsafePerformIO)
+import System.Environment
 
 
 -- -------------------------------------------------------------------
@@ -78,9 +78,9 @@ printDumpedAst uast = do
 -- -------------------------------------------------------------------
 -- The name of the program
 
-{-# INLINE progName #-}
+{-# NOINLINE progName #-}
 progName :: String
-progName = PROG_NAME
+progName = unsafePerformIO (getProgName)
 
 
 -- -------------------------------------------------------------------

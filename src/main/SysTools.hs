@@ -47,7 +47,7 @@ import Util
 
 import Data.IORef
 import Control.Monad
-import Control.Exception
+import Control.Exception as Exception
 import System.Exit
 import System.Environment
 import System.FilePath
@@ -230,8 +230,8 @@ getTempDir dflags@(DynFlags{tmpDir=tmp_dir}) = do
                          let mapping' = Map.insert tmp_dir dirname mapping
                          writeIORef ref mapping'
                          return dirname
-                      `IO.catch` \e ->
-                          if isAlreadyExistsError e
+                      `Exception.catch` \e ->
+                          if IO.isAlreadyExistsError e
                              then mkTempDir (x+1)
                              else ioError e
              mkTempDir 0
@@ -278,7 +278,7 @@ runSomethingFiltered dflags filter_fn phase_name pgm args mb_env = do
     let real_args = filter notNull (map showOpt args)
     traceCmd dflags phase_name (unwords (pgm:real_args)) $ do
     (exit_code, doesn'tExist) <-
-        IO.catch (do
+        Exception.catch (do
             rc <- builderMainLoop dflags filter_fn pgm real_args mb_env
             case rc of
                  ExitSuccess{} -> return (rc, False)

@@ -118,6 +118,7 @@ distcheck: dist
 clean:
 	$(MAKE) -C src $@
 	$(MAKE) -C testsuite clean
+	$(RM) testsuite_summary.txt
 
 .PHONY: distclean
 distclean: clean

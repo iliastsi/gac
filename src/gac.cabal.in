@@ -29,7 +29,6 @@ Executable @PACKAGE_TARNAME@
                  filepath    >= 1.2.0.0,
                  process     >= 1.0.1.5,
                  directory   >= 1.1.0.0,
-                 haskell98   >= 1.1.0.1,
                  bytestring  >= 0.9.1.10,
                  utf8-string >= 0.3.6
   if os(windows)
