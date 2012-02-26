@@ -6,9 +6,13 @@ tcfail014.alan:16:5-8: Error: Conflicting definitions for `fun2'
 	Bound at: tcfail014.alan:15:3-6
 	          tcfail014.alan:16:5-8
 
-tcfail014.alan:20:3-7: Error: Type mismatch at `fun()'
+tcfail014.alan:19:3-13: Error: Conflicting definitions for `writeString'
+	Bound at: <library function>
+	          tcfail014.alan:19:3-13
+
+tcfail014.alan:22:3-7: Error: Type mismatch at `fun()'
 	The function `fun' is applied to 0 parameters but its type has 1
 
-tcfail014.alan:23:3-9: Error: Type mismatch at `fun2(5)'
+tcfail014.alan:25:3-9: Error: Type mismatch at `fun2(5)'
 	The function `fun2' is applied to 1 parameters but its type has 0
 

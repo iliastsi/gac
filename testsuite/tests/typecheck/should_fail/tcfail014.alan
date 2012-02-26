@@ -16,6 +16,8 @@ redefError() : proc
     fun2(i : int) : proc
     {}
   {}
+  writeString(buf : reference byte[]) : proc
+  {}
 {
   fun();
   fun(5);
