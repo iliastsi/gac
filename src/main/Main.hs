@@ -19,9 +19,11 @@ import SymbolTable
 import TypeCheck
 import ErrUtils
 import UnTypedAst
+import TypedAst (TAst)
 import DynFlags
 import ModeFlags
 import SysTools
+import LambdaLift
 
 import System.Exit
 import System.Environment
@@ -109,8 +111,7 @@ main'' postLoadMode dflags0 srcs objs = do
 -- Drive one source file through all the necessary compilation steps
 
 -- ---------------------------
--- parse a file and return
--- the produced object file (if any)
+-- parse a file and call the typechecker
 driverParse :: PostLoadMode -> DynFlags -> String -> IO (Maybe String)
 driverParse postLoadMode dflags filename = do
     contents <- BS.readFile filename
@@ -132,16 +133,16 @@ driverParse postLoadMode dflags filename = do
                     driverTypeCheck postLoadMode dflags p_messages luast
 
 -- ---------------------------
--- type check an UAst and return
+-- type check an UAst and call the codeGenerator
 -- the produced object file (if any)
 driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
-driverTypeCheck _postLoadMode dflags p_messages luast = do
+driverTypeCheck postLoadMode dflags p_messages luast = do
     let tc_state = mkTcState dflags predefinedTable
     case unTcM (typeCheckAst luast) tc_state of
          TcFailed msg         -> do
              printMessages dflags msg
              exitFailure
-         TcOk tc_state' _ltast -> do
+         TcOk tc_state' ltast -> do
              let tc_messages  = (getTcMessages tc_state')
                  tc_messages' = unionMessages p_messages tc_messages
              if errorsFound tc_messages' ||
@@ -150,8 +151,16 @@ driverTypeCheck _postLoadMode dflags p_messages luast = do
                     printMessages dflags tc_messages'
                     exitFailure
                 else do
-                    printMessages dflags tc_messages'
-                    return Nothing
+                    driverCodeGen postLoadMode dflags tc_messages' ltast
+
+-- ---------------------------
+-- generate llvm code and return
+-- the produced object file (if any)
+driverCodeGen :: PostLoadMode -> DynFlags -> Messages -> (Located TAst) -> IO (Maybe String)
+driverCodeGen _postLoadMode dflags tc_messages ltast = do
+    let _ = lambdaLift (unLoc ltast)
+    printMessages dflags tc_messages
+    return Nothing
 
 
 -- -------------------------------------------------------------------

@@ -54,6 +54,7 @@ Executable @PACKAGE_TARNAME@
         TypedAst
         UnTypedAst
         ----------
+        LambdaLift
         Platform
         ----------
         CmdLineParser

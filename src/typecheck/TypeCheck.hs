@@ -24,6 +24,7 @@
 --
 -- Now our typeCheckExpr function has type
 --      typeCheckExpr :: UExpr -> TcM (AExpr)
+--
 --------------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
