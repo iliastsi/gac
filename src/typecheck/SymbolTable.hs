@@ -149,7 +149,8 @@ getFunc i t =
     nested t (\Table{functions=f} -> Map.lookup i f)
 
 getFuncName :: Maybe FunInfo -> Ide
-getFuncName (Just (FunInfo n _ _ fid _)) = (unLoc n) ++ "_" ++ show fid
+getFuncName (Just (FunInfo n _ _ fid _)) =
+    if fid==0 then (unLoc n) else (unLoc n) ++ "." ++ show fid
 getFuncName Nothing = "unknown"
 
 getFuncParams :: Maybe FunInfo -> [AType]

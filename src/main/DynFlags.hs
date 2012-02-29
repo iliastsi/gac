@@ -358,12 +358,8 @@ showOpt (Option s) = s
 updOptLevel :: Int -> DynFlags -> DynFlags
 -- ^ Sets the 'DynFlags' to be appropriate to the optimisation level
 updOptLevel n dfs =
-    dfs2{ optLevel = final_n }
-    where final_n = max 0 (min 2 n) -- Clamp to 0 <= n <= 2
-          dfs1 = foldr (flip dopt_unset) dfs  remove_dopts
-          dfs2 = foldr (flip dopt_set)   dfs1 extra_dopts
-          extra_dopts  = [ f | (ns,f) <- optLevelFlags, final_n `elem` ns ]
-          remove_dopts = [ f | (ns,f) <- optLevelFlags, final_n `notElem` ns ]
+    dfs{ optLevel = final_n }
+    where final_n = max 0 (min 3 n) -- Clamp to 0 <= n <= 3
 
 
 -- -------------------------------------------------------------------
@@ -537,15 +533,10 @@ xFlags = [
 defaultFlags :: [DynFlag]
 defaultFlags =
     [ Opt_AutoLinkPackages ]
-    ++ [f | (ns,f) <- optLevelFlags, 0 `elem` ns]
-            -- The default -O0 options
     ++ standarWarnings
 
 impliedFlags :: [(ExtensionFlag, TurnOnFlag, ExtensionFlag)]
 impliedFlags = []
-
-optLevelFlags :: [([Int], DynFlag)]
-optLevelFlags = []
 
 standarWarnings :: [DynFlag]
 standarWarnings =

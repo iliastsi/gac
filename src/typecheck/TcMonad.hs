@@ -97,7 +97,7 @@ mkTcState flags t =
         dflags      = flags,
         table       = t,
         messages    = emptyMessages,
-        unique      = 1
+        unique      = 0
     }
 
 -- Errors/Warnings
