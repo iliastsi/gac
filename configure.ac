@@ -1,4 +1,4 @@
-dnl == autoconf source for the Glasgow FP tools ==
+dnl == autoconf source for the Alan PL tools ==
 dnl (run "grep '^dnl \*' configure.ac | sed -e 's/dnl / /g; s/\*\*/   +/g;'"
 dnl  (or some such) to see the outline of this file)
 dnl
@@ -27,12 +27,6 @@ AC_CONFIG_SRCDIR([src/gac.cabal.in])
 
 dnl * We require autoconf version 2.52
 AC_PREREQ([2.68])
-
-# -------------------------------------------------------------------------
-# Prepare to generate the following header files
-#
-#
-AC_CONFIG_HEADER(src/config.h)
 
 # No, semi-sadly, we don't do `--srcdir'...
 if test x"$srcdir" != 'x.' ; then
@@ -206,19 +200,12 @@ chmod +x install-sh
 dnl ** figure out how to do a BSD-ish install
 AC_PROG_INSTALL
 
-dnl If you can run configure, you certainly have /bin/sh
-AC_DEFINE([HAVE_BIN_SH], [1], [Define to 1 if you have /bin/sh.])
-
 dnl ** Find the path to sed
 AC_PATH_PROGS(SedCmd,gsed sed,sed)
 
 dnl ** check for tar
 dnl   if GNU tar is named gtar, look for it first.
 AC_PATH_PROGS(TarCmd,gnutar gtar tar,tar)
-
-dnl ** check for patch
-dnl if GNU patch is named gpatch, look for it first
-AC_PATH_PROGS(PatchCmd,gpatch patch, patch)
 
 dnl ** Find the path to gzip
 AC_PATH_PROGS(GZipCmd,gzip,gzip)
@@ -273,7 +260,7 @@ if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
    AC_MSG_ERROR([src/gac.cabal.in contains tab characters; please remove them])
 fi
 
-AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile src/versions.h])
+AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile src/config.h])
 AC_OUTPUT
 
 # We get caught by

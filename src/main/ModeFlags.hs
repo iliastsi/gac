@@ -22,7 +22,7 @@ module ModeFlags (
     showGacUsage
   ) where
 
-#include "versions.h"
+#include "config.h"
 
 import CmdLineParser
 import DynFlags

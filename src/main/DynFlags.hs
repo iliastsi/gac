@@ -47,7 +47,7 @@ module DynFlags (
     compilerInfo
   ) where
 
-#include "versions.h"
+#include "config.h"
 
 import Platform
 import CmdLineParser

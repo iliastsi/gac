@@ -1,22 +1,37 @@
-/* src/config.h.in.  Generated from configure.ac by autoheader.  */
-
-/* Define to 1 if you have /bin/sh. */
-#undef HAVE_BIN_SH
+#ifndef CONFIG_H
+#define CONFIG_H
 
 /* Define to the address where bug reports for this package should be sent. */
-#undef PACKAGE_BUGREPORT
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
 
 /* Define to the full name of this package. */
-#undef PACKAGE_NAME
+#define PACKAGE_NAME "@PACKAGE_NAME@"
+#define PROJECT_NAME "@PACKAGE_NAME@"
 
 /* Define to the full name and version of this package. */
-#undef PACKAGE_STRING
+#define PACKAGE_STRING "@PACKAGE_STRING@"
 
 /* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
+#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+#define PROG_NAME       "@PACKAGE_TARNAME@"
 
 /* Define to the home page for this package. */
-#undef PACKAGE_URL
+#define PACKAGE_URL "@PACKAGE_URL@"
 
 /* Define to the version of this package. */
-#undef PACKAGE_VERSION
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+#define PROJECT_VERSION "@PACKAGE_VERSION@"
+
+/* Target Architecture */
+#define TARGET_ARCH "@TargetArch_CPP@"
+#define @TargetArch_CPP@_TARGET_ARCH 1
+
+/* Target Operating System */
+#define TARGET_OS "@TargetOS_CPP@"
+#define @TargetOS_CPP@_TARGET_OS 1
+
+/* Target Platform */
+#define TARGET_PLATFORM "@TargetPlatform_CPP@"
+#define @TargetPlatform_CPP@_TARGET_PLATFORM 1
+
+#endif

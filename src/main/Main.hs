@@ -8,7 +8,7 @@
 
 module Main(main) where
 
-#include "versions.h"
+#include "config.h"
 
 import Lexer
 import Parser

@@ -38,4 +38,3 @@ testsuite_summary.txt
 /src/Makefile
 /src/config.h
 /src/gac.cabal
-/src/versions.h

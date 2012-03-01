@@ -16,7 +16,7 @@ module Platform (
     defaultTmpDir
   ) where
 
-#include "versions.h"
+#include "config.h"
 
 
 -- | Contains enough information for the native code generator to emit
