@@ -1,0 +1,3 @@
+tcfail015.alan:3:5-7: Error: Not in scope `foo'
+	Each undeclared identifier is reported only once for each function it appears in
+
