@@ -185,7 +185,7 @@ typeCheckStmt _ lustmt@(L loc (UStmtAssign luvar luexpr)) = do
                     return (False, L loc TStmtNothing)
 -- UStmtCompound
 typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
-    (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts
+    (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts []
     return (does_ret, L loc $ TStmtCompound ltstmts)
 -- UStmtFun
 typeCheckStmt _ (L loc (UStmtFun lf@(L _ (UFuncCall fname _)))) = do
@@ -227,25 +227,28 @@ typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
 -- ---------------------------
 -- Type Check compound stmts
 -- As first argument (AType) we have the return type of the block
-tcCompoundStmt :: AType -> [Located UStmt] -> TcM (Bool, [Located TStmt])
-tcCompoundStmt _ [] = do
-    return (False, [])
-tcCompoundStmt ret_type (lustmt:lustmts) = do
+tcCompoundStmt :: AType -> [Located UStmt] -> [Located TStmt] -> TcM (Bool, [Located TStmt])
+tcCompoundStmt _ [] acc = do
+    return (False, reverse acc)
+tcCompoundStmt ret_type (lustmt:lustmts) acc = do
     (r1, ltstmt)  <- typeCheckStmt ret_type lustmt
     if not r1
        then do
-           (r2, ltstmts) <- tcCompoundStmt ret_type lustmts
-           return (r2, ltstmt:ltstmts)
+           -- r1 is False thus we didn't get any return
+           tcCompoundStmt ret_type lustmts (ltstmt:acc)
        else do
            if null lustmts
               then do
-                  return (True, [ltstmt])
+                  -- we get return but this is the last command
+                  return (True, reverse (ltstmt:acc))
               else do
+                  -- we get return and we have more to do
+                  -- *bang*, unreachable code
                   let unreach_start = srcSpanStart (getLoc (head lustmts))
                       unreach_end   = srcSpanEnd (getLoc (last lustmts))
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
-                  return (True, [ltstmt])
+                  return (True, reverse (ltstmt:acc))
 
 -- ---------------------------
 -- Error when the types of expression and variable in an assigment are different
