@@ -216,9 +216,9 @@ def _extra_clean( opts, v ):
 
 # -----
 
-def skip_if_no_ghci(opts):
-  if not ('ghci' in config.run_ways):
-      opts.skip = 1
+def fail_if_no_utf8(opts):
+  if not config.have_utf8:
+      opts.expect = 'fail';
 
 # ----
 

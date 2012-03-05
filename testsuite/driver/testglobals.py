@@ -79,6 +79,9 @@ class TestConfig:
         # Do we have profiling support?
         self.have_profiling = False
 
+        # Do we have UTF-8 support?
+        self.have_utf8 = False
+
         # Do we have shared libraries?
         self.have_shared_libs = False
 

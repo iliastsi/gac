@@ -727,7 +727,8 @@ compilerInfo =
     [("Project name",               String PROJECT_NAME)
     ,("Project version",            String PROJECT_VERSION)
     ,("Target platform",            String TARGET_PLATFORM)
-    ,("Have native code generator", String "NO")
     ,("Have llvm code generator",   String "NO")
+    ,("Have native code generator", String "NO")
+    ,("Have UTF-8 support",         String (if ALEX_VERSION>="3" then "YES" else "NO"))
     ,("LibDir",                     FromDynFlags topDir)
     ]

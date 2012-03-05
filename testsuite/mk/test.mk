@@ -36,16 +36,18 @@ else
 RUNTEST_OPTS += -e gac_with_native_codegen=0
 endif
 
-
-ifneq "$(shell $(SHELL) -c 'llvmc --version | grep version' 2> /dev/null)" ""
-  $(eval $(call get-gac-feature-bool,GacWithLlvmCodeGen,Have llvm code generator))
-  ifeq "$(GacWithLlvmCodeGen)" "YES"
-  RUNTEST_OPTS += -e gac_with_llvm=1
-  else
-  RUNTEST_OPTS += -e gac_with_llvm=0
-  endif
+$(eval $(call get-gac-feature-bool,GacWithLlvmCodeGen,Have llvm code generator))
+ifeq "$(GacWithLlvmCodeGen)" "YES"
+RUNTEST_OPTS += -e gac_with_llvm_codegen=1
 else
-  RUNTEST_OPTS += -e gac_with_llvm=0
+RUNTEST_OPTS += -e gac_with_llvm_codegen=0
+endif
+
+$(eval $(call get-gac-feature-bool,GacWithUTF8Support,Have UTF-8 support))
+ifeq "$(GacWithUTF8Support)" "YES"
+RUNTEST_OPTS += -e gac_with_utf8=1
+else
+RUNTEST_OPTS += -e gac_with_utf8=0
 endif
 
 ifeq "$(WINDOWS)" "YES"

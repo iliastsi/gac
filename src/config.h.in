@@ -34,4 +34,7 @@
 #define TARGET_PLATFORM "@TargetPlatform_CPP@"
 #define @TargetPlatform_CPP@_TARGET_PLATFORM 1
 
+/* Alex (lexer) version. */
+#define ALEX_VERSION "@AlexVersion@"
+
 #endif

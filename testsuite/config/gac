@@ -27,6 +27,9 @@ config.way_flags = {
     'non-opt'   : ['-O0']
 	}
 
+if (gac_with_utf8 == 1):
+    config.have_utf8 = True
+
 
 def get_compiler_info():
     # This should really not go through the shell
