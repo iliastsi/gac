@@ -113,8 +113,6 @@ data DynFlags = DynFlags {
     verbosity           :: Int,         -- ^ Verbosity level: see Note [Verbosity levels]
     optLevel            :: Int,         -- ^ Optimisation level
 
-    targetPlatform      :: Platform,    -- ^ The platform we're compiling for. Used by the NCG
-
     -- paths etc
     objectDir           :: Maybe String,
     objectSuf           :: String,
@@ -212,8 +210,6 @@ defaultDynFlags =
         alcOutName          = "",
         verbosity           = 0,
         optLevel            = 0,
-
-        targetPlatform      = defaultTargetPlatform,
 
         objectDir           = Nothing,
         objectSuf           = "o",
@@ -725,8 +721,13 @@ data Printable
 compilerInfo :: [(String, Printable)]
 compilerInfo =
     [("Project name",               String PROJECT_NAME)
+    ,("assembler command",          FromDynFlags $ fst . pgm_a)
+    ,("linker command",             FromDynFlags $ fst . pgm_l)
+    ,("llvm compiler",              FromDynFlags $ fst . pgm_lc)
+    ,("llvm optimiser",             FromDynFlags $ fst . pgm_lo)
+    ,("touch command",              FromDynFlags pgm_T)
     ,("Project version",            String PROJECT_VERSION)
-    ,("Target platform",            String TARGET_PLATFORM)
+    ,("Host platform",              String HOST_PLATFORM)
     ,("Have llvm code generator",   String "NO")
     ,("Have native code generator", String "NO")
     ,("Have UTF-8 support",         String (if ALEX_VERSION>="3" then "YES" else "NO"))

@@ -240,30 +240,6 @@ def if_not_platform( plat, f ):
     else:
         return normal
 
-def if_os( os, f ):
-    if config.os == os:
-        return f
-    else:
-        return normal
-
-def unless_os( os, f ):
-    if config.os == os:
-        return normal
-    else:
-        return f
-
-def if_arch( arch, f ):
-    if config.arch == arch:
-        return f
-    else:
-        return normal
-
-def if_wordsize( ws, f ):
-    if config.wordsize == str(ws):
-        return f
-    else:
-        return normal
-
 # ---
 
 def if_in_tree_compiler( f ):
@@ -1277,8 +1253,7 @@ def platform_wordsize_qualify( name, suff ):
     basepath = qualify(name, suff)
 
     fns = [ lambda x: x + '-' + config.compiler_type,
-            lambda x: x + '-' + config.compiler_maj_version,
-            lambda x: x + '-ws-' + config.wordsize ]
+            lambda x: x + '-' + config.compiler_maj_version]
 
     paths = [ basepath ]
     for fn in fns:

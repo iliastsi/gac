@@ -22,17 +22,14 @@
 #define PACKAGE_VERSION "@PACKAGE_VERSION@"
 #define PROJECT_VERSION "@PACKAGE_VERSION@"
 
-/* Target Architecture */
-#define TARGET_ARCH "@TargetArch_CPP@"
-#define @TargetArch_CPP@_TARGET_ARCH 1
+/* Compiler's Host Architecture */
+#define HOST_ARCH "@TargetArch@"
 
-/* Target Operating System */
-#define TARGET_OS "@TargetOS_CPP@"
-#define @TargetOS_CPP@_TARGET_OS 1
+/* Compiler's Host Operating System */
+#define HOST_OS "@TargetOS@"
 
-/* Target Platform */
-#define TARGET_PLATFORM "@TargetPlatform_CPP@"
-#define @TargetPlatform_CPP@_TARGET_PLATFORM 1
+/* Compiler's Host Platform */
+#define HOST_PLATFORM "@TargetPlatform@"
 
 /* Alex (lexer) version. */
 #define ALEX_VERSION "@AlexVersion@"

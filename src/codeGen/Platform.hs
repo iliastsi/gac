@@ -11,8 +11,6 @@ module Platform (
     Arch(..),
     OS(..),
 
-    defaultTargetPlatform,
-    osElfTarget,
     defaultTmpDir
   ) where
 
@@ -39,38 +37,9 @@ data OS
     | OSUnknown
   deriving (Show, Eq)
 
--- | This predicates tells us whether the OS supports ELF-like shared libraries
-osElfTarget :: OS -> Bool
-osElfTarget OSLinux = True
-osElfTarget _       = False
-
--- | This is the target platform as far as the #ifdefs are concerned
--- These are set in includes/gacplatform.h by the autoconf scripts
-defaultTargetPlatform :: Platform
-defaultTargetPlatform
-    = Platform defaultTargetArch defaultTargetOS
-
--- | Move the evil TARGET_ARCH #ifdefs into Haskell land
-defaultTargetArch :: Arch
-#if     i386_TARGET_ARCH
-defaultTargetArch = ArchX86
-#elif   x86_64_TARGET_ARCH
-defaultTargetArch = ArchX86_64
-#else
-#error "Platform.targetArch: undefined"
-#endif
-
--- | Move the evil TARGET_OS #ifdefs into Haskell land
-defaultTargetOS :: OS
-#if     linux_TARGET_OS
-defaultTargetOS = OSLinux
-#else
-defaultTargetOS = OSUnknown
-#endif
-
 -- | Default TEMPDIR depending on platform
 defaultTmpDir :: String
 defaultTmpDir
-    | TARGET_PLATFORM == "i386-unknown-cygwin32" = "/C/TEMP"
-    | TARGET_PLATFORM == "i386-unknown-mingw32"  = "/C/TEMP"
+    | HOST_PLATFORM == "i386-unknown-cygwin32" = "/C/TEMP"
+    | HOST_PLATFORM == "i386-unknown-mingw32"  = "/C/TEMP"
     | otherwise                                  = "/tmp"

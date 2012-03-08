@@ -76,14 +76,6 @@ AS_IF([test "x$HappyCmd" != "x"],
   [],
   [AC_PATH_PROG(HappyCmd,happy,)])
 # Happy is passed to Cabal, so we need a native path
-if test "x$HostPlatform"  = "xi386-unknown-mingw32" && \
-   test "${OSTYPE}"      != "msys"                  && \
-   test "${HappyCmd}"    != ""
-then
-    # Canonicalise to <drive>:/path/to/gcc
-    HappyCmd=`cygpath -m "${HappyCmd}"`
-    AC_MSG_NOTICE([normalized happy command to $HappyCmd])
-fi
 
 AC_CACHE_CHECK([for version of happy], fptools_cv_happy_version,
 changequote(, )dnl
@@ -115,13 +107,6 @@ AS_IF([test "x$AlexCmd" != "x"],
   [],
   [AC_PATH_PROG(AlexCmd,alex,)])
 # Alex is passed to Cabal, so we need a native path
-if test "x$HostPlatform"  = "xi386-unknown-mingw32" && \
-   test "${OSTYPE}"      != "msys"                  && \
-   test "${AlexCmd}"     != ""
-then
-    # Canonicalise to <drive>:/path/to/gcc
-    AlexCmd=`cygpath -m "${AlexCmd}"`
-fi
 
 AC_CACHE_CHECK([for version of alex], fptools_cv_alex_version,
 changequote(, )dnl
@@ -203,29 +188,6 @@ ifelse($#, [1], [dnl
 ])dnl
 
 
-# FP_PROG_GHC_PKG
-# ----------------
-# Try to find a ghc-pkg matching the ghc mentioned in the environment variable
-# WithGhc. Sets the output variable GhcPkgCmd.
-AC_DEFUN([FP_PROG_GHC_PKG],
-[AC_CACHE_CHECK([for ghc-pkg matching $WithGhc], fp_cv_matching_ghc_pkg,
-[
-# If we are told to use ghc-stage2, then we're using an in-tree
-# compiler. In this case, we just want ghc-pkg, not ghc-pkg-stage2,
-# so we sed off -stage[0-9]$. However, if we are told to use
-# ghc-6.12.1 then we want to use ghc-pkg-6.12.1, so we keep any
-# other suffix.
-fp_ghc_pkg_guess=`echo $WithGhc | sed -e 's/-stage@<:@0-9@:>@$//' -e 's,ghc\(@<:@^/\\@:>@*\)$,ghc-pkg\1,'`
-if "$fp_ghc_pkg_guess" list > /dev/null 2>&1; then
-  fp_cv_matching_ghc_pkg=$fp_ghc_pkg_guess
-else
-  AC_MSG_ERROR([Cannot find matching ghc-pkg])
-fi])
-GhcPkgCmd=$fp_cv_matching_ghc_pkg
-AC_SUBST([GhcPkgCmd])
-])# FP_PROG_GHC_PKG
-
-
 # LIBRARY_VERSION(lib)
 # --------------------------------
 # Gets the version number of a library.
@@ -234,5 +196,3 @@ AC_DEFUN([LIBRARY_VERSION],[
 LIBRARY_[]translit([$1], [-], [_])[]_VERSION=`grep -i "^version:" libraries/$1/$1.cabal | sed "s/.* //"`
 AC_SUBST(LIBRARY_[]translit([$1], [-], [_])[]_VERSION)
 ])
-
-# LocalWords:  fi

@@ -15,13 +15,11 @@ dnl
 
 AC_INIT([The Glorious Alan Compilation System], [0.7], [iliastsi@hotmail.com], [gac])
 
-
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])
 
 dnl ----------------------------------------------------------
 dnl ** Find unixy sort and find commands,
 dnl ** which are needed by FP_SETUP_PROJECT_VERSION
-
 # First off, a distrib sanity check..
 AC_CONFIG_SRCDIR([src/gac.cabal.in])
 
@@ -42,10 +40,8 @@ dnl ** Tell the make system which OS we are using
 dnl $OSTYPE is set by the operating system to "msys" or "cygwin" or something
 AC_SUBST(OSTYPE)
 
-
 dnl ** What command to use to compile compiler sources ?
 dnl --------------------------------------------------------------
-
 AC_ARG_WITH([ghc],
 [AC_HELP_STRING([--with-ghc=ARG],
   [Use ARG as the path to GHC  [default=autodetect]])],
@@ -82,46 +78,13 @@ fi;
 # GHC is passed to Cabal, so we need a native path
 ghc_host=`"${WithGhc}" +RTS --info | grep 'Host platform' | sed -e 's/.*, "//' -e 's/")//'`
 
-if test "$ghc_host" = "i386-unknown-mingw32"
-then
-    if test "${OSTYPE}" = "msys"
-    then
-        WithGhc=`echo "${WithGhc}" | sed "s#^/\([a-zA-Z]\)/#\1:/#"`
-    else
-        # Canonicalise to <drive>:/path/to/ghc
-        WithGhc=`cygpath -m "${WithGhc}"`
-    fi
-    echo "GHC path canonicalised to: ${WithGhc}"
-fi
 AC_SUBST([WithGhc])
-
 
 dnl--------------------------------------------------------------------
 dnl * Choose host(/target/build) platform
 dnl--------------------------------------------------------------------
 dnl We ask the ghc compiler what platform it is for
-
 FPTOOLS_SET_PLATFORM_VARS
-
-exeext=''
-soext='.so'
-case $host in
-*-unknown-cygwin32)
-    AC_MSG_WARN([GHC does not support the Cygwin target at the moment])
-    AC_MSG_WARN([I'm assuming you wanted to build for i386-unknown-mingw32])
-    exit 1
-    ;;
-*-unknown-mingw32)
-    exeext='.exe'
-    soext='.dll'
-    ;;
-i386-apple-darwin|powerpc-apple-darwin)
-    soext='.dylib'
-    ;;
-x86_64-apple-darwin)
-    soext='.dylib'
-    ;;
-esac
 
 checkArch() {
     case $1 in
@@ -157,34 +120,23 @@ checkOS() {
 }
 
 TargetPlatform="$TargetArch-$TargetVendor-$TargetOS"
-TargetPlatform_CPP=`echo "$TargetPlatform" | sed -e 's/\./_/g' -e 's/-/_/g'`
-TargetArch_CPP=`    echo "$TargetArch"     | sed -e 's/\./_/g' -e 's/-/_/g'`
-TargetVendor_CPP=`  echo "$TargetVendor"   | sed -e 's/\./_/g' -e 's/-/_/g'`
-TargetOS_CPP=`      echo "$TargetOS"       | sed -e 's/\./_/g' -e 's/-/_/g'`
 
 checkArch "$TargetArch"
 checkVendor "$TargetVendor"
 checkOS "$TargetOS"
 
 AC_SUBST(TargetPlatform)
-AC_SUBST(TargetPlatform_CPP)
-AC_SUBST(TargetArch_CPP)
-AC_SUBST(TargetOS_CPP)
-AC_SUBST(TargetVendor_CPP)
-
-AC_SUBST(exeext)
-AC_SUBST(soext)
-
+AC_SUBST(TargetArch)
+AC_SUBST(TargetOS)
+AC_SUBST(TargetVendor)
 
 dnl --------------------------------------------------------------
 dnl End of configure script option section
 dnl --------------------------------------------------------------
 
-
 dnl --------------------------------------------------------------
 dnl * General configuration checks
 dnl --------------------------------------------------------------
-
 dnl ** does #! work?
 AC_SYS_INTERPRETER()
 
@@ -209,9 +161,6 @@ AC_PATH_PROGS(TarCmd,gnutar gtar tar,tar)
 
 dnl ** Find the path to gzip
 AC_PATH_PROGS(GZipCmd,gzip,gzip)
-
-dnl ** check for ghc-pkg command
-FP_PROG_GHC_PKG
 
 dnl ** check for installed happy binary + version
 FPTOOLS_HAPPY
