@@ -14,7 +14,7 @@
 {-# LANGUAGE GADTs, ExistentialQuantification, PatternGuards #-}
 module TypedAst where
 
-import UnTypedAst (LIde, Ide, LOp, Mode)
+import UnTypedAst (LIde, Ide, LOp)
 import SrcLoc
 import Outputable (panic)
 
@@ -47,8 +47,8 @@ data ADef = forall a . ADef (TDef a) (TType a)
 type LTParam a = Located (TParam a)
 
 data TParam a where
-    TParHead :: LIde -> Mode -> LTType a -> LTParam b -> TParam (a -> b)
-    TParTail :: LIde -> Mode -> LTType a              -> TParam a
+    TParHead :: LIde -> LTType a -> LTParam b -> TParam (a -> b)
+    TParTail :: LIde -> LTType a              -> TParam a
 
 type LAParam = Located AParam
 

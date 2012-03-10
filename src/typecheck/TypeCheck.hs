@@ -133,7 +133,7 @@ typeCheckParam [] = panic "TypeCheck.typeCheckParam can't handle empty lists"
 typeCheckParam lparams = do
     let empty_lide  = L wiredInSrcSpan "empty"
         empty_ltype = L wiredInSrcSpan TTypeUnknown
-        empty_tpar  = TParTail empty_lide ModeByVal empty_ltype
+        empty_tpar  = TParTail empty_lide empty_ltype
         empty_apar  = AParam empty_tpar TTypeUnknown
     foldrM typeCheckParam' ([], L wiredInSrcSpan $ empty_apar) lparams
 
@@ -141,18 +141,40 @@ typeCheckParam' :: Located UParam -> ([AType], LAParam) -> TcM ([AType], LAParam
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) ([], _) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
-    when (atypeIsArray (AType ftype) && (mode /= ModeByRef)) $
-            tcArrayParamErr luparam
-    return ([AType ftype], L loc $ AParam (TParTail lide' mode (L type_loc ftype)) ftype)
+    case (mode, atypeIsArray (AType ftype)) of
+         -- pass a non array by value
+         (ModeByVal, False) -> do
+             return ([AType ftype], L loc $
+                 AParam (TParTail lide' (L type_loc ftype)) ftype)
+         -- pass an array by value (error)
+         (ModeByVal, True) -> do
+             tcArrayParamErr luparam
+             return ([AType ftype], L loc $
+                 AParam (TParTail lide' (L type_loc ftype)) ftype)
+         -- pass a non array by reference (change it to ptr)
+         (ModeByRef, False) -> do
+             return ([AType ftype], L loc $
+                 AParam (TParTail lide' (L type_loc (TTypePtr ftype))) (TTypePtr ftype))
+         -- pass an array by reference (normal)
+         (ModeByRef, True) -> do
+             return ([AType ftype], L loc $
+                 AParam (TParTail lide' (L type_loc ftype)) ftype)
 typeCheckParam' luparam@(L loc (UParam lide mode lutype)) (atypes, laparam) = do
     (L type_loc (AType ftype)) <- typeCheckType lutype
     (L par_loc (AParam tparam par_types)) <- return laparam
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ftype))
+    -- check if passing an array by value (error)
     when (atypeIsArray (AType ftype) && (mode /= ModeByRef)) $
             tcArrayParamErr luparam
     let atype_accum   = (AType ftype) : atypes
-        laparam_accum = L loc $ AParam (TParHead lide' mode (L type_loc ftype)
-                                        (L par_loc tparam)) (TTypeFunc ftype par_types)
+        laparam_accum =
+            if (mode==ModeByRef) && (not $ atypeIsArray (AType ftype))
+               -- pass a non array by reference (change it to ptr)
+               then L loc $ AParam (TParHead lide' (L type_loc (TTypePtr ftype))
+                        (L par_loc tparam)) (TTypeFunc (TTypePtr ftype) par_types)
+               -- pass by value or pass an array by reference (normal)
+               else L loc $ AParam (TParHead lide' (L type_loc ftype)
+                        (L par_loc tparam)) (TTypeFunc ftype par_types)
     return (atype_accum, laparam_accum)
 
 -- ---------------------------
