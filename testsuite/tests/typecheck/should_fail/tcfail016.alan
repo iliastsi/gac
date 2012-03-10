@@ -1,0 +1,5 @@
+param_def() : proc
+  foo(i : int) : proc
+    i : byte[10];
+  {}
+{}

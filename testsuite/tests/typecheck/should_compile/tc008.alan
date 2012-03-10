@@ -1,0 +1,10 @@
+fun_1 () : proc
+  var_1 : int;
+
+  fun_2 () : int
+  { return var_1; }
+
+  fun_3 () : proc
+  { fun_2(); } -- lewnidas thought of it as error
+
+{ fun_3(); }

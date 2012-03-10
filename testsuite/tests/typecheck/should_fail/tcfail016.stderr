@@ -1,0 +1,4 @@
+tcfail016.alan:3:5: Error: Conflicting definitions for `i'
+	Bound at: tcfail016.alan:2:7
+	          tcfail016.alan:3:5
+
