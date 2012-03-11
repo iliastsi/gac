@@ -33,26 +33,15 @@ type LTDef a = Located (TDef a)
 
 data TDef a where
       -- functions
-    TDefFun  :: LIde -> LTParam a -> LTType b -> [LADef] -> LTStmt -> TDef (a -> b)
-    TDefFunE :: LIde              -> LTType b -> [LADef] -> LTStmt -> TDef b
+    TDefFun :: LIde -> LTType a -> [LADef] -> LTStmt -> TDef a
+    TDefPar :: LIde -> LTType a -> LTDef b -> TDef (a -> b)
       -- variables
-    TDefVar  :: LIde    -> LTType a      -> TDef a
-    TDefArr  :: LTDef a -> Located Word32 -> TDef (Ptr a)
+    TDefVar :: LIde    -> LTType a       -> TDef a
+    TDefArr :: LTDef a -> Located Word32 -> TDef (Ptr a)
 
 type LADef = Located ADef
 
 data ADef = forall a . ADef (TDef a) (TType a)
-
--- ---------------------------
-type LTParam a = Located (TParam a)
-
-data TParam a where
-    TParHead :: LIde -> LTType a -> LTParam b -> TParam (a -> b)
-    TParTail :: LIde -> LTType a              -> TParam a
-
-type LAParam = Located AParam
-
-data AParam = forall a . AParam (TParam a) (TType a)
 
 -- ---------------------------
 type LTStmt = Located TStmt
@@ -73,8 +62,6 @@ data TExpr a where
     TExprInt    :: Int32        -> TExpr Int32
     TExprChar   :: Word8        -> TExpr Word8
     TExprString :: String       -> TExpr (Ptr Word8)
-    -- ^ use createStringNul llvm instruction to store this
-    -- and then getElementPtr to convert it into Ptr Word8
     TExprVar    :: TVariable a  -> TExpr a
     TExprFun    :: TFuncCall a  -> TExpr a
     TExprMinus  :: LTExpr a     -> TExpr a
@@ -140,7 +127,8 @@ instance Show AType where
 type LTFuncCall a = Located (TFuncCall a)
 
 data TFuncCall a where
-    TFuncCall :: LIde -> TType a -> [LAExpr] -> TFuncCall a
+    TFuncCall  :: LIde    -> TType a           -> TFuncCall a
+    TParamCall :: TExpr a -> LTFuncCall (a->b) -> TFuncCall b
 
 type LAFuncCall = Located AFuncCall
 
