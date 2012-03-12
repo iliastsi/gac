@@ -72,7 +72,7 @@ typeCheckDef ludef@(L _ (UDefArr _ _)) = do
 -- ---------------------------
 -- Type Check parameters
 tcParamDef :: (SrcSpan, (LIde,LIde), LAType, [Located UDef], Located UStmt)
-           -> [Located UParam] -> [AType] -> TcM (Located ADef)
+           -> [Located UParam] -> [(AType,Mode)] -> TcM (Located ADef)
 tcParamDef (loc, (fname,lide), L type_loc (AType ftype), ludefs, lustmt) [] par_types = do
     -- update parameters in symbol table
     updateFuncM $ reverse par_types
@@ -88,7 +88,7 @@ tcParamDef f_info (luparam@(L loc (UParam lide mode lutype)):luparams) par_types
     (L type_loc atype@(AType ptype)) <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ptype))
     -- type check the rest parameters
-    (L rest_loc (ADef rest rest_type)) <- tcParamDef f_info luparams (atype:par_types)
+    (L rest_loc (ADef rest rest_type)) <- tcParamDef f_info luparams ((atype,mode):par_types)
     case (mode, atypeIsArray atype) of
          -- pass a non array by value
          (ModeByVal, False) -> do
@@ -537,22 +537,37 @@ typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
 
 -- ---------------------------
 -- Type Check function parameters
-tcFunPar :: (SrcSpan, (LIde,LIde), AType) -> ([Located UExpr], [AType])
+tcFunPar :: (SrcSpan, (LIde,LIde), AType) -> ([Located UExpr], [(AType,Mode)])
          -> (AType -> AType) -> Int -> TcM (Located AFuncCall)
 tcFunPar (loc, (fname,_), (AType ftype)) ([],[]) type_fn _ = do
     AType ftype' <- return $ type_fn (AType ftype)
     return (L loc $ AFuncCall (TFuncCall fname ftype') ftype')
-tcFunPar f_info@(_, (_,lide), _) ((lupar:lupars),(ptype:ptypes)) type_fn cnt = do
-    (L aeloc (AExpr texpr ttype)) <- typeCheckExpr lupar
-    when (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown))) $
-            tcParTypeErr (unLoc lide) lupar cnt ptype (AType ttype)
+tcFunPar f_info@(_, (_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt = do
+    L aeloc aexpr@(AExpr texpr ttype) <- typeCheckExpr lupar
+    AExpr texpr' ttype' <-
+        if (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)))
+           then do
+               tcParTypeErr (unLoc lide) lupar cnt ptype (AType ttype)
+               return aexpr
+           else do
+               case (mode, texpr) of
+                    (ModeByRef, TExprString {}) -> return aexpr
+                    (ModeByRef, TExprVar TVarArray {}) -> return aexpr
+                    (ModeByRef, TExprVar (TVar vide vtype)) ->
+                        return (AExpr (TExprVar (TVarArray
+                            (L wiredInSrcSpan $ TVar vide (TTypePtr vtype))
+                            (L wiredInSrcSpan (TExprInt 0)))) vtype)
+                    (ModeByRef, _) -> do
+                        tcParRefErr (unLoc lide) lupar cnt
+                        return aexpr
+                    (ModeByVal, _) -> return aexpr
     -- type check the rest parameters
     let type_fn' = (\(AType rtype) -> AType (TTypeFunc ttype rtype)) . type_fn
-    (L rest_loc (AFuncCall rest (TTypeFunc ttype' rtype))) <-
+    (L rest_loc (AFuncCall rest (TTypeFunc ctype rtype))) <-
                 tcFunPar f_info (lupars,ptypes) type_fn' (cnt-1)
-    case test ttype ttype' of
+    case test ttype' ctype of
          Just Eq ->
-             return (L aeloc $ AFuncCall (TParamCall texpr (L rest_loc rest)) rtype)
+             return (L aeloc $ AFuncCall (TParamCall texpr' (L rest_loc rest)) rtype)
          Nothing ->
              panic "test in TypeCheck.tcFunPar had to return Eq"
 tcFunPar _ _ _ _ = panic "TypeCheck.tcFunPar got unexpected input"
@@ -573,3 +588,10 @@ tcParTypeErr ide (L loc uexpr) count exptype acttype =
       ("Incompatible type of argument " ++ show count ++ " of function `" ++
        ide ++"'\n\tExpected `" ++ show exptype ++
        "' but argument is of type `" ++ show acttype ++ "'")
+
+-- Error when passing a non-lvalue as reference
+tcParRefErr :: Ide -> Located UExpr -> Int -> TcM ()
+tcParRefErr ide (L loc uexpr) count =
+    addTypeError loc (TypeError $ show uexpr)
+      ("Incompatible type of argument " ++ show count ++ " of function `" ++
+      ide ++ "'\n\tReference expected, value given")

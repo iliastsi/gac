@@ -26,7 +26,7 @@ module TcMonad (
 import SrcLoc
 import SymbolTable
 import ErrUtils
-import UnTypedAst (Ide)
+import UnTypedAst (Ide, Mode)
 import TypedAst (AType(..), TType(..))
 import DynFlags
 
@@ -155,7 +155,7 @@ getFuncM lide@(L loc ide) = do
 getFuncNameM :: Maybe FunInfo -> TcM Ide
 getFuncNameM = return . getFuncName
 
-getFuncParamsM :: Maybe FunInfo -> TcM [AType]
+getFuncParamsM :: Maybe FunInfo -> TcM [(AType,Mode)]
 getFuncParamsM = return . getFuncParams
 
 getFuncRetTypeM :: Maybe FunInfo -> TcM AType
@@ -187,7 +187,7 @@ getVarTypeM = return . getVarType
 
 -- ---------------------------
 -- Add functions
-addFuncM :: Located Ide -> [AType] -> AType -> TcM Ide
+addFuncM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
     case getFunc ide t of
@@ -220,7 +220,7 @@ addVarM lide@(L loc ide) vt = do
 
 -- ---------------------------
 -- Update local function's parameters info
-updateFuncM :: [AType] -> TcM ()
+updateFuncM :: [(AType,Mode)] -> TcM ()
 updateFuncM pt = do
     t <- getTable
     setTable (updateFunc pt t)

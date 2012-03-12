@@ -1,0 +1,4 @@
+expression_by_reference() : proc
+  foo(b : byte, i : reference int) : proc
+  { i = 3; }
+{ foo('i', 1+5); }

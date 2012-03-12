@@ -1,0 +1,4 @@
+tcfail017.alan:4:12-14: Error: Type mismatch at `1 + 5'
+	Incompatible type of argument 2 of function `foo'
+	Reference expected, value given
+
