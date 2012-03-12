@@ -1,4 +1,10 @@
 expression_by_reference() : proc
-  foo(b : byte, i : reference int) : proc
+  b : byte[10];
+  i : int;
+  foo(b : reference byte[], i : reference int, c : reference byte) : proc
   { i = 3; }
-{ foo('i', 1+5); }
+{
+  foo(b, i, b[2]);
+  foo("ilias", 41+1, 'a');
+  foo(b[0], i, 'i');
+}

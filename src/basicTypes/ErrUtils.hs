@@ -46,7 +46,6 @@ data MsgCode
   | ArrSizeError  String  -- array definition errors
   | UnusedIdError String  -- variable/function defined but not used
   | UnusedRsError String  -- unused result
-  | UninitError   String  -- uninitialized variable
   | UnknownError
 
 data Severity
@@ -155,5 +154,4 @@ instance Show MsgCode where
     show (ArrSizeError buf)  = "Array definition error at `" ++ buf ++ "'"
     show (UnusedIdError buf) = "Defined but not used: `" ++ buf ++ "'"
     show (UnusedRsError buf) = "Unused return value of function `" ++ buf ++ "'"
-    show (UninitError buf)   = "Variable `" ++ buf ++ "' may be used uninitialized"
     show UnknownError        = "Unknown Error :@"

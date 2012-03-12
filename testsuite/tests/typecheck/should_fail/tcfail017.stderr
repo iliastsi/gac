@@ -1,4 +1,16 @@
-tcfail017.alan:4:12-14: Error: Type mismatch at `1 + 5'
+tcfail017.alan:8:16-19: Error: Type mismatch at `41 + 1'
 	Incompatible type of argument 2 of function `foo'
+	Reference expected, value given
+
+tcfail017.alan:8:22-24: Error: Type mismatch at `'a''
+	Incompatible type of argument 3 of function `foo'
+	Reference expected, value given
+
+tcfail017.alan:9:7-10: Error: Type mismatch at `b[0]'
+	Incompatible type of argument 1 of function `foo'
+	Expected `array of byte' but argument is of type `byte'
+
+tcfail017.alan:9:16-18: Error: Type mismatch at `'i''
+	Incompatible type of argument 3 of function `foo'
 	Reference expected, value given
 

@@ -82,7 +82,6 @@ data DynFlag
     | Opt_WarnUnusedFunction
     | Opt_WarnUnusedResult
     | Opt_WarnUnusedVariable
-    | Opt_WarnUnitialized
     | Opt_WarnTypeOverflows
     | Opt_WarnWarningsDeprecations
     | Opt_WarnDeprecatedFlags
@@ -509,7 +508,6 @@ fFlags = [
   ( "warn-unused-function",         Opt_WarnUnusedFunction, nop),
   ( "warn-unused-result",           Opt_WarnUnusedResult, nop),
   ( "warn-unused-variable",         Opt_WarnUnusedVariable, nop),
-  ( "warn-uninitialized",           Opt_WarnUnitialized, nop),
   ( "warn-type-overflows",          Opt_WarnTypeOverflows, nop),
   ( "warn-warnings-deprecations",   Opt_WarnWarningsDeprecations, nop),
   ( "warn-deprecations",            Opt_WarnWarningsDeprecations, nop),
@@ -546,7 +544,6 @@ minusWOpts =
     [ Opt_WarnUnreachableCode
     , Opt_WarnUnusedFunction
     , Opt_WarnUnusedVariable
-    , Opt_WarnUnitialized
     ]
 
 minusWallOpts :: [DynFlag]
