@@ -2,6 +2,6 @@ tcfail013.alan:3:3: Error: Conflicting definitions for `foo'
 	Bound at: tcfail013.alan:2:3-5
 	          tcfail013.alan:3:3-5
 
-tcfail013.alan:6:3: Error: Type mismatch at `foo = 'a';'
-	Lvalue is of type `int' but Rvalue is of type `byte'
+tcfail013.alan:5:3: Error: Type mismatch at `foo = 5;'
+	Lvalue is of type `byte' but Rvalue is of type `int'
 

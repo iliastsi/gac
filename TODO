@@ -6,9 +6,6 @@
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
 
-** Fix in Flags:
-    - Add implementation for -fwarn-uninitialized
-
 
     Releases
 ~~~~~~~~~~~~~~~~~~~

@@ -148,6 +148,7 @@ test :: TType a -> TType b -> Maybe (Equal a b)
 test TTypeInt      TTypeInt     = return Eq
 test TTypeChar     TTypeChar    = return Eq
 test TTypeProc     TTypeProc    = return Eq
+test TTypeUnknown  TTypeUnknown = return Eq
 test (TTypePtr a)  (TTypePtr b) = do
     Eq <- test a b
     return Eq

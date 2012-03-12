@@ -1,0 +1,5 @@
+main () : proc
+{
+   writeString("This is a multi line string
+		This program is wrong\n");
+}

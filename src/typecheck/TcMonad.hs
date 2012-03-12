@@ -190,13 +190,10 @@ getVarTypeM = return . getVarType
 addFuncM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
-    case getFunc ide t of
-         Nothing ->
-             return ()
+    case isFuncLocal ide t of
          Just (FunInfo lprev _ _ _ _) ->
              addRedefError ide loc (getLoc lprev)
-    -- we re-insert the function (in the current scope)
-    -- in order to continue with the type checking
+         Nothing -> return ()
     u <- getUnique
     let finfo = FunInfo lide pt rt u True
     setTable (addFunc ide finfo t)
@@ -208,15 +205,13 @@ addVarM :: Located Ide -> AType -> TcM Ide
 addVarM lide@(L loc ide) vt = do
     t <- getTable
     case isVarLocal ide t of
-         Nothing -> do
-             u <- getUnique
-             let vinfo = VarInfo lide vt u True
-             setTable (addVar ide vinfo t)
-             return (getVarName (Just vinfo))
-         Just (VarInfo lprev _ _ _) -> do
-             -- Here we don't re-insert the variable
+         Just (VarInfo lprev _ _ _) ->
              addRedefError ide loc (getLoc lprev)
-             return "unknown"
+         Nothing -> return ()
+    u <- getUnique
+    let vinfo = VarInfo lide vt u True
+    setTable (addVar ide vinfo t)
+    return (getVarName (Just vinfo))
 
 -- ---------------------------
 -- Update local function's parameters info

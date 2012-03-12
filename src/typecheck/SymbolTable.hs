@@ -17,7 +17,7 @@ module SymbolTable (
 
     -- ** Extract from Table
     getName, getCurrDepth,
-    getLocalFuncs, getFunc, getFuncName, getFuncParams, getFuncRetType,
+    getLocalFuncs, getFunc, getFuncName, getFuncParams, getFuncRetType, isFuncLocal,
     getLocalVars, getVar, getVarName, getVarType, isVarLocal,
 
     -- ** Add to Table
@@ -171,6 +171,9 @@ getFuncParams Nothing = []
 getFuncRetType :: Maybe FunInfo -> AType
 getFuncRetType (Just (FunInfo _ _ frt _ _)) = frt
 getFuncRetType Nothing = AType TTypeUnknown
+
+isFuncLocal :: Ide -> Table -> Maybe FunInfo
+isFuncLocal i Table{functions=f} = Map.lookup i f
 
 -- Get variables
 getLocalVars :: Table -> [VarInfo]

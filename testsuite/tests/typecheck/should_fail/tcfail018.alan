@@ -1,0 +1,7 @@
+main () : proc
+   a : int [10];
+   b : int [10];
+{
+   writeInteger(a+b);
+   writeString("\nThis program is wrong!\n");
+}

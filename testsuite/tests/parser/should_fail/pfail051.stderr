@@ -1,0 +1,6 @@
+pfail051.alan:3:16: Error: Parse error on input `"'
+	Cannot parse char `"'
+
+pfail051.alan:3:22: Error: Parse error on input `is'
+	Probably missing `)'
+
