@@ -87,6 +87,8 @@ type LTVariable a = Located (TVariable a)
 data TVariable a where
     TVar      :: Ide                -> TType a      -> TVariable a
     TVarArray :: LTVariable (Ptr a) -> LTExpr Int32 -> TVariable a
+    -- pointer to one variable
+    TVarPtr   :: TVariable a -> TVariable (Ptr a)
 
 type LAVariable = Located AVariable
 
@@ -168,6 +170,8 @@ instance Type () where
     theType = TTypeProc
 instance (Type a) => Type (Ptr a) where
     theType = TTypePtr theType
+instance (Type a, Type b) => Type (a->b) where
+    theType = TTypeFunc theType theType
 
 extractTDef :: (Type a) => ADef -> TDef a
 extractTDef adef =

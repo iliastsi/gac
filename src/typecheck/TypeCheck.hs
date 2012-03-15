@@ -550,19 +550,16 @@ tcFunPar f_info@(_, (_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn 
                tcParTypeErr (unLoc lide) lupar cnt ptype (AType ttype)
                return aexpr
            else do
-               case (mode, texpr) of
-                    (ModeByRef, TExprString {}) -> return aexpr
-                    (ModeByRef, TExprVar TVarArray {}) -> return aexpr
-                    (ModeByRef, TExprVar (TVar vide vtype)) ->
-                        return (AExpr (TExprVar (TVarArray
-                            (L wiredInSrcSpan $ TVar vide (TTypePtr vtype))
-                            (L wiredInSrcSpan (TExprInt 0)))) vtype)
-                    (ModeByRef, _) -> do
+               case (mode, texpr, AType ttype) of
+                    (ModeByRef, _, AType TTypePtr {}) -> return aexpr
+                    (ModeByRef, TExprVar tev, _) ->
+                        return (AExpr (TExprVar $ TVarPtr tev) (TTypePtr ttype))
+                    (ModeByRef, _, _) -> do
                         tcParRefErr (unLoc lide) lupar cnt
                         return aexpr
-                    (ModeByVal, _) -> return aexpr
+                    (ModeByVal, _, _) -> return aexpr
     -- type check the rest parameters
-    let type_fn' = (\(AType rtype) -> AType (TTypeFunc ttype rtype)) . type_fn
+    let type_fn' = (\(AType rtype) -> AType (TTypeFunc ttype' rtype)) . type_fn
     (L rest_loc (AFuncCall rest (TTypeFunc ctype rtype))) <-
                 tcFunPar f_info (lupars,ptypes) type_fn' (cnt-1)
     case test ttype' ctype of
