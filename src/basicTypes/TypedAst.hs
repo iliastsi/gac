@@ -33,15 +33,15 @@ type LTDef a = Located (TDef a)
 
 data TDef a where
       -- functions
-    TDefFun :: LIde -> LTType a -> [LADef] -> LTStmt -> TDef a
-    TDefPar :: LIde -> LTType a -> LTDef b -> TDef (a -> b)
+    TDefFun :: (Type a) => LIde -> LTType a -> [LADef] -> LTStmt -> TDef a
+    TDefPar :: (Type a, Type b) => LIde -> LTType a -> LTDef b -> TDef (a -> b)
       -- variables
-    TDefVar :: LIde    -> LTType a       -> TDef a
-    TDefArr :: LTDef a -> Located Word32 -> TDef (Ptr a)
+    TDefVar :: (Type a) => LIde    -> LTType a       -> TDef a
+    TDefArr :: (Type a) => LTDef a -> Located Word32 -> TDef (Ptr a)
 
 type LADef = Located ADef
 
-data ADef = forall a . ADef (TDef a) (TType a)
+data ADef = forall a . Type a => ADef (TDef a) (TType a)
 
 -- ---------------------------
 type LTStmt = Located TStmt
@@ -59,17 +59,17 @@ data TStmt
 type LTExpr a = Located (TExpr a)
 
 data TExpr a where
-    TExprInt    :: Int32        -> TExpr Int32
-    TExprChar   :: Word8        -> TExpr Word8
-    TExprString :: String       -> TExpr (Ptr Word8)
-    TExprVar    :: TVariable a  -> TExpr a
-    TExprFun    :: TFuncCall a  -> TExpr a
-    TExprMinus  :: LTExpr a     -> TExpr a
-    TExprOp     :: LTExpr a -> LOp -> LTExpr a -> TExpr a
+    TExprInt    :: Int32   -> TExpr Int32
+    TExprChar   :: Word8   -> TExpr Word8
+    TExprString :: String  -> TExpr (Ptr Word8)
+    TExprVar    :: (Type a) => TVariable a -> TExpr a
+    TExprFun    :: (Type a) => TFuncCall a -> TExpr a
+    TExprMinus  :: (Type a) => LTExpr a    -> TExpr a
+    TExprOp     :: (Type a) => LTExpr a -> LOp -> LTExpr a -> TExpr a
 
 type LAExpr = Located AExpr
 
-data AExpr = forall a . AExpr (TExpr a) (TType a)
+data AExpr = forall a . Type a => AExpr (TExpr a) (TType a)
 
 -- ---------------------------
 type LTCond = Located TCond
@@ -85,14 +85,14 @@ data TCond
 type LTVariable a = Located (TVariable a)
 
 data TVariable a where
-    TVar      :: Ide                -> TType a      -> TVariable a
-    TVarArray :: LTVariable (Ptr a) -> LTExpr Int32 -> TVariable a
+    TVar      :: (Type a) => Ide                -> TType a      -> TVariable a
+    TVarArray :: (Type a) => LTVariable (Ptr a) -> LTExpr Int32 -> TVariable a
     -- pointer to one variable
-    TVarPtr   :: TVariable a -> TVariable (Ptr a)
+    TVarPtr   :: (Type a) => TVariable a -> TVariable (Ptr a)
 
 type LAVariable = Located AVariable
 
-data AVariable = forall a . AVariable (TVariable a) (TType a)
+data AVariable = forall a . Type a => AVariable (TVariable a) (TType a)
 
 -- ---------------------------
 type LTType a = Located (TType a)
@@ -101,13 +101,13 @@ data TType a where
     TTypeInt        :: TType Int32
     TTypeChar       :: TType Word8
     TTypeProc       :: TType ()
-    TTypePtr        :: TType a -> TType (Ptr a)
+    TTypePtr        :: (Type a) => TType a -> TType (Ptr a)
     TTypeUnknown    :: TType ()
-    TTypeFunc       :: TType a -> TType b -> TType (a -> b)
+    TTypeFunc       :: (Type a, Type b) => TType a -> TType b -> TType (a -> b)
 
 type LAType = Located AType
 
-data AType = forall a . AType (TType a)
+data AType = forall a . Type a => AType (TType a)
 
 instance Eq AType where
     (AType TTypeUnknown) == (AType TTypeUnknown) = True
@@ -129,12 +129,12 @@ instance Show AType where
 type LTFuncCall a = Located (TFuncCall a)
 
 data TFuncCall a where
-    TFuncCall  :: LIde    -> TType a           -> TFuncCall a
-    TParamCall :: TExpr a -> LTFuncCall (a->b) -> TFuncCall b
+    TFuncCall  :: (Type a) => LIde -> TType a -> TFuncCall a
+    TParamCall :: (Type a, Type b) => TExpr a -> LTFuncCall (a->b) -> TFuncCall b
 
 type LAFuncCall = Located AFuncCall
 
-data AFuncCall = forall a . AFuncCall (TFuncCall a) (TType a)
+data AFuncCall = forall a . Type a => AFuncCall (TFuncCall a) (TType a)
 
 
 -- -------------------------------------------------------------------
@@ -146,7 +146,7 @@ data AFuncCall = forall a . AFuncCall (TFuncCall a) (TType a)
 data Equal a b where
     Eq :: Equal a a
 
-test :: TType a -> TType b -> Maybe (Equal a b)
+test :: (Type a, Type b) => TType a -> TType b -> Maybe (Equal a b)
 test TTypeInt      TTypeInt     = return Eq
 test TTypeChar     TTypeChar    = return Eq
 test TTypeProc     TTypeProc    = return Eq
@@ -178,7 +178,7 @@ extractTDef adef =
     case extract theType adef of
          Just x  -> x
          Nothing -> panic "extract in TypedAst.extractTDef returned Nothing"
-    where extract :: TType a -> ADef -> Maybe (TDef a)
+    where extract :: (Type a) => TType a -> ADef -> Maybe (TDef a)
           extract s (ADef e t) = do
               Eq <- test s t
               return e
@@ -188,7 +188,7 @@ extractTExpr aexpr =
     case extract theType aexpr of
          Just x  -> x
          Nothing -> panic "extract in TypedAst.extractTExpr returned Nothing"
-    where extract :: TType a -> AExpr -> Maybe (TExpr a)
+    where extract :: (Type a) => TType a -> AExpr -> Maybe (TExpr a)
           extract s (AExpr e t) = do
               Eq <- test s t
               return e
@@ -198,7 +198,7 @@ extractTVariable avar =
     case extract theType avar of
          Just x  -> x
          Nothing -> panic "extract in TypedAst.extractTVariable returned Nothing"
-    where extract :: TType a -> AVariable -> Maybe (TVariable a)
+    where extract :: (Type a) => TType a -> AVariable -> Maybe (TVariable a)
           extract s (AVariable e t) = do
               Eq <- test s t
               return e

@@ -158,7 +158,7 @@ driverTypeCheck postLoadMode dflags p_messages luast = do
 -- the produced object file (if any)
 driverCodeGen :: PostLoadMode -> DynFlags -> Messages -> (Located TAst) -> IO (Maybe String)
 driverCodeGen _postLoadMode dflags tc_messages ltast = do
-    let _ = lambdaLift (unLoc ltast)
+    let _ = lambdaLift ltast
     printMessages dflags tc_messages
     return Nothing
 
