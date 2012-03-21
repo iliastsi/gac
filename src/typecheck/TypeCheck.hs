@@ -47,80 +47,86 @@ import Control.Monad
 
 -- ---------------------------
 --
-typeCheckAst :: Located UAst -> TcM (Located TAst)
-typeCheckAst = typeCheckDef
+typeCheckAst :: Located UAst -> TcM TAst
+typeCheckAst luast = do
+    adef <- typeCheckDef luast
+    case adef of
+         Left tast -> return tast
+         Right _   -> panic "typeCheck.typeCheckAst Either had to return Left"
 
 
 -- -------------------------------------------------------------------
 -- TypeCheck UDef
-typeCheckDef :: Located UDef -> TcM (Located ADef)
+typeCheckDef :: Located UDef -> TcM ADef
 -- UDefFun
 typeCheckDef (L loc (UDefFun lide luparams lutype ludefs lustmt)) = do
-    lftype@(L _ (AType ftype)) <- typeCheckType lutype
+    aftype <- typeCheckType lutype
     -- add function and get it's name
-    fname <- liftM (L (getLoc lide)) (addFuncM lide [] (AType ftype))
+    fname <- liftM (L (getLoc lide)) (addFuncM lide [] aftype)
     rawOpenScopeM (unLoc lide)
     -- type check all
-    tcParamDef (loc, (fname,lide), lftype, ludefs, lustmt) luparams []
+    adef <- tcParamDef (loc, (fname,lide), aftype, ludefs, lustmt) luparams []
+    return $ Left adef
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
-    tcVarDef ludef id
+    adef <- tcVarDef ludef id
+    return $ Right adef
 -- UDefArr
 typeCheckDef ludef@(L _ (UDefArr _ _)) = do
-    tcVarDef ludef id
+    adef <- tcVarDef ludef id
+    return $ Right adef
 
 -- ---------------------------
 -- Type Check parameters
-tcParamDef :: (SrcSpan, (LIde,LIde), LAType, [Located UDef], Located UStmt)
-           -> [Located UParam] -> [(AType,Mode)] -> TcM (Located ADef)
-tcParamDef (loc, (fname,lide), L type_loc (AType ftype), ludefs, lustmt) [] par_types = do
+tcParamDef :: (SrcSpan, (LIde,LIde), AType, [Located UDef], Located UStmt)
+           -> [Located UParam] -> [(AType,Mode)] -> TcM ADefFun
+tcParamDef (loc, (fname,lide), AType ftype, ludefs, lustmt) [] par_types = do
     -- update parameters in symbol table
     updateFuncM $ reverse par_types
     -- type check definitions
-    ladefs <- mapM typeCheckDef ludefs
+    adefs <- mapM typeCheckDef ludefs
     -- type check statements
-    (does_ret, ltstmt) <- typeCheckStmt (AType ftype) lustmt
+    (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
     when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
             tcNoRetErr loc (unLoc lide) (AType ftype)
     rawCloseScopeM
-    return (L loc $ ADef (TDefFun fname (L type_loc ftype) ladefs ltstmt) ftype)
-tcParamDef f_info (luparam@(L loc (UParam lide mode lutype)):luparams) par_types = do
-    (L type_loc atype@(AType ptype)) <- typeCheckType lutype
+    return $ ADefFun (TDefFun fname ftype adefs tstmt) (TTypeRetIO ftype)
+tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
+    atype@(AType ptype) <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ptype))
     -- type check the rest parameters
-    (L rest_loc (ADef rest rest_type)) <- tcParamDef f_info luparams ((atype,mode):par_types)
+    ADefFun rest rest_type <- tcParamDef f_info luparams ((atype,mode):par_types)
     case (mode, atypeIsArray atype) of
          -- pass a non array by value
          (ModeByVal, False) -> do
-             return (L loc $ ADef (TDefPar lide' (L type_loc ptype) (L rest_loc rest))
-                        (TTypeFunc ptype rest_type))
+             return $ ADefFun (TDefPar lide' ptype rest)
+                        (TTypeFunc ptype rest_type)
          -- pass an array by value (error)
          (ModeByVal, True) -> do
              tcArrayParamErr luparam
-             return (L loc $ ADef (TDefPar lide' (L type_loc ptype) (L rest_loc rest))
-                        (TTypeFunc ptype rest_type))
+             return $ ADefFun (TDefPar lide' ptype rest)
+                        (TTypeFunc ptype rest_type)
          -- pass a non array by reference (change it to ptr)
          (ModeByRef, False) -> do
-             return (L loc $ ADef (TDefPar lide' (L type_loc (TTypePtr ptype)) (L rest_loc rest))
-                        (TTypeFunc (TTypePtr ptype) rest_type))
+             return $ ADefFun (TDefPar lide' (TTypePtr ptype) rest)
+                        (TTypeFunc (TTypePtr ptype) rest_type)
          -- pass an array by reference (normal)
          (ModeByRef, True) -> do
-             return (L loc $ ADef (TDefPar lide' (L type_loc ptype) (L rest_loc rest))
-                        (TTypeFunc ptype rest_type))
+             return $ ADefFun (TDefPar lide' ptype rest)
+                        (TTypeFunc ptype rest_type)
 
 -- Type Check variable definitions
-tcVarDef :: Located UDef -> (AType -> AType) -> TcM (Located ADef)
-tcVarDef (L loc (UDefVar lide lutype)) type_fn = do
-    (L type_loc (AType ftype)) <- typeCheckType lutype
+tcVarDef :: Located UDef -> (AType -> AType) -> TcM ADefVar
+tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
+    AType ftype <- typeCheckType lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
-    return (L loc $ ADef (TDefVar lide' (L type_loc ftype)) ftype)
-tcVarDef ludef@(L loc (UDefArr luarr lsize)) type_fn = do
+    return $ ADefVar (TDefVar lide' ftype) ftype
+tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
     let type_fn' = type_fn . (\(AType ttype) -> AType (TTypePtr ttype))
-    (L var_loc (ADef var_def var_type)) <- tcVarDef luarr type_fn'
+    ADefVar var_def var_type <- tcVarDef luarr type_fn'
     let size'  = fromIntegral (unLoc lsize)
-        lsize' = L (getLoc lsize) size'
     tcCheckArraySize ludef lsize size'
-    return (L loc $ ADef (TDefArr (L var_loc var_def) lsize') (TTypePtr var_type))
+    return $ ADefVar (TDefArr var_def size') (TTypePtr var_type)
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check if array size is positive
@@ -154,81 +160,81 @@ tcArrayParamErr (L loc uparam) =
 -- -------------------------------------------------------------------
 -- TypeCheck UStmt
 
-typeCheckStmt :: AType -> Located UStmt -> TcM (Bool, Located TStmt)
+typeCheckStmt :: AType -> Located UStmt -> TcM (Bool, TStmt)
 -- UStmtNothing
-typeCheckStmt _ (L loc UStmtNothing) = do
-    return (False, L loc TStmtNothing)
+typeCheckStmt _ (L _ UStmtNothing) = do
+    return (False, TStmtNothing)
 -- UStmtAssign
-typeCheckStmt _ lustmt@(L loc (UStmtAssign luvar luexpr)) = do
-    lavar@(L _ (AVariable _ var_type)) <- typeCheckVariable luvar
-    laexpr@(L _ (AExpr _ expr_type))  <- typeCheckExpr luexpr
+typeCheckStmt _ lustmt@(L _ (UStmtAssign luvar luexpr)) = do
+    avar@(AVariable _ var_type) <- typeCheckVariable luvar
+    aexpr@(AExpr _ expr_type)  <- typeCheckExpr luexpr
     if (AType var_type) == (AType TTypeUnknown) || (AType expr_type) == (AType TTypeUnknown)
-       then return (False, L loc TStmtNothing)
+       then return (False, TStmtNothing)
        else do
            case test var_type expr_type of
                 Just Eq -> do
-                    return (False, L loc $ TStmtAssign lavar laexpr)
+                    return (False, TStmtAssign avar aexpr)
                 Nothing -> do
                     tcAssignErr lustmt (AType var_type) (AType expr_type)
-                    return (False, L loc TStmtNothing)
+                    return (False, TStmtNothing)
 -- UStmtCompound
-typeCheckStmt ret_type (L loc (UStmtCompound lustmts)) = do
-    (does_ret, ltstmts) <- tcCompoundStmt ret_type lustmts []
-    return (does_ret, L loc $ TStmtCompound ltstmts)
+typeCheckStmt ret_type (L _ (UStmtCompound lustmts)) = do
+    (does_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
+    return (does_ret, TStmtCompound tstmts)
 -- UStmtFun
 typeCheckStmt _ (L loc (UStmtFun lf@(L _ (UFuncCall fname _)))) = do
-    lafunc@(L _ (AFuncCall _ ftype)) <- typeCheckFunc lf
+    afunc@(AFuncCall _ ftype) <- typeCheckFunc lf
     flags <- getDynFlags
-    when ((AType ftype)/=(AType TTypeProc) &&
-          (AType ftype)/=(AType TTypeUnknown) &&
-          (dopt Opt_WarnUnusedResult flags)) $
-              addTypeWarning loc (UnusedRsError (unLoc fname)) ""
-    return (False, L loc $ TStmtFun lafunc)
+    when ((ATypeF ftype)/=(ATypeF $ TTypeRetIO TTypeProc) &&
+         (ATypeF ftype)/=(ATypeF $ TTypeRetIO TTypeUnknown) &&
+         (dopt Opt_WarnUnusedResult flags)) $
+                addTypeWarning loc (UnusedRsError (unLoc fname)) ""
+    return (False, TStmtFun afunc)
 -- UStmtIf
-typeCheckStmt ret_type (L loc (UStmtIf lucond lustmt1 m_lustmt2)) = do
-    ltcond <- typeCheckCond lucond
-    (dsr1, ltstmt1) <- typeCheckStmt ret_type lustmt1
+typeCheckStmt ret_type (L _ (UStmtIf lucond lustmt1 m_lustmt2)) = do
+    acond <- typeCheckCond lucond
+    (dsr1, tstmt1) <- typeCheckStmt ret_type lustmt1
     case m_lustmt2 of
          Nothing ->
-             return (False, L loc $ TStmtIf ltcond ltstmt1 Nothing)
+             return (False, TStmtIf acond tstmt1 Nothing)
          Just lustmt2 -> do
-             (dsr2, ltstmt2) <- typeCheckStmt ret_type lustmt2
-             return (dsr1 && dsr2, L loc $ TStmtIf ltcond ltstmt1 (Just ltstmt2))
+             (dsr2, tstmt2) <- typeCheckStmt ret_type lustmt2
+             return (dsr1 && dsr2, TStmtIf acond tstmt1 (Just tstmt2))
 -- UStmtWhile
-typeCheckStmt ret_type (L loc (UStmtWhile lucond lustmt)) = do
-    ltcond <- typeCheckCond lucond
-    (_, ltstmt) <- typeCheckStmt ret_type lustmt
-    return (False, L loc $ TStmtWhile ltcond ltstmt)
+typeCheckStmt ret_type (L _ (UStmtWhile lucond lustmt)) = do
+    acond <- typeCheckCond lucond
+    (_, tstmt) <- typeCheckStmt ret_type lustmt
+    return (False, TStmtWhile acond tstmt)
 -- UStmtReturn
-typeCheckStmt ret_type lustmt@(L loc (UStmtReturn m_expr)) = do
+typeCheckStmt ret_type lustmt@(L _ (UStmtReturn m_expr)) = do
     case m_expr of
          Nothing -> do
              when (ret_type /= (AType TTypeProc)) $
                     tcRetStmtErr lustmt ret_type (AType TTypeProc)
-             return (True, L loc $ TStmtReturn Nothing)
+             return (True, TStmtReturn Nothing)
          Just luexpr -> do
-             laexpr@(L _ (AExpr _ expr_type)) <- typeCheckExpr luexpr
+             aexpr@(AExpr _ expr_type) <- typeCheckExpr luexpr
              when (ret_type /= (AType expr_type)) $
                     tcRetStmtErr lustmt ret_type (AType expr_type)
-             return (True, L loc $ TStmtReturn (Just laexpr))
+             return (True, TStmtReturn (Just aexpr))
 
 -- ---------------------------
 -- Type Check compound stmts
 -- As first argument (AType) we have the return type of the block
-tcCompoundStmt :: AType -> [Located UStmt] -> [Located TStmt] -> TcM (Bool, [Located TStmt])
+tcCompoundStmt :: AType -> [Located UStmt] -> [TStmt] -> TcM (Bool, [TStmt])
 tcCompoundStmt _ [] acc = do
     return (False, reverse acc)
 tcCompoundStmt ret_type (lustmt:lustmts) acc = do
-    (r1, ltstmt)  <- typeCheckStmt ret_type lustmt
+    (r1, tstmt)  <- typeCheckStmt ret_type lustmt
     if not r1
        then do
            -- r1 is False thus we didn't get any return
-           tcCompoundStmt ret_type lustmts (ltstmt:acc)
+           tcCompoundStmt ret_type lustmts (tstmt:acc)
        else do
            if null lustmts
               then do
                   -- we get return but this is the last command
-                  return (True, reverse (ltstmt:acc))
+                  return (True, reverse (tstmt:acc))
               else do
                   -- we get return and we have more to do
                   -- *bang*, unreachable code
@@ -236,7 +242,7 @@ tcCompoundStmt ret_type (lustmt:lustmts) acc = do
                       unreach_end   = srcSpanEnd (getLoc (last lustmts))
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
-                  return (True, reverse (ltstmt:acc))
+                  return (True, reverse (tstmt:acc))
 
 -- ---------------------------
 -- Error when the types of expression and variable in an assigment are different
@@ -268,62 +274,60 @@ tcRetStmtErr _ _ _ = panic "TypeCheck.tcRetStmtErr got unexpected input"
 -- -------------------------------------------------------------------
 -- TypeCheck UExpr
 
-typeCheckExpr :: Located UExpr -> TcM (Located AExpr)
+typeCheckExpr :: Located UExpr -> TcM AExpr
 -- UExprInt
 typeCheckExpr (L loc (UExprInt i)) = do
     let i' = fromIntegral i
     tcCheckIntOverflow (L loc i) i'
-    return (L loc $ AExpr (TExprInt i') (TTypeInt))
+    return $ AExpr (TExprInt i') (TTypeInt)
 -- UExprChar
-typeCheckExpr (L loc (UExprChar c)) = do
-    return (L loc $ AExpr (TExprChar (fromIntegral (ord c))) (TTypeChar))
+typeCheckExpr (L _ (UExprChar c)) = do
+    return $ AExpr (TExprChar (fromIntegral (ord c))) (TTypeChar)
 -- UExprString
-typeCheckExpr (L loc (UExprString s)) = do
-    return (L loc $ AExpr (TExprString s) (TTypePtr TTypeChar))
+typeCheckExpr (L _ (UExprString s)) = do
+    return $ AExpr (TExprString s) (TTypePtr TTypeChar)
 -- UExprVar
 typeCheckExpr (L loc (UExprVar v)) = do
-    (L _ (AVariable tvar ttype)) <- typeCheckVariable (L loc v)
-    return (L loc $ AExpr (TExprVar tvar) ttype)
+    AVariable tvar ttype <- typeCheckVariable (L loc v)
+    return $ AExpr (TExprVar tvar) ttype
 -- UExprFun
 typeCheckExpr (L loc (UExprFun f)) = do
-    (L _ (AFuncCall tfun ttype)) <- typeCheckFunc (L loc f)
-    return (L loc $ AExpr (TExprFun tfun) ttype)
+    (AFuncCall tfun (TTypeRetIO ttype)) <- typeCheckFunc (L loc f)
+    return $ AExpr (TExprFun tfun) ttype
 -- UExprSign
 typeCheckExpr (L loc (UExprSign (L _ OpMinus) (L _ (UExprInt i)))) = do
     typeCheckExpr (L loc (UExprInt (-i)))
-typeCheckExpr luexpr@(L loc (UExprSign lop lue1)) = do
-    (L l1 aexpr@(AExpr te1 tt1)) <- typeCheckExpr lue1
+typeCheckExpr luexpr@(L _ (UExprSign lop lue1)) = do
+    aexpr@(AExpr te1 tt1) <- typeCheckExpr lue1
     if (AType tt1) /= (AType TTypeInt) && (AType tt1) /= (AType TTypeUnknown)
        then do
            tcSignExprErr luexpr (AType tt1)
-           return (L loc $ AExpr unknown_expr TTypeUnknown)
+           return $ AExpr unknown_expr TTypeUnknown
        else do
            if (unLoc lop) == OpPlus
-              then return (L loc aexpr)
-              else return (L loc $ AExpr (TExprMinus (L l1 te1)) tt1)
+              then return aexpr
+              else return $ AExpr (TExprMinus te1) tt1
 -- UExprParen
 typeCheckExpr (L _ (UExprParen luexpr)) =
     typeCheckExpr luexpr
 -- UExprOp
-typeCheckExpr luexpr@(L loc (UExprOp lue1 lop lue2)) = do
-    (L l1 (AExpr te1 tt1)) <- typeCheckExpr lue1
-    (L l2 (AExpr te2 tt2)) <- typeCheckExpr lue2
-    let lte1 = L l1 te1
-        lte2 = L l2 te2
+typeCheckExpr luexpr@(L _ (UExprOp lue1 lop lue2)) = do
+    AExpr te1 tt1 <- typeCheckExpr lue1
+    AExpr te2 tt2 <- typeCheckExpr lue2
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
-       then return (L loc $ AExpr unknown_expr TTypeUnknown)
+       then return $ AExpr unknown_expr TTypeUnknown
        else do
            int_or_byte <- isIntOrByte luexpr (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
                   case test tt1 tt2 of
                        Just Eq -> do
-                           return (L loc $ AExpr (TExprOp lte1 lop lte2) tt1)
+                           return $ AExpr (TExprOp te1 (unLoc lop) te2) tt1
                        Nothing -> do
                            tcOpExprErr luexpr (AType tt1) (AType tt2)
-                           return (L loc $ AExpr unknown_expr TTypeUnknown)
+                           return $ AExpr unknown_expr TTypeUnknown
               else do
-                  return (L loc $ AExpr unknown_expr TTypeUnknown)
+                  return $ AExpr unknown_expr TTypeUnknown
 
 -- ---------------------------
 -- Check if expressions is of either type int or char
@@ -347,7 +351,7 @@ isIntOrByte' (L loc uexpr) ue at = do
 
 -- Return an expression with unknown type
 unknown_expr :: TExpr ()
-unknown_expr = (TExprVar (TVar "unknown" TTypeUnknown))
+unknown_expr = TExprVar unknown_var
 
 -- Check for integer overflows
 tcCheckIntOverflow :: Located Integer -> Int32 -> TcM ()
@@ -380,39 +384,39 @@ tcSignExprErr _ _ = panic "TypeCheck.tcSignExprErr got unexpected input"
 -- -------------------------------------------------------------------
 -- TypeCheck UCond
 
-typeCheckCond :: Located UCond -> TcM (Located TCond)
+typeCheckCond :: Located UCond -> TcM (ACond)
 -- UCondTrue
-typeCheckCond (L loc UCondTrue) = do
-    return (L loc TCondTrue)
+typeCheckCond (L _ UCondTrue) = do
+    return $ ACond TCondTrue
 -- UCondFalse
-typeCheckCond (L loc UCondFalse) = do
-    return (L loc TCondFalse)
+typeCheckCond (L _ UCondFalse) = do
+    return $ ACond TCondFalse
 -- UCondNot
-typeCheckCond (L loc (UCondNot lucond)) = do
-    ltcond <- typeCheckCond lucond
-    return (L loc (TCondNot ltcond))
-typeCheckCond lucond@(L loc (UCondOp lue1 lop lue2)) = do
-    lae1@(L _ (AExpr _ tt1)) <- typeCheckExpr lue1
-    lae2@(L _ (AExpr _ tt2)) <- typeCheckExpr lue2
+typeCheckCond (L _ (UCondNot lucond)) = do
+    ACond tcond <- typeCheckCond lucond
+    return $ ACond (TCondNot tcond)
+typeCheckCond lucond@(L _ (UCondOp lue1 lop lue2)) = do
+    AExpr te1 tt1 <- typeCheckExpr lue1
+    AExpr te2 tt2 <- typeCheckExpr lue2
     if (AType tt1) == (AType TTypeUnknown) || (AType tt2) == (AType TTypeUnknown)
-       then return (L loc TCondFalse)
+       then return $ ACond TCondFalse
        else do
            int_or_byte <- isIntOrByte lucond (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
                   case test tt1 tt2 of
                        Just Eq -> do
-                           return (L loc $ TCondOp lae1 lop lae2)
+                           return $ ACond (TCondOp te1 (unLoc lop) te2)
                        Nothing -> do
                            tcOpCondErr lucond (AType tt1) (AType tt2)
-                           return (L loc TCondFalse)
+                           return $ ACond TCondFalse
               else do
-                  return (L loc TCondFalse)
+                  return $ ACond TCondFalse
 -- UCondLog
-typeCheckCond (L loc (UCondLog luc1 lop luc2)) = do
-    ltc1 <- typeCheckCond luc1
-    ltc2 <- typeCheckCond luc2
-    return (L loc $ TCondLog ltc1 lop ltc2)
+typeCheckCond (L _ (UCondLog luc1 lop luc2)) = do
+    ACond tc1 <- typeCheckCond luc1
+    ACond tc2 <- typeCheckCond luc2
+    return $ ACond (TCondLog tc1 (unLoc lop) tc2)
 
 -- ---------------------------
 -- Error when the types of expressions on TCondOp are different
@@ -428,17 +432,17 @@ tcOpCondErr _ _ _ = panic "TypeCheck.tcOpCondErr got unexpected input"
 -- -------------------------------------------------------------------
 -- TypeCheck UVariable
 
-typeCheckVariable :: Located UVariable -> TcM (Located AVariable)
+typeCheckVariable :: Located UVariable -> TcM AVariable
 -- UVar
 typeCheckVariable (L loc (UVar ide)) = do
     m_var_info <- getVarM (L loc ide)
     ide' <- getVarNameM m_var_info
     (AType var_type) <- getVarTypeM m_var_info
-    return (L loc $ AVariable (TVar ide' var_type) var_type)
+    return $ AVariable (TVar ide' var_type) var_type
 -- UVarArray
-typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
-    (L aeloc (AExpr texpr expr_type)) <- typeCheckExpr luexpr
-    (L var_loc (AVariable tvar var_type)) <- typeCheckVariable luvar
+typeCheckVariable luarr@(L _ (UVarArray luvar luexpr)) = do
+    AExpr texpr expr_type <- typeCheckExpr luexpr
+    AVariable tvar var_type <- typeCheckVariable luvar
     let exprIsInt     = (AType expr_type) == (AType TTypeInt)
         exprIsUnknown = (AType expr_type) == (AType TTypeUnknown)
         varIsArray    = atypeIsArray (AType var_type)
@@ -450,14 +454,13 @@ typeCheckVariable luarr@(L loc (UVarArray luvar luexpr)) = do
     if exprIsInt && varIsArray
        then do
            (AType ptr_type) <- return $ getPointer (AType var_type)
-           let lexpr' = L aeloc texpr
            case (test expr_type TTypeInt, test var_type (TTypePtr ptr_type)) of
              (Just Eq, Just Eq) ->
-                 return (L loc $ AVariable (TVarArray (L var_loc tvar) lexpr') ptr_type)
+                 return $ AVariable (TVarArray tvar texpr) ptr_type
              _ ->
                  panic "test in TypeCheck.typeCheckVariable had to return Eq"
        else do
-           return (L loc $ AVariable unknown_var TTypeUnknown)
+           return $ AVariable unknown_var TTypeUnknown
 
 -- ---------------------------
 -- Check if a given AType is of TTypePtr
@@ -495,27 +498,27 @@ tcArrayVarErr _ _ = panic "TypeCheck.tcArrayVarErr got unexpected input"
 -- -------------------------------------------------------------------
 -- TypeCheck UType
 
-typeCheckType :: Located UType -> TcM (Located AType)
+typeCheckType :: Located UType -> TcM AType
 -- UTypeInt
-typeCheckType (L loc UTypeInt) =
-    return (L loc $ AType TTypeInt)
+typeCheckType (L _ UTypeInt) =
+    return $ AType TTypeInt
 -- UTypeChar
-typeCheckType (L loc UTypeChar) =
-    return (L loc $ AType TTypeChar)
+typeCheckType (L _ UTypeChar) =
+    return $ AType TTypeChar
 -- UTypeProc
-typeCheckType (L loc UTypeProc) =
-    return (L loc $ AType TTypeProc)
+typeCheckType (L _ UTypeProc) =
+    return $ AType TTypeProc
 -- UTypePtr
-typeCheckType (L loc (UTypePtr utype)) = do
-    (L _ (AType ttype)) <- typeCheckType (L wiredInSrcSpan utype)
-    return (L loc $ AType (TTypePtr ttype))
+typeCheckType (L _ (UTypePtr utype)) = do
+    AType ttype <- typeCheckType (L wiredInSrcSpan utype)
+    return $ AType (TTypePtr ttype)
 
 
 -- -------------------------------------------------------------------
 -- TypeCheck UFuncCall
 
-typeCheckFunc :: Located UFuncCall -> TcM (Located AFuncCall)
-typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
+typeCheckFunc :: Located UFuncCall -> TcM AFuncCall
+typeCheckFunc lufunc@(L _ (UFuncCall lide lupars)) = do
     m_fun_info <- getFuncM lide
     lide' <- liftM (L (getLoc lide)) (getFuncNameM m_fun_info)
     ret_type <- getFuncRetTypeM m_fun_info
@@ -528,22 +531,24 @@ typeCheckFunc lufunc@(L loc (UFuncCall lide lupars)) = do
            if given_len /= expec_len
               then do
                   tcParLenErr lufunc given_len expec_len
-                  return (L loc $ AFuncCall (TFuncCall lide' TTypeUnknown) TTypeUnknown)
+                  return $ AFuncCall (TFuncCall lide' (TTypeRetIO TTypeUnknown))
+                                (TTypeRetIO TTypeUnknown)
               else do
-                  tcFunPar (loc, (lide',lide), ret_type)
+                  tcFunPar ((lide',lide), ret_type)
                         (reverse lupars, reverse apar_type) id given_len
        else do
-           return (L loc $ AFuncCall (TFuncCall lide' TTypeUnknown) TTypeUnknown)
+           return $ AFuncCall (TFuncCall lide' (TTypeRetIO TTypeUnknown))
+                        (TTypeRetIO TTypeUnknown)
 
 -- ---------------------------
 -- Type Check function parameters
-tcFunPar :: (SrcSpan, (LIde,LIde), AType) -> ([Located UExpr], [(AType,Mode)])
-         -> (AType -> AType) -> Int -> TcM (Located AFuncCall)
-tcFunPar (loc, (fname,_), (AType ftype)) ([],[]) type_fn _ = do
-    AType ftype' <- return $ type_fn (AType ftype)
-    return (L loc $ AFuncCall (TFuncCall fname ftype') ftype')
-tcFunPar f_info@(_, (_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt = do
-    L aeloc aexpr@(AExpr texpr ttype) <- typeCheckExpr lupar
+tcFunPar :: ((LIde,LIde), AType) -> ([Located UExpr], [(AType,Mode)])
+         -> (ATypeF -> ATypeF) -> Int -> TcM AFuncCall
+tcFunPar ((fname,_), (AType ftype)) ([],[]) type_fn _ = do
+    ATypeF ftype' <- return $ type_fn (ATypeF $ TTypeRetIO ftype)
+    return $ AFuncCall (TFuncCall fname ftype') ftype'
+tcFunPar f_info@((_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt = do
+    aexpr@(AExpr texpr ttype) <- typeCheckExpr lupar
     AExpr texpr' ttype' <-
         if (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)))
            then do
@@ -559,12 +564,12 @@ tcFunPar f_info@(_, (_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn 
                         return aexpr
                     (ModeByVal, _, _) -> return aexpr
     -- type check the rest parameters
-    let type_fn' = (\(AType rtype) -> AType (TTypeFunc ttype' rtype)) . type_fn
-    (L rest_loc (AFuncCall rest (TTypeFunc ctype rtype))) <-
+    let type_fn' = (\(ATypeF rtype) -> ATypeF (TTypeFunc ttype' rtype)) . type_fn
+    AFuncCall rest (TTypeFunc ctype rtype) <-
                 tcFunPar f_info (lupars,ptypes) type_fn' (cnt-1)
     case test ttype' ctype of
          Just Eq ->
-             return (L aeloc $ AFuncCall (TParamCall texpr' (L rest_loc rest)) rtype)
+             return $ AFuncCall (TParamCall texpr' rest) rtype
          Nothing ->
              panic "test in TypeCheck.tcFunPar had to return Eq"
 tcFunPar _ _ _ _ = panic "TypeCheck.tcFunPar got unexpected input"

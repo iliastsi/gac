@@ -24,6 +24,7 @@ import DynFlags
 import ModeFlags
 import SysTools
 import LambdaLift
+import LlvmCodeGen
 
 import System.Exit
 import System.Environment
@@ -32,6 +33,7 @@ import Data.List
 import Data.Maybe
 import Control.Monad (when)
 import qualified Data.ByteString as BS
+import LLVM.Core
 
 
 -- ---------------------------
@@ -142,7 +144,7 @@ driverTypeCheck postLoadMode dflags p_messages luast = do
          TcFailed msg         -> do
              printMessages dflags msg
              exitFailure
-         TcOk tc_state' ltast -> do
+         TcOk tc_state' tast -> do
              let tc_messages  = (getTcMessages tc_state')
                  tc_messages' = unionMessages p_messages tc_messages
              if errorsFound tc_messages' ||
@@ -151,14 +153,17 @@ driverTypeCheck postLoadMode dflags p_messages luast = do
                     printMessages dflags tc_messages'
                     exitFailure
                 else do
-                    driverCodeGen postLoadMode dflags tc_messages' ltast
+                    driverCodeGen postLoadMode dflags tc_messages' tast
 
 -- ---------------------------
 -- generate llvm code and return
 -- the produced object file (if any)
-driverCodeGen :: PostLoadMode -> DynFlags -> Messages -> (Located TAst) -> IO (Maybe String)
-driverCodeGen _postLoadMode dflags tc_messages ltast = do
-    let _ = lambdaLift ltast
+driverCodeGen :: PostLoadMode -> DynFlags -> Messages -> TAst -> IO (Maybe String)
+driverCodeGen _postLoadMode dflags tc_messages tast = do
+    let tast' = lambdaLift tast
+    mFoo <- newModule
+    defineModule mFoo (compile tast')
+--    writeBitcodeToFile "foo.br" mFoo
     printMessages dflags tc_messages
     return Nothing
 
