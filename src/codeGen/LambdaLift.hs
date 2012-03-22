@@ -61,9 +61,18 @@ disFunDef _ = panic "LambdaLift.disFunDef got unexpected input"
 -- Turn pamaters to FreeVars
 paramToFreeVar :: forall a. (TDefFun a) -> [FreeVar] -> [FreeVar]
 paramToFreeVar (TDefPar lide atype tdefs) acc =
-    paramToFreeVar tdefs ((unLoc lide, AType atype):acc)
+    if atypeIsArray (AType atype)
+       -- since our variable is already an array return it as it is
+       then paramToFreeVar tdefs ((unLoc lide, AType atype):acc)
+       -- else return a ptr
+       else paramToFreeVar tdefs ((unLoc lide, AType $ TTypePtr atype):acc)
 paramToFreeVar (TDefFun {}) acc = acc
 paramToFreeVar _ _ = panic "LambdaLift.paramToFreeVar got unexpected input"
+
+-- Check if a given AType is of TTypePtr
+atypeIsArray :: AType -> Bool
+atypeIsArray (AType (TTypePtr _)) = True
+atypeIsArray _ = False
 
 -- Change the function definition to contain the free variables
 chFunDef :: ADefFun -> [FreeVar] -> (Located Ide, [ADefVar], TStmt) -> ADefFun
@@ -90,8 +99,10 @@ chFunDef _ _ _ = panic "LambdaLift.chFunDef got unexpected input"
 -- Return first the variables, then the lifted functions
 liftDefs :: [ADef] -> ([ADefVar], [ADefFun], Env) -> ([ADefVar], [ADefFun])
 liftDefs ((Right adef@(ADefVar (TDefVar lide atype) _)):adefs) (var_acc, fun_acc, (evars, efuns)) =
-    liftDefs adefs (adef:var_acc, fun_acc, ((unLoc lide, AType atype):evars, efuns))
+    -- return the free variable as an array
+    liftDefs adefs (adef:var_acc, fun_acc, ((unLoc lide, AType $ TTypePtr atype):evars, efuns))
 liftDefs ((Right adef@(ADefVar (TDefArr tdef _) _)):adefs) (var_acc, fun_acc, (evars, efuns)) =
+    -- return the free variable as it is (it is already an array)
     let (array, arr_type) = getArrayVar tdef in
     liftDefs adefs (adef:var_acc, fun_acc, ((array, AType $ TTypePtr arr_type):evars, efuns))
 liftDefs ((Left fundef):adefs) (var_acc, fun_acc, env@(evars, efuns)) =
