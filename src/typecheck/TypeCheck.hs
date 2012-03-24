@@ -40,7 +40,6 @@ import DynFlags
 import ErrUtils (MsgCode(..))
 
 import Data.Int
-import Data.Word
 import Data.Char
 import Control.Monad
 
@@ -118,8 +117,7 @@ tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types =
 --  TypeCheck Array Types
 tcArrType :: Located UParam -> Located UType -> TcM AType
 tcArrType luparam (L _ (UTypeArr lutype lsize)) = do
-    let size' = fromIntegral (unLoc lsize)
-    tcCheckArraySize luparam lsize size'
+    size' <- tcCheckArraySize luparam lsize
     AType atype <- tcArrType luparam lutype
     return $ AType $ TTypeArray atype size'
 tcArrType _ lutype = typeCheckType lutype
@@ -131,25 +129,29 @@ tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
     lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
     return $ ADefVar (TDefVar lide' ftype) ftype
 tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
-    let size'  = fromIntegral (unLoc lsize)
-    tcCheckArraySize ludef lsize size'
+    size' <- tcCheckArraySize ludef lsize
     let type_fn' = type_fn . (\(AType ttype) -> AType (TTypeArray ttype size'))
     ADefVar var_def var_type <- tcVarDef luarr type_fn'
     return $ ADefVar (TDefArr var_def size') (TTypeArray var_type size')
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check if array size is positive
-tcCheckArraySize :: (Show a) => Located a -> Located Integer -> Word32 -> TcM ()
-tcCheckArraySize (L ldef udef) (L loc origin) rounded = do
+tcCheckArraySize :: (Show a) => Located a -> Located Integer -> TcM Int32
+tcCheckArraySize (L ldef udef) (L loc origin) = do
     flags <- getDynFlags
     let max_bound = toInteger (maxBound :: Int32)
     if origin <= 0
-       then addTypeError ldef (ArrSizeError $ show udef)
-              ("Array size must be a positive integer")
+       then do
+           addTypeError ldef (ArrSizeError $ show udef)
+                ("Array size must be a positive integer")
+           return 1
        else do
-           when ((origin > max_bound) && dopt Opt_WarnTypeOverflows flags) $
-               addTypeWarning loc (OverflowError $ show origin)
-                 ("Integer has been rounded to `" ++ show rounded ++ "'")
+           if ((origin > max_bound) && dopt Opt_WarnTypeOverflows flags)
+              then do
+                  addTypeWarning loc (OverflowError $ show origin)
+                        ("Integer has been rounded to `" ++ show max_bound ++ "'")
+                  return maxBound
+              else return $ fromIntegral origin
 
 -- ---------------------------
 -- Error when functions doesn't return a value
@@ -332,12 +334,10 @@ typeCheckExpr luexpr@(L _ (UExprOp lue1 lop lue2)) = do
            int_or_byte <- isIntOrByte luexpr (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
-                  case (test tt1 tt2, test tt1 TTypeInt, test tt1 TTypeChar) of
-                       (Just Eq, Just Eq, Nothing) -> do
-                           return $ AExpr (TExprIntOp te1 (unLoc lop) te2) tt1
-                       (Just Eq, Nothing, Just Eq) -> do
-                           return $ AExpr (TExprChrOp te1 (unLoc lop) te2) tt1
-                       _ -> do
+                  case test tt1 tt2 of
+                       Just Eq -> do
+                           return $ AExpr (TExprOp te1 (unLoc lop) te2) tt1
+                       Nothing -> do
                            tcOpExprErr luexpr (AType tt1) (AType tt2)
                            return $ AExpr unknown_expr TTypeUnknown
               else do
@@ -418,12 +418,10 @@ typeCheckCond lucond@(L _ (UCondOp lue1 lop lue2)) = do
            int_or_byte <- isIntOrByte lucond (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
-                  case (test tt1 tt2, test tt1 TTypeInt, test tt1 TTypeChar) of
-                       (Just Eq, Just Eq, Nothing) -> do
-                           return $ ACond (TCondIntOp te1 (unLoc lop) te2)
-                       (Just Eq, Nothing, Just Eq) -> do
-                           return $ ACond (TCondChrOp te1 (unLoc lop) te2)
-                       _ -> do
+                  case test tt1 tt2 of
+                       Just Eq -> do
+                           return $ ACond (TCondOp te1 (unLoc lop) te2)
+                       Nothing -> do
                            tcOpCondErr lucond (AType tt1) (AType tt2)
                            return $ ACond TCondFalse
               else do

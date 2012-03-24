@@ -172,9 +172,9 @@ liftCall (AFuncCall (TFuncCall lide _) _) [] type_fn frtype =
          ATypeF ftype -> AFuncCall (TFuncCall lide ftype) ftype
 
 -- Return the type of a TExpr
-getExprType :: TExpr a -> TType a
-getExprType _ = undefined
+getExprType :: (Type a) => TExpr a -> TType a
+getExprType _ = theType
 
 -- Return the type of a TFuncCall
-getFunType :: TFuncCall a -> TType a
-getFunType _ = undefined
+getFunType :: (Type a) => TFuncCall a -> TType a
+getFunType _ = theType

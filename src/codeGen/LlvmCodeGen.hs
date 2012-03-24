@@ -79,7 +79,7 @@ compileDefVar (ADefVar (TDefVar lide vtype) _) =
          _ -> panic "LlvmCodeGen.compileDefVar test had to return Eq"
 
 -- Helper function to allocate memory
-cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a) =>
+cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a, Type a) =>
             Ide -> TType a -> CodeGenFunction r ValueEnv
 cmpVarAlloc ide vtype = do
     (t::Value (Ptr a)) <- alloca
@@ -192,17 +192,15 @@ compileExpr env (TExprMinus texpr) = do
     t1 <- compileExpr env texpr
     t2 <- return $ valueOf (0::Int32)
     sub t2 t1
--- TExprIntOp
-compileExpr env (TExprIntOp e1 op e2) = do
+-- TExprOp
+compileExpr env (TExprOp e1 op e2) = do
     t1 <- compileExpr env e1
     t2 <- compileExpr env e2
-    cmpArithOp op t1 t2
--- TExprChrOp
-compileExpr env (TExprChrOp e1 op e2) = do
-    t1 <- compileExpr env e1
-    t2 <- compileExpr env e2
-    cmpArithOp op t1 t2
-
+    let tt1 = getExprType e1
+    case (test tt1 TTypeInt, test tt1 TTypeChar) of
+         (Just Eq, Nothing) -> cmpArithOp op t1 t2
+         (Nothing, Just Eq) -> cmpArithOp op t1 t2
+         _ -> panic "LlvmCodeGen.compileExpr test had to return Eq"
 
 -- Arithmetic operations
 cmpArithOp :: (IsInteger a) => Op -> Value a -> Value a -> CodeGenFunction r (Value a)
@@ -212,6 +210,10 @@ cmpArithOp OpTimes = mul
 cmpArithOp OpDiv   = idiv
 cmpArithOp OpMod   = irem
 cmpArithOp _ = panic "LlvmCodeGen.cmpArithOp got unexpected input"
+
+-- Return the type of a TExpr
+getExprType :: (Type a) => TExpr a -> TType a
+getExprType _ = theType
 
 
 -- -------------------------------------------------------------------
@@ -225,16 +227,15 @@ compileCond _ TCondFalse = return $ valueOf False
 compileCond env (TCondNot tcond) = do
     t1 <- compileCond env tcond
     xor t1 True
--- TCondIntOp
-compileCond env (TCondIntOp e1 op e2) = do
+-- TCondOp
+compileCond env (TCondOp e1 op e2) = do
     t1 <- compileExpr env e1
     t2 <- compileExpr env e2
-    cmpCompOp op t1 t2
--- TCondChrOp
-compileCond env (TCondChrOp e1 op e2) = do
-    t1 <- compileExpr env e1
-    t2 <- compileExpr env e2
-    cmpCompOp op t1 t2
+    let tt1 = getExprType e1
+    case (test tt1 TTypeInt, test tt1 TTypeChar) of
+         (Just Eq, Nothing) -> cmpCompOp op t1 t2
+         (Nothing, Just Eq) -> cmpCompOp op t1 t2
+         _ -> panic "LlvmCodeGen.compileCond test had to return Eq"
 -- TCondLog
 compileCond env tcond@(TCondLog {}) =
     cmpLogOp env tcond
