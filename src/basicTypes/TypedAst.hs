@@ -128,11 +128,23 @@ instance Show AType where
     show (AType TTypeInt)     = "int"
     show (AType TTypeChar)    = "byte"
     show (AType TTypeProc)    = "proc"
-    show (AType (TTypePtr t)) = "array of " ++ show (AType t)
+    show (AType (TTypePtr t)) = showType t ++ " " ++ showArray (TTypePtr t)
     show (AType TTypeUnknown) = "unknown"
     show (AType (TTypeArray a s)) =
-        show (AType a) ++ "[" ++ show s ++ "]"
+            showType a ++ " " ++ showArray (TTypeArray a s)
     show (AType _)            = panic "TypedAst.show got unexpected input"
+
+showType :: (IsFirstClass a, Type a) => TType a -> String
+showType (TTypeArray t _) = showType t
+showType (TTypePtr t) = showType t
+showType t = show $ AType t
+
+showArray :: (IsFirstClass a, Type a) => TType a -> String
+showArray (TTypeArray a s) =
+    "[" ++ show s ++ "]" ++ showArray a
+showArray (TTypePtr a) =
+    "(*)" ++ showArray a
+showArray _ = ""
 
 -- ---------------------------
 data TFuncCall a where

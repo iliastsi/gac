@@ -2,19 +2,19 @@ libfail002.alan:6:3: Error: Type mismatch at `b = readInteger();'
 	Lvalue is of type `byte' but Rvalue is of type `int'
 
 libfail002.alan:7:3: Error: Type mismatch at `s = readInteger();'
-	Lvalue is of type `byte[42]' but Rvalue is of type `int'
+	Lvalue is of type `byte [42]' but Rvalue is of type `int'
 
 libfail002.alan:9:3: Error: Type mismatch at `i = readByte();'
 	Lvalue is of type `int' but Rvalue is of type `byte'
 
 libfail002.alan:10:3: Error: Type mismatch at `s = readByte();'
-	Lvalue is of type `byte[42]' but Rvalue is of type `byte'
+	Lvalue is of type `byte [42]' but Rvalue is of type `byte'
 
 libfail002.alan:12:3: Error: Type mismatch at `i = readChar();'
 	Lvalue is of type `int' but Rvalue is of type `byte'
 
 libfail002.alan:13:3: Error: Type mismatch at `s = readChar();'
-	Lvalue is of type `byte[42]' but Rvalue is of type `byte'
+	Lvalue is of type `byte [42]' but Rvalue is of type `byte'
 
 libfail002.alan:15:14: Error: Type mismatch at `b'
 	Incompatible type of argument 1 of function `readString'
@@ -22,15 +22,15 @@ libfail002.alan:15:14: Error: Type mismatch at `b'
 
 libfail002.alan:16:14: Error: Type mismatch at `s'
 	Incompatible type of argument 1 of function `readString'
-	Expected `int' but argument is of type `byte[42]'
+	Expected `int' but argument is of type `byte [42]'
 
 libfail002.alan:17:17: Error: Type mismatch at `i'
 	Incompatible type of argument 2 of function `readString'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail002.alan:18:17: Error: Type mismatch at `b'
 	Incompatible type of argument 2 of function `readString'
-	Expected `array of byte' but argument is of type `byte'
+	Expected `byte (*)' but argument is of type `byte'
 
 libfail002.alan:19:3: Error: Type mismatch at `readString(i)'
 	The function `readString' is applied to 1 parameters but its type has 2

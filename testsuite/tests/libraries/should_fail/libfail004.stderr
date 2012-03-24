@@ -1,31 +1,31 @@
 libfail004.alan:5:14: Error: Type mismatch at `42'
 	Incompatible type of argument 1 of function `strlen'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail004.alan:6:7: Error: Type mismatch at `strlen(s, 42)'
 	The function `strlen' is applied to 2 parameters but its type has 1
 
 libfail004.alan:7:3: Error: Type mismatch at `s = strlen(s);'
-	Lvalue is of type `byte[42]' but Rvalue is of type `int'
+	Lvalue is of type `byte [42]' but Rvalue is of type `int'
 
 libfail004.alan:9:17: Error: Type mismatch at `i'
 	Incompatible type of argument 2 of function `strcmp'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail004.alan:10:3: Error: Type mismatch at `s = strcmp(s, s);'
-	Lvalue is of type `byte[42]' but Rvalue is of type `int'
+	Lvalue is of type `byte [42]' but Rvalue is of type `int'
 
 libfail004.alan:12:10: Error: Type mismatch at `i'
 	Incompatible type of argument 1 of function `strcpy'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail004.alan:13:10: Error: Type mismatch at `i'
 	Incompatible type of argument 1 of function `strcpy'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail004.alan:13:13: Error: Type mismatch at `i'
 	Incompatible type of argument 2 of function `strcpy'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 
 libfail004.alan:14:3: Error: Type mismatch at `strcpy(i, i, s)'
 	The function `strcpy' is applied to 3 parameters but its type has 2
@@ -35,5 +35,5 @@ libfail004.alan:16:3: Error: Type mismatch at `i = strcat(s, i);'
 
 libfail004.alan:16:17: Error: Type mismatch at `i'
 	Incompatible type of argument 2 of function `strcat'
-	Expected `array of byte' but argument is of type `int'
+	Expected `byte (*)' but argument is of type `int'
 

@@ -1,10 +1,10 @@
 tcfail019.alan:4:8-19: Error: Type mismatch at `f :  int[][5]'
 	Array parameters have to be passed by reference
 
-tcfail019.alan:14:3-17: Error: Type mismatch at `i[1][2] = i[1];'
-	Lvalue is of type `int' but Rvalue is of type `int[4]'
+tcfail019.alan:16:3-17: Error: Type mismatch at `i[1][2] = i[1];'
+	Lvalue is of type `int' but Rvalue is of type `int [5]'
 
-tcfail019.alan:18:8: Error: Type mismatch at `i'
+tcfail019.alan:20:8: Error: Type mismatch at `i'
 	Incompatible type of argument 1 of function `foo4'
-	Expected `array of int[7]' but argument is of type `int[4][5]'
+	Expected `int (*)[7]' but argument is of type `int [4][5]'
 

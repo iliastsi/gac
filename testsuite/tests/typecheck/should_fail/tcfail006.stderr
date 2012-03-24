@@ -5,5 +5,5 @@ tcfail006.alan:8:3: Error: Type mismatch at `b = i + 6;'
 	Lvalue is of type `byte' but Rvalue is of type `int'
 
 tcfail006.alan:9:3: Error: Type mismatch at `a = i;'
-	Lvalue is of type `int[5]' but Rvalue is of type `int'
+	Lvalue is of type `int [5]' but Rvalue is of type `int'
 

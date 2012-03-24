@@ -9,6 +9,8 @@ MulDimArray() : proc
   {}
   foo4(f : reference int[][7]) : proc
   {}
+  foo5(f : reference int[5]) : proc
+  {}
 {
   i[1][2] = 42;
   i[1][2] = i[1];
@@ -16,4 +18,5 @@ MulDimArray() : proc
   foo2(i);
   foo3(i);
   foo4(i);
+  foo5(i[3]);
 }

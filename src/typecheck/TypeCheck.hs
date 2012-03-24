@@ -118,8 +118,14 @@ tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types =
 tcArrType :: Located UParam -> Located UType -> TcM AType
 tcArrType luparam (L _ (UTypeArr lutype lsize)) = do
     size' <- tcCheckArraySize luparam lsize
-    AType atype <- tcArrType luparam lutype
-    return $ AType $ TTypeArray atype size'
+    atype <- tcArrType luparam lutype
+    case atype of
+         AType (TTypeArray tt s) ->
+             return $ AType $ TTypeArray (TTypeArray tt size') s
+         AType (TTypePtr tt) ->
+             return $ AType $ TTypePtr (TTypeArray tt size')
+         AType tt ->
+             return $ AType $ TTypeArray tt size'
 tcArrType _ lutype = typeCheckType lutype
 
 -- Type Check variable definitions
@@ -130,7 +136,7 @@ tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
     return $ ADefVar (TDefVar lide' ftype) ftype
 tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
     size' <- tcCheckArraySize ludef lsize
-    let type_fn' = type_fn . (\(AType ttype) -> AType (TTypeArray ttype size'))
+    let type_fn' = (\(AType ttype) -> AType (TTypeArray ttype size')) . type_fn
     ADefVar var_def var_type <- tcVarDef luarr type_fn'
     return $ ADefVar (TDefArr var_def size') (TTypeArray var_type size')
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
