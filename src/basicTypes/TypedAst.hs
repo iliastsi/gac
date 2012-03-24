@@ -32,12 +32,13 @@ type ADef = Either ADefFun ADefVar
 
 -- ---------------------------
 data TDefFun a where
-    TDefFun  :: (IsFirstClass a) => LIde -> TType a -> [Either ADefFun ADefVar]
-                                 -> TStmt -> TDefFun (IO a)
-    TDefPar  :: (IsFirstClass a, IsFunction b) => LIde -> TType a
-                                 -> TDefFun b -> TDefFun (a->b)
-    TDefFunL :: (IsFirstClass a) => LIde -> TType a -> [ADefVar]
-                                 -> TStmt -> TDefFun (IO a)
+    TDefFun  :: (IsFirstClass a) =>
+             LIde -> TType a -> [Either ADefFun ADefVar] -> TStmt -> TDefFun (IO a)
+    TDefPar  :: (IsFirstClass a, IsFunction b) =>
+             LIde -> TType a -> TDefFun b -> TDefFun (a->b)
+    -- after LambdaLift we should have this instead of TDefFun
+    TDefFunL :: (IsFirstClass a) =>
+             LIde -> TType a -> [ADefVar] -> TStmt -> TDefFun (IO a)
 
 data ADefFun = forall a. (IsFunction a) => ADefFun (TDefFun a) (TType a)
 
@@ -65,8 +66,9 @@ data TExpr a where
     TExprString :: String  -> TExpr (Ptr Word8)
     TExprVar    :: (IsFirstClass a) => TVariable a -> TExpr a
     TExprFun    :: (IsFirstClass a) => TFuncCall (IO a) -> TExpr a
-    TExprMinus  :: (IsFirstClass a) => TExpr a -> TExpr a
-    TExprOp     :: (IsFirstClass a) => TExpr a -> Op -> TExpr a -> TExpr a
+    TExprMinus  :: TExpr Int32 -> TExpr Int32
+    TExprIntOp  :: TExpr Int32 -> Op -> TExpr Int32 -> TExpr Int32
+    TExprChrOp  :: TExpr Word8 -> Op -> TExpr Word8 -> TExpr Word8
 
 data AExpr = forall a. (IsFirstClass a) => AExpr (TExpr a) (TType a)
 
@@ -75,7 +77,8 @@ data TCond a where
     TCondTrue  :: TCond Bool
     TCondFalse :: TCond Bool
     TCondNot   :: TCond Bool -> TCond Bool
-    TCondOp    :: (IsFirstClass a) => TExpr a -> Op -> TExpr a -> TCond Bool
+    TCondIntOp :: TExpr Int32 -> Op -> TExpr Int32 -> TCond Bool
+    TCondChrOp :: TExpr Word8 -> Op -> TExpr Word8 -> TCond Bool
     TCondLog   :: TCond Bool -> Op -> TCond Bool -> TCond Bool
 
 data ACond = ACond (TCond Bool)
@@ -91,24 +94,29 @@ data AVariable = forall a. (IsFirstClass a) => AVariable (TVariable a) (TType a)
 
 -- ---------------------------
 data TType a where
-    TTypeInt        :: TType Int32
-    TTypeChar       :: TType Word8
-    TTypeProc       :: TType ()
-    TTypePtr        :: (IsFirstClass a) => TType a -> TType (Ptr a)
-    TTypeUnknown    :: TType ()
-    TTypeFunc       :: (IsFirstClass a, IsFunction b) => TType a -> TType b -> TType (a->b)
-    TTypeRetIO      :: (IsFirstClass a) => TType a -> TType (IO a)
+    TTypeInt     :: TType Int32
+    TTypeChar    :: TType Word8
+    TTypeProc    :: TType ()
+    TTypePtr     :: (IsFirstClass a) => TType a -> TType (Ptr a)
+    TTypeUnknown :: TType ()
+    TTypeFunc    :: (IsFirstClass a, IsFunction b) => TType a -> TType b -> TType (a->b)
+    TTypeRetIO   :: (IsFirstClass a) => TType a -> TType (IO a)
+    TTypeArray   :: (IsFirstClass a) => TType a -> Word32 -> TType (Ptr a)
 
 data AType = forall a. (IsFirstClass a) => AType (TType a)
 
 data ATypeF = forall a. (IsFunction a) => ATypeF (TType a)
 
 instance Eq AType where
-    (AType TTypeUnknown)   == (AType TTypeUnknown)   = True
-    (AType TTypeInt)       == (AType TTypeInt)       = True
-    (AType TTypeChar)      == (AType TTypeChar)      = True
-    (AType TTypeProc)      == (AType TTypeProc)      = True
-    (AType (TTypePtr a))   == (AType (TTypePtr b))   = AType a == AType b
+    (AType TTypeUnknown)      == (AType TTypeUnknown)      = True
+    (AType TTypeInt)          == (AType TTypeInt)          = True
+    (AType TTypeChar)         == (AType TTypeChar)         = True
+    (AType TTypeProc)         == (AType TTypeProc)         = True
+    (AType (TTypePtr a))      == (AType (TTypePtr b))      = AType a == AType b
+    (AType (TTypeArray a sa)) == (AType (TTypeArray b sb)) =
+        (AType a == AType b) && (sa == sb)
+    (AType (TTypeArray a _))  == (AType (TTypePtr b))      = AType a == AType b
+    (AType (TTypePtr a))      == (AType (TTypeArray b _))  = AType a == AType b
     (AType _) == (AType _) = False
 
 instance Eq ATypeF where
@@ -121,12 +129,15 @@ instance Show AType where
     show (AType TTypeProc)    = "proc"
     show (AType (TTypePtr t)) = "array of " ++ show (AType t)
     show (AType TTypeUnknown) = "unknown"
+    show (AType (TTypeArray a s)) =
+        show (AType a) ++ "[" ++ show s ++ "]"
     show (AType _)            = panic "TypedAst.show got unexpected input"
 
 -- ---------------------------
 data TFuncCall a where
     TFuncCall  :: (IsFunction a) => LIde -> TType a -> TFuncCall a
-    TParamCall :: (IsFirstClass a, IsFunction b) => TExpr a -> TFuncCall (a->b) -> TFuncCall b
+    TParamCall :: (IsFirstClass a, IsFunction b) =>
+               TExpr a -> TFuncCall (a->b) -> TFuncCall b
 
 data AFuncCall = forall a. (IsFunction a) => AFuncCall (TFuncCall a) (TType a)
 
@@ -148,6 +159,16 @@ test TTypeUnknown  TTypeUnknown = return Eq
 test (TTypePtr a)  (TTypePtr b) = do
     Eq <- test a b
     return Eq
+test (TTypeArray a _) (TTypePtr b) = do
+    Eq <- test a b
+    return Eq
+test (TTypePtr a) (TTypeArray b _) = do
+    Eq <- test a b
+    return Eq
+test (TTypeArray a sa) (TTypeArray b sb) = do
+    if sa == sb
+       then do Eq <- test a b; return Eq
+       else mzero
 test (TTypeRetIO a) (TTypeRetIO b) = do
     Eq <- test a b
     return Eq

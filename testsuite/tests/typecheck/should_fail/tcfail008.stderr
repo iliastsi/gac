@@ -1,5 +1,5 @@
 tcfail008.alan:7:6: Error: Type mismatch at `a < a'
-	Expected `int' or `byte' but expression `a' is of type `array of int'
+	Expected `int' or `byte' but expression `a' is of type `int[5]'
 
 tcfail008.alan:9:6: Error: Type mismatch at `i != 'a''
 	First argument of `!=' is of type `int'

@@ -24,7 +24,7 @@
 module Lexer (
     ParseResult(..), PState, P(..), mkPState, Token(..),
     failMsgP, failLocMsgP, failSpanMsgP, failSpanTokP, srcParseFail,
-    lexer, lexDummy, getPState,
+    lexer, lexDummy, getPState, getDynFlags,
     getInput, setInput, AlexInput(..),
     getSrcLoc, setSrcLoc,
     getPMessages,
@@ -321,6 +321,10 @@ failSpanTokP span tok msg = P $ \s@(PState{messages=ms}) ->
 
 getPState :: P PState
 getPState = P $ \s -> POk s s
+
+getDynFlags :: P DynFlags
+getDynFlags = P $ \s@(PState{dflags=df}) ->
+                    POk s df
 
 getInput :: P AlexInput
 getInput = P $ \s@(PState{loc=loc, buffer=buffer}) ->

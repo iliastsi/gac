@@ -1,0 +1,3 @@
+MulDimArray() : proc
+  foo(x : reference int[][2]) : proc
+{}

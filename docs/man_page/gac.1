@@ -68,7 +68,7 @@ Alan source code; compile
 
 .SS Language options
 .nh
-\-XNoForwardDeclarations \-XForwardDeclarations
+\-XNoForwardDeclarations \-XForwardDeclarations \-XNoMultiDimArrays \-XMultiDimArrays
 .hy
 
 .SS Warnings
@@ -262,6 +262,12 @@ set the directory for temporary files
 .TP
 \fB\-XForwardDeclarations\fP
 Enable forward declaration for functions
+.rj
+[dynamic]
+
+.TP
+\fB\-XMultiDimArrays\fP
+Enable support for arrays bigger than one dimension
 .rj
 [dynamic]
 

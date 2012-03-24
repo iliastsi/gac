@@ -298,6 +298,7 @@ data UType
     | UTypeChar
     | UTypeProc
     | UTypePtr UType
+    | UTypeArr LUType (Located Integer)
 
 dumpUType :: UType -> String
 dumpUType UTypeInt = "int"
@@ -305,6 +306,8 @@ dumpUType UTypeChar = "byte"
 dumpUType UTypeProc = "proc"
 dumpUType (UTypePtr utype) =
     dumpUType utype ++ "[]"
+dumpUType (UTypeArr lutype lidx) =
+    dumpUType (unLoc lutype) ++ "[" ++ show (unLoc lidx) ++ "]"
 
 -- ---------------------------
 type LUFuncCall = Located UFuncCall

@@ -101,6 +101,7 @@ data DynFlag
 
 data ExtensionFlag
     = Opt_ForwardDecls
+    | Opt_MultiDimArrays
   deriving (Eq, Show)
 
 -- | Contains not only a collection of 'DynFlag's but also a plethora of
@@ -521,7 +522,8 @@ supportedExtensions = [ name' | (name, _, _) <- xFlags, name' <- [name, "No"++na
 -- | These -X<blah> flags can all be reversed with -XNo<blah>
 xFlags :: [FlagSpec ExtensionFlag]
 xFlags = [
-  ( "ForwardDeclarations",          Opt_ForwardDecls, nop)
+  ( "ForwardDeclarations",      Opt_ForwardDecls, nop),
+  ( "MultiDimArrays",           Opt_MultiDimArrays, nop)
   ]
 
 defaultFlags :: [DynFlag]

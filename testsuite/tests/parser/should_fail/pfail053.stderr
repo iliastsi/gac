@@ -1,0 +1,4 @@
+pfail053.alan:2:29: Error: Parse error on input `)'
+	Alan doesn't support arrays bigger than one dimension
+	Use -XMultiDimArrays if you want to enable this
+

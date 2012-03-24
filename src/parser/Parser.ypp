@@ -21,6 +21,7 @@ import Lexer
 import ErrUtils
 import SrcLoc
 import UnTypedAst
+import DynFlags
 }
 
 {-
@@ -154,8 +155,21 @@ fpardef :: { Located UParam }
 
 type :: { Located UType }
     : datatype                      { $1 }
-    | datatype '[' ']'              { LL $ UTypePtr (unLoc $1) }
-    | datatype '[' error            {% missing ']' }
+    | type '[' ']'                  {% case unLoc $1 of
+                                            UTypePtr {} -> notValidArray
+                                            UTypeArr {} -> notValidArray
+                                            _ -> return $ LL $ UTypePtr (unLoc $1) }
+    | type '[' DIGIT ']'            {% do { x <- getDynFlags;
+                                          L digit_span (ITdigit d) <- return $3;
+                                          if xopt Opt_MultiDimArrays x
+                                              then return $ LL $ UTypeArr $1 (sL digit_span d)
+                                              else multiDimError }}
+    | type '[' '-' DIGIT ']'        {% do { x <- getDynFlags;
+                                          L digit_span (ITdigit d) <- return $4;
+                                          if xopt Opt_MultiDimArrays x
+                                              then return $ LL $ UTypeArr $1 (sL digit_span (-d))
+                                              else multiDimError }}
+    | type '[' error                {% missing ']' }
     | error                         {% srcParseFail ("Unknown type" ++
                                            "\n\tYou have to use either int or byte") }
 
@@ -175,19 +189,26 @@ localdefs :: { [Located UDef] }
 
 localdef :: { Located UDef }
     : funcdef                       { $1 }
-    | vardef                        { $1 }
+    | vardef ';'                    { $1 }
+    | vardef error                  {% missing ';' }
     | ID error                      {% srcParseFail ("Probably missing `:' for variable definition" ++
                                                         " or `(' for function definition") }
     | error                         {% srcParseFail "Expected function or variable declaration" }
 
 vardef :: { Located UDef }
-    : vardef2 ';'                   { $1 }
-    | vardef2 '[' DIGIT ']' ';'     { LL $ let (L digit_span (ITdigit d)) = $3 in UDefArr $1 (sL digit_span d) }
-    | vardef2 '[' '-' DIGIT ']' ';' { LL $ let (L digit_span (ITdigit d)) = $4 in UDefArr $1 (sL digit_span (-d)) }
-    | vardef2 '[' DIGIT ']' error   {% missing ';' }
-    | vardef2 '[' DIGIT error       {% missing ']' }
-    | vardef2 '[' error             {% srcParseFail "Expected positive integer for array size" }
-    | vardef2 error                 {% missing ';' }
+    : vardef2                       { $1 }
+    | vardef '[' DIGIT ']'          {% do { x <- getDynFlags;
+                                          L digit_span (ITdigit d) <- return $3;
+                                          case (unLoc $1, xopt Opt_MultiDimArrays x) of
+                                               (UDefArr {}, False) -> multiDimError
+                                               _ -> return $ LL $ UDefArr $1 (sL digit_span d) }}
+    | vardef '[' '-' DIGIT ']'      {% do { x <- getDynFlags;
+                                          L digit_span (ITdigit d) <- return $4;
+                                          case (unLoc $1, xopt Opt_MultiDimArrays x) of
+                                               (UDefArr {}, False) -> multiDimError
+                                               _ -> return $ LL $ UDefArr $1 (sL digit_span (-d)) }}
+    | vardef '[' DIGIT error        {% missing ']' }
+    | vardef '[' error              {% srcParseFail "Expected positive integer for array size" }
 
 vardef2 :: { Located UDef }
     : ID ':' datatype               { LL $ let (L span (ITid i)) = $1 in UDefVar (sL span i) $3 }
@@ -261,9 +282,12 @@ expr :: { Located UExpr }
 
 lvalue :: { Located UVariable }
     : ID                            { L1 $ let (ITid i) = unLoc $1 in UVar i }
-    | ID '[' expr ']'               { LL $ let (L span (ITid i)) = $1 in UVarArray (sL span (UVar i)) $3 }
-    | ID '[' expr error             {% missing ']' }
-    | ID '[' error                  {% notValidExpr }
+    | lvalue '[' expr ']'           {% do { x <- getDynFlags;
+                                          case (unLoc $1, xopt Opt_MultiDimArrays x) of
+                                               (UVarArray {}, False) -> multiDimError
+                                               _ ->  return $ LL $ UVarArray $1 $3 }}
+    | lvalue '[' expr error         {% missing ']' }
+    | lvalue '[' error              {% notValidExpr }
 
 cond :: { Located UCond }
     : TRUE                          { L1 $ UCondTrue }
@@ -337,6 +361,9 @@ notValidExpr = srcParseFail "Not a valid expression"
 notValidCond :: P a
 notValidCond = srcParseFail "Not a valid condition"
 
+notValidArray :: P a
+notValidArray = srcParseFail "Not acceptable array type"
+
 missing :: Char -> P a
 missing c = srcParseFail $ "Probably missing `" ++ [c] ++ "'"
 
@@ -347,4 +374,8 @@ compSymbol (L loc str) =
 condSymbol :: Located String -> P a
 condSymbol (L loc str) =
   failSpanTokP loc str "Cannot use conditional symbols in expressions"
+
+multiDimError :: P a
+multiDimError = srcParseFail $ "Alan doesn't support arrays bigger than one dimension"
+                    ++ "\n\tUse -XMultiDimArrays if you want to enable this"
 }

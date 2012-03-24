@@ -7,5 +7,5 @@ tcfail007.alan:8:7: Error: Type mismatch at `a[5] + 'a''
 	Second argument of `+' is of type `byte'
 
 tcfail007.alan:9:7: Error: Type mismatch at `a + a'
-	Expected `int' or `byte' but expression `a' is of type `array of int'
+	Expected `int' or `byte' but expression `a' is of type `int[5]'
 

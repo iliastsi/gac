@@ -92,7 +92,7 @@ tcParamDef (loc, (fname,lide), AType ftype, ludefs, lustmt) [] par_types = do
     rawCloseScopeM
     return $ ADefFun (TDefFun fname ftype adefs tstmt) (TTypeRetIO ftype)
 tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
-    atype@(AType ptype) <- typeCheckType lutype
+    atype@(AType ptype) <- tcArrType luparam lutype
     lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ptype))
     -- type check the rest parameters
     ADefFun rest rest_type <- tcParamDef f_info luparams ((atype,mode):par_types)
@@ -115,6 +115,15 @@ tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types =
              return $ ADefFun (TDefPar lide' ptype rest)
                         (TTypeFunc ptype rest_type)
 
+--  TypeCheck Array Types
+tcArrType :: Located UParam -> Located UType -> TcM AType
+tcArrType luparam (L _ (UTypeArr lutype lsize)) = do
+    let size' = fromIntegral (unLoc lsize)
+    tcCheckArraySize luparam lsize size'
+    AType atype <- tcArrType luparam lutype
+    return $ AType $ TTypeArray atype size'
+tcArrType _ lutype = typeCheckType lutype
+
 -- Type Check variable definitions
 tcVarDef :: Located UDef -> (AType -> AType) -> TcM ADefVar
 tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
@@ -122,15 +131,15 @@ tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
     lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
     return $ ADefVar (TDefVar lide' ftype) ftype
 tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
-    let type_fn' = type_fn . (\(AType ttype) -> AType (TTypePtr ttype))
-    ADefVar var_def var_type <- tcVarDef luarr type_fn'
     let size'  = fromIntegral (unLoc lsize)
     tcCheckArraySize ludef lsize size'
-    return $ ADefVar (TDefArr var_def size') (TTypePtr var_type)
+    let type_fn' = type_fn . (\(AType ttype) -> AType (TTypeArray ttype size'))
+    ADefVar var_def var_type <- tcVarDef luarr type_fn'
+    return $ ADefVar (TDefArr var_def size') (TTypeArray var_type size')
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check if array size is positive
-tcCheckArraySize :: Located UDef -> Located Integer -> Word32 -> TcM ()
+tcCheckArraySize :: (Show a) => Located a -> Located Integer -> Word32 -> TcM ()
 tcCheckArraySize (L ldef udef) (L loc origin) rounded = do
     flags <- getDynFlags
     let max_bound = toInteger (maxBound :: Int32)
@@ -299,14 +308,17 @@ typeCheckExpr (L loc (UExprSign (L _ OpMinus) (L _ (UExprInt i)))) = do
     typeCheckExpr (L loc (UExprInt (-i)))
 typeCheckExpr luexpr@(L _ (UExprSign lop lue1)) = do
     aexpr@(AExpr te1 tt1) <- typeCheckExpr lue1
-    if (AType tt1) /= (AType TTypeInt) && (AType tt1) /= (AType TTypeUnknown)
-       then do
-           tcSignExprErr luexpr (AType tt1)
-           return $ AExpr unknown_expr TTypeUnknown
-       else do
-           if (unLoc lop) == OpPlus
-              then return aexpr
-              else return $ AExpr (TExprMinus te1) tt1
+    case test tt1 (TTypeInt) of
+         Just Eq ->
+             if (unLoc lop) == OpPlus
+                then return aexpr
+                else return $ AExpr (TExprMinus te1) tt1
+         Nothing ->
+             if (AType tt1) == (AType TTypeUnknown)
+                then return aexpr
+                else do
+                    tcSignExprErr luexpr (AType tt1)
+                    return $ AExpr unknown_expr TTypeUnknown
 -- UExprParen
 typeCheckExpr (L _ (UExprParen luexpr)) =
     typeCheckExpr luexpr
@@ -320,10 +332,12 @@ typeCheckExpr luexpr@(L _ (UExprOp lue1 lop lue2)) = do
            int_or_byte <- isIntOrByte luexpr (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
-                  case test tt1 tt2 of
-                       Just Eq -> do
-                           return $ AExpr (TExprOp te1 (unLoc lop) te2) tt1
-                       Nothing -> do
+                  case (test tt1 tt2, test tt1 TTypeInt, test tt1 TTypeChar) of
+                       (Just Eq, Just Eq, Nothing) -> do
+                           return $ AExpr (TExprIntOp te1 (unLoc lop) te2) tt1
+                       (Just Eq, Nothing, Just Eq) -> do
+                           return $ AExpr (TExprChrOp te1 (unLoc lop) te2) tt1
+                       _ -> do
                            tcOpExprErr luexpr (AType tt1) (AType tt2)
                            return $ AExpr unknown_expr TTypeUnknown
               else do
@@ -404,10 +418,12 @@ typeCheckCond lucond@(L _ (UCondOp lue1 lop lue2)) = do
            int_or_byte <- isIntOrByte lucond (unLoc lue1) (AType tt1) (unLoc lue2) (AType tt2)
            if int_or_byte
               then do
-                  case test tt1 tt2 of
-                       Just Eq -> do
-                           return $ ACond (TCondOp te1 (unLoc lop) te2)
-                       Nothing -> do
+                  case (test tt1 tt2, test tt1 TTypeInt, test tt1 TTypeChar) of
+                       (Just Eq, Just Eq, Nothing) -> do
+                           return $ ACond (TCondIntOp te1 (unLoc lop) te2)
+                       (Just Eq, Nothing, Just Eq) -> do
+                           return $ ACond (TCondChrOp te1 (unLoc lop) te2)
+                       _ -> do
                            tcOpCondErr lucond (AType tt1) (AType tt2)
                            return $ ACond TCondFalse
               else do
@@ -465,12 +481,14 @@ typeCheckVariable luarr@(L _ (UVarArray luvar luexpr)) = do
 -- ---------------------------
 -- Check if a given AType is of TTypePtr
 atypeIsArray :: AType -> Bool
-atypeIsArray (AType (TTypePtr _)) = True
+atypeIsArray (AType (TTypePtr _))  = True
+atypeIsArray (AType TTypeArray {}) = True
 atypeIsArray _ = False
 
 -- Take the pointed type of a TTypePtr
 getPointer :: AType -> AType
-getPointer (AType (TTypePtr p)) = (AType p)
+getPointer (AType (TTypePtr p))     = (AType p)
+getPointer (AType (TTypeArray p _)) = (AType p)
 getPointer _ = panic "TypeCheck.getPointer got unexpected input"
 
 -- Return a variable with unknown type
@@ -512,7 +530,7 @@ typeCheckType (L _ UTypeProc) =
 typeCheckType (L _ (UTypePtr utype)) = do
     AType ttype <- typeCheckType (L wiredInSrcSpan utype)
     return $ AType (TTypePtr ttype)
-
+typeCheckType _ = panic "TypeCheck.typeCheckType got unexpected input"
 
 -- -------------------------------------------------------------------
 -- TypeCheck UFuncCall
@@ -555,8 +573,8 @@ tcFunPar f_info@((_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt
                tcParTypeErr (unLoc lide) lupar cnt ptype (AType ttype)
                return aexpr
            else do
-               case (mode, texpr, AType ttype) of
-                    (ModeByRef, _, AType TTypePtr {}) -> return aexpr
+               case (mode, texpr, atypeIsArray $ AType ttype) of
+                    (ModeByRef, _, True) -> return aexpr
                     (ModeByRef, TExprVar tev, _) ->
                         return (AExpr (TExprVar $ TVarPtr tev) (TTypePtr ttype))
                     (ModeByRef, _, _) -> do

@@ -1,0 +1,19 @@
+MulDimArray() : proc
+  i : int [4][5];
+
+  foo1(f : int[][5]) : proc
+  {}
+  foo2(f : reference int[][5]) : proc
+  { f[1][3] = 42; }
+  foo3(f : reference int[4][5]) : proc
+  {}
+  foo4(f : reference int[][7]) : proc
+  {}
+{
+  i[1][2] = 42;
+  i[1][2] = i[1];
+
+  foo2(i);
+  foo3(i);
+  foo4(i);
+}

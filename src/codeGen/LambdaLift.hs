@@ -72,6 +72,7 @@ paramToFreeVar _ _ = panic "LambdaLift.paramToFreeVar got unexpected input"
 -- Check if a given AType is of TTypePtr
 atypeIsArray :: AType -> Bool
 atypeIsArray (AType (TTypePtr _)) = True
+atypeIsArray (AType TTypeArray {}) = True
 atypeIsArray _ = False
 
 -- Change the function definition to contain the free variables
