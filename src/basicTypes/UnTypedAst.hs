@@ -297,16 +297,15 @@ data UType
     = UTypeInt
     | UTypeChar
     | UTypeProc
-    | UTypePtr UType
-    | UTypeArr LUType (Located Integer)
+    | UTypeArr LUType (Maybe (Located Integer))
 
 dumpUType :: UType -> String
 dumpUType UTypeInt = "int"
 dumpUType UTypeChar = "byte"
 dumpUType UTypeProc = "proc"
-dumpUType (UTypePtr utype) =
-    dumpUType utype ++ "[]"
-dumpUType (UTypeArr lutype lidx) =
+dumpUType (UTypeArr lutype Nothing) =
+    dumpUType (unLoc lutype) ++ "[]"
+dumpUType (UTypeArr lutype (Just lidx)) =
     dumpUType (unLoc lutype) ++ "[" ++ show (unLoc lidx) ++ "]"
 
 -- ---------------------------

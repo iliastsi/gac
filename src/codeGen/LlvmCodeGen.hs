@@ -63,10 +63,11 @@ declareFun' linkage tdef ttype = do
 
 funName :: forall a. (IsFunction a) => TDefFun a -> Ide
 funName (TDefPar _ _ tdef) = funName tdef
-funName (TDefFunL lide _ _ _) = unLoc lide
+funName (TDefFunL ide _ _ _) = ide
 funName _ = panic "LlvmCodeGen.funName got unexpected input"
 
 
+{-
 -- -------------------------------------------------------------------
 -- Compile TDefVar into llvm
 compileDefVar :: ADefVar -> CodeGenFunction r ValueEnv
@@ -285,7 +286,8 @@ cmpLogOp _ _ = panic "LlvmCodeGen.cmpLogOp got unexpected input"
 
 -- -------------------------------------------------------------------
 -- Compile TVariable into llvm
-compileVariable :: Env -> TVariable a -> CodeGenFunction r (Value (Ptr a))
+compileVariable :: (IsFirstClass a, Type a) =>
+                Env -> TVariable a -> CodeGenFunction r (Value (Ptr a))
 -- TVar
 compileVariable (_,var_env) (TVar ide t_type) = do
     case Map.lookup ide var_env of
@@ -295,10 +297,10 @@ compileVariable (_,var_env) (TVar ide t_type) = do
                   Nothing -> panic "LlvmCodeGen.compileVariable test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileVariable lookup returned Nothing"
 -- TVarArray
-compileVariable env (TVarArray tvar offset) = do
-    v_value <- compArray env tvar
-    off_value <- compileExpr env offset
-    getElementPtr v_value (off_value, ())
+compileVariable env tvar@(TVarArray {}) = do
+    let tt1 = getVarType tvar
+        ss1 = getArrSize tt1 1
+    compArray env (AVariable tvar tt1) tt1 (valueOf ss1) (valueOf 0)
 -- TVarPtr
 compileVariable env (TVarPtr tvar) = do
     v_value <- compileVariable env tvar
@@ -308,20 +310,36 @@ compileVariable env (TVarPtr tvar) = do
     return t1
 
 -- We use this function when compiling Arrays
-compArray :: Env -> TVariable a -> CodeGenFunction r (Value a)
-compArray (_,var_env) (TVar ide t_type) = do
+compArray :: (IsFirstClass a, Type a) =>
+          Env -> AVariable -> TType a -> Value Int32 -> Value Int32 -> CodeGenFunction r (Value (Ptr a))
+compArray (_,var_env) (AVariable (TVar ide _) _) t_type _ idx = do
     case Map.lookup ide var_env of
          Just (AValue v_value v_type) ->
-             case test t_type v_type of
-                  Just Eq -> return $ v_value
+             case test (TTypePtr t_type) v_type of
+                  Just Eq -> do
+                      getElementPtr v_value (idx, ())
                   Nothing -> panic "LlvmCodeGen.compArray test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileArray lookup returned Nothing"
-compArray env (TVarArray tvar offset) = do
-    v_value <- compArray env tvar
-    off_value <- compileExpr env offset
-    t1 <- getElementPtr v_value (off_value, ())
-    load t1
-compArray _ _ = panic "LlvmCodeGen.compArray got unexpected input"
+compArray env (AVariable (TVarArray tvar expr) _) t_type arr_size idx = do
+    case getVarType tvar of
+         v_type@(TTypeArray _ offs) -> do
+             t1 <- compileExpr env expr
+             t2 <- mul t1 arr_size
+             idx' <- add idx t2
+             arr_size' <- mul arr_size (valueOf offs)
+             compArray env (AVariable tvar v_type) t_type arr_size' idx'
+         _ -> panic "LlvmCodeGen.compArray case had to return TTypeArray"
+compArray _ _ _ _ _ = panic "LlvmCodeGen.compArray got unexpected input"
+
+-- Return the type of a TVariable
+getVarType :: (Type a) => TVariable a -> TType a
+getVarType _ = theType
+
+-- Return the size of our array
+getArrSize :: TType a -> Int32 -> Int32
+getArrSize (TTypeArray t_type offset) acc =
+    getArrSize t_type (offset*acc)
+getArrSize _ acc = acc
 
 
 -- -------------------------------------------------------------------
@@ -339,3 +357,4 @@ compileFuncCall env (TParamCall expr tfunc) = do
     t1 <- compileExpr env expr
     t2 <- compileFuncCall env tfunc
     return $ t2 t1
+-}

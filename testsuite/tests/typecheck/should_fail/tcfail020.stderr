@@ -1,0 +1,3 @@
+tcfail020.alan:4:3: Error: Type mismatch at `i = i;'
+	Expected `int' or `byte' but expression `i' is of type `int [4]'
+

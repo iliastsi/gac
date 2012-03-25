@@ -61,10 +61,11 @@ typeCheckDef :: Located UDef -> TcM ADef
 typeCheckDef (L loc (UDefFun lide luparams lutype ludefs lustmt)) = do
     aftype <- typeCheckType lutype
     -- add function and get it's name
-    fname <- liftM (L (getLoc lide)) (addFuncM lide [] aftype)
-    rawOpenScopeM (unLoc lide)
+    fname <- addFuncM lide [] aftype
+    let ide = unLoc lide
+    rawOpenScopeM ide
     -- type check all
-    adef <- tcParamDef (loc, (fname,lide), aftype, ludefs, lustmt) luparams []
+    adef <- tcParamDef (loc, (fname,ide), aftype, ludefs, lustmt) luparams []
     return $ Left adef
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
@@ -77,9 +78,9 @@ typeCheckDef ludef@(L _ (UDefArr _ _)) = do
 
 -- ---------------------------
 -- Type Check parameters
-tcParamDef :: (SrcSpan, (LIde,LIde), AType, [Located UDef], Located UStmt)
+tcParamDef :: (SrcSpan, (Ide,Ide), AType, [Located UDef], Located UStmt)
            -> [Located UParam] -> [(AType,Mode)] -> TcM ADefFun
-tcParamDef (loc, (fname,lide), AType ftype, ludefs, lustmt) [] par_types = do
+tcParamDef (loc, (fname,ide), AType ftype, ludefs, lustmt) [] par_types = do
     -- update parameters in symbol table
     updateFuncM $ reverse par_types
     -- type check definitions
@@ -87,58 +88,58 @@ tcParamDef (loc, (fname,lide), AType ftype, ludefs, lustmt) [] par_types = do
     -- type check statements
     (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
     when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
-            tcNoRetErr loc (unLoc lide) (AType ftype)
+            tcNoRetErr loc ide (AType ftype)
     rawCloseScopeM
     return $ ADefFun (TDefFun fname ftype adefs tstmt) (TTypeRetIO ftype)
 tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
     atype@(AType ptype) <- tcArrType luparam lutype
-    lide' <- liftM (L (getLoc lide)) (addVarM lide (AType ptype))
+    ide' <- addVarM lide (AType ptype)
     -- type check the rest parameters
     ADefFun rest rest_type <- tcParamDef f_info luparams ((atype,mode):par_types)
     case (mode, atypeIsArray atype) of
          -- pass a non array by value
          (ModeByVal, False) -> do
-             return $ ADefFun (TDefPar lide' ptype rest)
+             return $ ADefFun (TDefPar ide' ptype rest)
                         (TTypeFunc ptype rest_type)
          -- pass an array by value (error)
          (ModeByVal, True) -> do
              tcArrayParamErr luparam
-             return $ ADefFun (TDefPar lide' ptype rest)
+             return $ ADefFun (TDefPar ide' ptype rest)
                         (TTypeFunc ptype rest_type)
          -- pass a non array by reference (change it to ptr)
          (ModeByRef, False) -> do
-             return $ ADefFun (TDefPar lide' (TTypePtr ptype) rest)
+             return $ ADefFun (TDefPar ide' (TTypePtr ptype) rest)
                         (TTypeFunc (TTypePtr ptype) rest_type)
-         -- pass an array by reference (normal)
+         -- pass an array by reference (still change it)
          (ModeByRef, True) -> do
-             return $ ADefFun (TDefPar lide' ptype rest)
-                        (TTypeFunc ptype rest_type)
+             return $ ADefFun (TDefPar ide' (TTypePtr ptype) rest)
+                        (TTypeFunc (TTypePtr ptype) rest_type)
 
 --  TypeCheck Array Types
 tcArrType :: Located UParam -> Located UType -> TcM AType
-tcArrType luparam (L _ (UTypeArr lutype lsize)) = do
-    size' <- tcCheckArraySize luparam lsize
+tcArrType luparam (L _ (UTypeArr lutype mlsize)) = do
+    size' <- case mlsize of
+                  Just size -> do
+                      tcCheckArraySize luparam size >>= return . Just
+                  Nothing -> return Nothing
     atype <- tcArrType luparam lutype
     case atype of
-         AType (TTypeArray tt s) ->
-             return $ AType $ TTypeArray (TTypeArray tt size') s
-         AType (TTypePtr tt) ->
-             return $ AType $ TTypePtr (TTypeArray tt size')
+         AType (TTypeArr tt s) ->
+             return $ AType $ TTypeArr (TTypeArr tt size') s
          AType tt ->
-             return $ AType $ TTypeArray tt size'
+             return $ AType $ TTypeArr tt size'
 tcArrType _ lutype = typeCheckType lutype
 
 -- Type Check variable definitions
 tcVarDef :: Located UDef -> (AType -> AType) -> TcM ADefVar
 tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
     AType ftype <- typeCheckType lutype
-    lide' <- liftM (L (getLoc lide)) (addVarM lide (type_fn (AType ftype)))
-    return $ ADefVar (TDefVar lide' ftype) ftype
+    ide' <- addVarM lide (type_fn (AType ftype))
+    return $ ADefVar (TDefVar ide' ftype) ftype
 tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
     size' <- tcCheckArraySize ludef lsize
-    let type_fn' = (\(AType ttype) -> AType (TTypeArray ttype size')) . type_fn
-    ADefVar var_def var_type <- tcVarDef luarr type_fn'
-    return $ ADefVar (TDefArr var_def size') (TTypeArray var_type size')
+    let type_fn' = (\(AType ttype) -> AType (TTypeArr ttype (Just size'))) . type_fn
+    tcVarDef luarr type_fn'
 tcVarDef _ _ = panic "TypeCheck.tcVarDef got unexpected input"
 
 -- Check if array size is positive
@@ -185,15 +186,20 @@ typeCheckStmt _ (L _ UStmtNothing) = do
 typeCheckStmt _ lustmt@(L _ (UStmtAssign luvar luexpr)) = do
     avar@(AVariable _ var_type) <- typeCheckVariable luvar
     aexpr@(AExpr _ expr_type)  <- typeCheckExpr luexpr
-    if (AType var_type) == (AType TTypeUnknown) || (AType expr_type) == (AType TTypeUnknown)
+    let avar_type = AType var_type
+        aexpr_type = AType expr_type
+    if avar_type == (AType TTypeUnknown) || aexpr_type == (AType TTypeUnknown)
        then return (False, TStmtNothing)
        else do
-           case test var_type expr_type of
-                Just Eq -> do
-                    return (False, TStmtAssign avar aexpr)
-                Nothing -> do
-                    tcAssignErr lustmt (AType var_type) (AType expr_type)
-                    return (False, TStmtNothing)
+           int_or_byte <- isIntOrByte lustmt (unLoc luvar) avar_type (unLoc luexpr) aexpr_type
+           if not int_or_byte
+              then return (False, TStmtNothing)
+              else do
+                  if avar_type == aexpr_type
+                     then return (False, TStmtAssign avar aexpr)
+                     else do
+                         tcAssignErr lustmt (AType var_type) (AType expr_type)
+                         return (False, TStmtNothing)
 -- UStmtCompound
 typeCheckStmt ret_type (L _ (UStmtCompound lustmts)) = do
     (does_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
@@ -302,7 +308,7 @@ typeCheckExpr (L _ (UExprChar c)) = do
     return $ AExpr (TExprChar (fromIntegral (ord c))) (TTypeChar)
 -- UExprString
 typeCheckExpr (L _ (UExprString s)) = do
-    return $ AExpr (TExprString s) (TTypePtr TTypeChar)
+    return $ AExpr (TExprString s) (TTypePtr $ TTypeArr TTypeChar Nothing)
 -- UExprVar
 typeCheckExpr (L loc (UExprVar v)) = do
     AVariable tvar ttype <- typeCheckVariable (L loc v)
@@ -316,7 +322,7 @@ typeCheckExpr (L loc (UExprSign (L _ OpMinus) (L _ (UExprInt i)))) = do
     typeCheckExpr (L loc (UExprInt (-i)))
 typeCheckExpr luexpr@(L _ (UExprSign lop lue1)) = do
     aexpr@(AExpr te1 tt1) <- typeCheckExpr lue1
-    case test tt1 (TTypeInt) of
+    case test tt1 TTypeInt of
          Just Eq ->
              if (unLoc lop) == OpPlus
                 then return aexpr
@@ -351,15 +357,15 @@ typeCheckExpr luexpr@(L _ (UExprOp lue1 lop lue2)) = do
 
 -- ---------------------------
 -- Check if expressions is of either type int or char
-isIntOrByte :: (Show a) => Located a -> UExpr -> AType ->
-                UExpr -> AType -> TcM Bool
+isIntOrByte :: (Show a, Show b, Show c) => Located a -> b -> AType ->
+                c -> AType -> TcM Bool
 isIntOrByte luexpr ue1 at1 ue2 at2 = do
     int_or_byte1 <- isIntOrByte' luexpr ue1 at1
     if int_or_byte1
        then isIntOrByte' luexpr ue2 at2
        else return False
 
-isIntOrByte' :: (Show a) => Located a -> UExpr -> AType -> TcM Bool
+isIntOrByte' :: (Show a, Show b) => Located a -> b -> AType -> TcM Bool
 isIntOrByte' (L loc uexpr) ue at = do
     if at == (AType TTypeInt) || at == (AType TTypeChar)
        then return True
@@ -474,7 +480,7 @@ typeCheckVariable luarr@(L _ (UVarArray luvar luexpr)) = do
     if exprIsInt && varIsArray
        then do
            (AType ptr_type) <- return $ getPointer (AType var_type)
-           case (test expr_type TTypeInt, test var_type (TTypePtr ptr_type)) of
+           case (test expr_type TTypeInt, test var_type (TTypeArr ptr_type Nothing)) of
              (Just Eq, Just Eq) ->
                  return $ AVariable (TVarArray tvar texpr) ptr_type
              _ ->
@@ -485,14 +491,12 @@ typeCheckVariable luarr@(L _ (UVarArray luvar luexpr)) = do
 -- ---------------------------
 -- Check if a given AType is of TTypePtr
 atypeIsArray :: AType -> Bool
-atypeIsArray (AType (TTypePtr _))  = True
-atypeIsArray (AType TTypeArray {}) = True
+atypeIsArray (AType TTypeArr {}) = True
 atypeIsArray _ = False
 
--- Take the pointed type of a TTypePtr
+-- Take the pointed type of a TTypeArr
 getPointer :: AType -> AType
-getPointer (AType (TTypePtr p))     = (AType p)
-getPointer (AType (TTypeArray p _)) = (AType p)
+getPointer (AType (TTypeArr p _)) = (AType p)
 getPointer _ = panic "TypeCheck.getPointer got unexpected input"
 
 -- Return a variable with unknown type
@@ -530,10 +534,6 @@ typeCheckType (L _ UTypeChar) =
 -- UTypeProc
 typeCheckType (L _ UTypeProc) =
     return $ AType TTypeProc
--- UTypePtr
-typeCheckType (L _ (UTypePtr utype)) = do
-    AType ttype <- typeCheckType (L wiredInSrcSpan utype)
-    return $ AType (TTypePtr ttype)
 typeCheckType _ = panic "TypeCheck.typeCheckType got unexpected input"
 
 -- -------------------------------------------------------------------
@@ -542,7 +542,7 @@ typeCheckType _ = panic "TypeCheck.typeCheckType got unexpected input"
 typeCheckFunc :: Located UFuncCall -> TcM AFuncCall
 typeCheckFunc lufunc@(L _ (UFuncCall lide lupars)) = do
     m_fun_info <- getFuncM lide
-    lide' <- liftM (L (getLoc lide)) (getFuncNameM m_fun_info)
+    ide' <- getFuncNameM m_fun_info
     ret_type <- getFuncRetTypeM m_fun_info
     apar_type <- getFuncParamsM m_fun_info
     let given_len = length lupars
@@ -553,49 +553,56 @@ typeCheckFunc lufunc@(L _ (UFuncCall lide lupars)) = do
            if given_len /= expec_len
               then do
                   tcParLenErr lufunc given_len expec_len
-                  return $ AFuncCall (TFuncCall lide' (TTypeRetIO TTypeUnknown))
+                  return $ AFuncCall (TFuncCall ide' (TTypeRetIO TTypeUnknown))
                                 (TTypeRetIO TTypeUnknown)
               else do
-                  tcFunPar ((lide',lide), ret_type)
+                  tcFunPar ((ide',(unLoc lide)), ret_type)
                         (reverse lupars, reverse apar_type) id given_len
        else do
-           return $ AFuncCall (TFuncCall lide' (TTypeRetIO TTypeUnknown))
+           return $ AFuncCall (TFuncCall ide' (TTypeRetIO TTypeUnknown))
                         (TTypeRetIO TTypeUnknown)
 
 -- ---------------------------
 -- Type Check function parameters
-tcFunPar :: ((LIde,LIde), AType) -> ([Located UExpr], [(AType,Mode)])
+tcFunPar :: ((Ide,Ide), AType) -> ([Located UExpr], [(AType,Mode)])
          -> (ATypeF -> ATypeF) -> Int -> TcM AFuncCall
 tcFunPar ((fname,_), (AType ftype)) ([],[]) type_fn _ = do
     ATypeF ftype' <- return $ type_fn (ATypeF $ TTypeRetIO ftype)
     return $ AFuncCall (TFuncCall fname ftype') ftype'
-tcFunPar f_info@((_,lide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt = do
+tcFunPar f_info@((_,ide), _) ((lupar:lupars),((ptype,mode):ptypes)) type_fn cnt = do
     aexpr@(AExpr texpr ttype) <- typeCheckExpr lupar
     AExpr texpr' ttype' <-
-        if (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)))
+        if (not ((AType ttype) == ptype || (AType ttype) == (AType TTypeUnknown)
+                    || isString aexpr ptype))
            then do
-               tcParTypeErr (unLoc lide) lupar cnt ptype (AType ttype)
+               tcParTypeErr ide lupar cnt ptype (AType ttype)
                return aexpr
            else do
-               case (mode, texpr, atypeIsArray $ AType ttype) of
-                    (ModeByRef, _, True) -> return aexpr
-                    (ModeByRef, TExprVar tev, _) ->
+               case (mode, texpr) of
+                    (ModeByRef, TExprString _) -> return aexpr
+                    (ModeByRef, TExprVar tev) ->
                         return (AExpr (TExprVar $ TVarPtr tev) (TTypePtr ttype))
-                    (ModeByRef, _, _) -> do
-                        tcParRefErr (unLoc lide) lupar cnt
+                    (ModeByRef, _) -> do
+                        tcParRefErr ide lupar cnt
                         return aexpr
-                    (ModeByVal, _, _) -> return aexpr
+                    (ModeByVal, _) -> return aexpr
     -- type check the rest parameters
     let type_fn' = (\(ATypeF rtype) -> ATypeF (TTypeFunc ttype' rtype)) . type_fn
     AFuncCall rest (TTypeFunc ctype rtype) <-
                 tcFunPar f_info (lupars,ptypes) type_fn' (cnt-1)
     case test ttype' ctype of
          Just Eq ->
-             return $ AFuncCall (TParamCall texpr' rest) rtype
+             return $ AFuncCall (TParamCall texpr' ttype' rest) rtype
          Nothing ->
              panic "test in TypeCheck.tcFunPar had to return Eq"
 tcFunPar _ _ _ _ = panic "TypeCheck.tcFunPar got unexpected input"
 
+-- ---------------------------
+-- Check string parameters
+isString :: AExpr -> AType -> Bool
+isString (AExpr (TExprString _) (TTypePtr ttype)) ptype =
+    (AType ttype) == ptype
+isString _ _ = False
 
 -- ---------------------------
 -- Error when the function parameter's number is different from the prototype

@@ -156,18 +156,17 @@ fpardef :: { Located UParam }
 type :: { Located UType }
     : datatype                      { $1 }
     | type '[' ']'                  {% case unLoc $1 of
-                                            UTypePtr {} -> notValidArray
                                             UTypeArr {} -> notValidArray
-                                            _ -> return $ LL $ UTypePtr (unLoc $1) }
+                                            _ -> return $ LL $ UTypeArr $1 Nothing }
     | type '[' DIGIT ']'            {% do { x <- getDynFlags;
                                           L digit_span (ITdigit d) <- return $3;
                                           if xopt Opt_MultiDimArrays x
-                                              then return $ LL $ UTypeArr $1 (sL digit_span d)
+                                              then return $ LL $ UTypeArr $1 (Just (sL digit_span d))
                                               else multiDimError }}
     | type '[' '-' DIGIT ']'        {% do { x <- getDynFlags;
                                           L digit_span (ITdigit d) <- return $4;
                                           if xopt Opt_MultiDimArrays x
-                                              then return $ LL $ UTypeArr $1 (sL digit_span (-d))
+                                              then return $ LL $ UTypeArr $1 (Just (sL digit_span (-d)))
                                               else multiDimError }}
     | type '[' error                {% missing ']' }
     | error                         {% srcParseFail ("Unknown type" ++

@@ -94,7 +94,7 @@ predefinedTable =
                 (FunInfo (lL "writeChar") [(AType TTypeChar, ModeByVal)]
                             (AType TTypeProc) 0 False) .
           Map.insert "writeString"
-                (FunInfo (lL "writeString") [(AType (TTypePtr TTypeChar), ModeByRef)]
+                (FunInfo (lL "writeString") [(AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeProc) 0 False) .
           Map.insert "readInteger"
                 (FunInfo (lL "readInteger") [] (AType TTypeInt) 0 False) .
@@ -104,7 +104,7 @@ predefinedTable =
                 (FunInfo (lL "readChar") [] (AType TTypeChar) 0 False) .
           Map.insert "readString"
                 (FunInfo (lL "readString") [(AType TTypeInt, ModeByVal),
-                            (AType (TTypePtr TTypeChar), ModeByRef)]
+                            (AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeProc) 0 False) .
            -- conversions
           Map.insert "extend"
@@ -115,19 +115,19 @@ predefinedTable =
                             (AType TTypeChar) 0 False) .
            -- strings
           Map.insert "strlen"
-                (FunInfo (lL "strlen") [(AType (TTypePtr TTypeChar), ModeByRef)]
+                (FunInfo (lL "strlen") [(AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeInt) 0 False) .
           Map.insert "strcmp"
-                (FunInfo (lL "strcmp") [(AType (TTypePtr TTypeChar), ModeByRef),
-                            (AType (TTypePtr TTypeChar), ModeByRef)]
+                (FunInfo (lL "strcmp") [(AType (TTypeArr TTypeChar Nothing), ModeByRef),
+                            (AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeInt) 0 False) .
           Map.insert "strcpy"
-                (FunInfo (lL "strcpy") [(AType (TTypePtr TTypeChar), ModeByRef),
-                            (AType (TTypePtr TTypeChar), ModeByRef)]
+                (FunInfo (lL "strcpy") [(AType (TTypeArr TTypeChar Nothing), ModeByRef),
+                            (AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeProc) 0 False) .
           Map.insert "strcat"
-                (FunInfo (lL "strcat") [(AType (TTypePtr TTypeChar), ModeByRef),
-                            (AType (TTypePtr TTypeChar), ModeByRef)]
+                (FunInfo (lL "strcat") [(AType (TTypeArr TTypeChar Nothing), ModeByRef),
+                            (AType (TTypeArr TTypeChar Nothing), ModeByRef)]
                             (AType TTypeProc) 0 False)
          ) -- the end
           Map.empty

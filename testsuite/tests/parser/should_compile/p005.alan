@@ -1,8 +1,7 @@
 hello() : proc
-  s : byte [40];
 {
-  s = "abc";
-  s = "Route 66";
-  s = "Hello world!\n";
-  s = "Name:\t\"Douglas Adams\"\nValue:\t42\n";
+  writeString("abc");
+  writeString("Route 66");
+  writeString("Hello world!\n");
+  writeString("Name:\t\"Douglas Adams\"\nValue:\t42\n");
 }

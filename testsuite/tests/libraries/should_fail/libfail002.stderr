@@ -2,19 +2,19 @@ libfail002.alan:6:3: Error: Type mismatch at `b = readInteger();'
 	Lvalue is of type `byte' but Rvalue is of type `int'
 
 libfail002.alan:7:3: Error: Type mismatch at `s = readInteger();'
-	Lvalue is of type `byte [42]' but Rvalue is of type `int'
+	Expected `int' or `byte' but expression `s' is of type `byte [42]'
 
 libfail002.alan:9:3: Error: Type mismatch at `i = readByte();'
 	Lvalue is of type `int' but Rvalue is of type `byte'
 
 libfail002.alan:10:3: Error: Type mismatch at `s = readByte();'
-	Lvalue is of type `byte [42]' but Rvalue is of type `byte'
+	Expected `int' or `byte' but expression `s' is of type `byte [42]'
 
 libfail002.alan:12:3: Error: Type mismatch at `i = readChar();'
 	Lvalue is of type `int' but Rvalue is of type `byte'
 
 libfail002.alan:13:3: Error: Type mismatch at `s = readChar();'
-	Lvalue is of type `byte [42]' but Rvalue is of type `byte'
+	Expected `int' or `byte' but expression `s' is of type `byte [42]'
 
 libfail002.alan:15:14: Error: Type mismatch at `b'
 	Incompatible type of argument 1 of function `readString'
