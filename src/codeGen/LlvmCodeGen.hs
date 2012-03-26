@@ -67,20 +67,19 @@ funName (TDefFunL ide _ _ _) = ide
 funName _ = panic "LlvmCodeGen.funName got unexpected input"
 
 
-{-
 -- -------------------------------------------------------------------
 -- Compile TDefVar into llvm
 compileDefVar :: ADefVar -> CodeGenFunction r ValueEnv
-compileDefVar (ADefVar (TDefVar lide vtype) _) =
+compileDefVar (ADefVar (TDefVar ide vtype) _) =
     case (test vtype TTypeInt, test vtype TTypeChar) of
          (Just Eq, Nothing) ->
-             cmpVarAlloc (unLoc lide) vtype
+             cmpVarAlloc ide vtype
          (Nothing, Just Eq) ->
-             cmpVarAlloc (unLoc lide) vtype
+             cmpVarAlloc ide vtype
          _ -> panic "LlvmCodeGen.compileDefVar test had to return Eq"
 
 -- Helper function to allocate memory
-cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a, Type a) =>
+cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a) =>
             Ide -> TType a -> CodeGenFunction r ValueEnv
 cmpVarAlloc ide vtype = do
     (t::Value (Ptr a)) <- alloca
@@ -194,10 +193,9 @@ compileExpr env (TExprMinus texpr) = do
     t2 <- return $ valueOf (0::Int32)
     sub t2 t1
 -- TExprOp
-compileExpr env (TExprOp e1 op e2) = do
+compileExpr env (TExprOp e1 op e2 tt1) = do
     t1 <- compileExpr env e1
     t2 <- compileExpr env e2
-    let tt1 = getExprType e1
     case (test tt1 TTypeInt, test tt1 TTypeChar) of
          (Just Eq, Nothing) -> cmpArithOp op t1 t2
          (Nothing, Just Eq) -> cmpArithOp op t1 t2
@@ -212,10 +210,6 @@ cmpArithOp OpDiv   = idiv
 cmpArithOp OpMod   = irem
 cmpArithOp _ = panic "LlvmCodeGen.cmpArithOp got unexpected input"
 
--- Return the type of a TExpr
-getExprType :: (Type a) => TExpr a -> TType a
-getExprType _ = theType
-
 
 -- -------------------------------------------------------------------
 -- Compile TCond into llvm
@@ -229,10 +223,9 @@ compileCond env (TCondNot tcond) = do
     t1 <- compileCond env tcond
     xor t1 True
 -- TCondOp
-compileCond env (TCondOp e1 op e2) = do
+compileCond env (TCondOp e1 op e2 tt1) = do
     t1 <- compileExpr env e1
     t2 <- compileExpr env e2
-    let tt1 = getExprType e1
     case (test tt1 TTypeInt, test tt1 TTypeChar) of
          (Just Eq, Nothing) -> cmpCompOp op t1 t2
          (Nothing, Just Eq) -> cmpCompOp op t1 t2
@@ -286,7 +279,7 @@ cmpLogOp _ _ = panic "LlvmCodeGen.cmpLogOp got unexpected input"
 
 -- -------------------------------------------------------------------
 -- Compile TVariable into llvm
-compileVariable :: (IsFirstClass a, Type a) =>
+compileVariable :: (IsFirstClass a) =>
                 Env -> TVariable a -> CodeGenFunction r (Value (Ptr a))
 -- TVar
 compileVariable (_,var_env) (TVar ide t_type) = do
@@ -296,6 +289,7 @@ compileVariable (_,var_env) (TVar ide t_type) = do
                   Just Eq -> return $ v_value
                   Nothing -> panic "LlvmCodeGen.compileVariable test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileVariable lookup returned Nothing"
+         {-
 -- TVarArray
 compileVariable env tvar@(TVarArray {}) = do
     let tt1 = getVarType tvar
@@ -310,7 +304,7 @@ compileVariable env (TVarPtr tvar) = do
     return t1
 
 -- We use this function when compiling Arrays
-compArray :: (IsFirstClass a, Type a) =>
+compArray :: (IsFirstClass a) =>
           Env -> AVariable -> TType a -> Value Int32 -> Value Int32 -> CodeGenFunction r (Value (Ptr a))
 compArray (_,var_env) (AVariable (TVar ide _) _) t_type _ idx = do
     case Map.lookup ide var_env of
@@ -331,30 +325,26 @@ compArray env (AVariable (TVarArray tvar expr) _) t_type arr_size idx = do
          _ -> panic "LlvmCodeGen.compArray case had to return TTypeArray"
 compArray _ _ _ _ _ = panic "LlvmCodeGen.compArray got unexpected input"
 
--- Return the type of a TVariable
-getVarType :: (Type a) => TVariable a -> TType a
-getVarType _ = theType
-
 -- Return the size of our array
 getArrSize :: TType a -> Int32 -> Int32
 getArrSize (TTypeArray t_type offset) acc =
     getArrSize t_type (offset*acc)
 getArrSize _ acc = acc
+-}
 
 
 -- -------------------------------------------------------------------
 -- Compile TFuncCall into llvm
 compileFuncCall :: forall a f r. (CallArgs f a r) =>
                 Env -> TFuncCall f -> CodeGenFunction r a
-compileFuncCall (fun_env,_) (TFuncCall lide t_type) = do
-    case Map.lookup (unLoc lide) fun_env of
+compileFuncCall (fun_env,_) (TFuncCall ide t_type) = do
+    case Map.lookup ide fun_env of
          Just (AFunc f_value f_type) ->
              case test t_type f_type of
                   Just Eq -> return $ call f_value
                   Nothing -> panic "LlvmCodeGen.compileFuncCall test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileFuncCall lookup returned Nothing"
-compileFuncCall env (TParamCall expr tfunc) = do
+compileFuncCall env (TParamCall expr _ tfunc) = do
     t1 <- compileExpr env expr
     t2 <- compileFuncCall env tfunc
     return $ t2 t1
--}

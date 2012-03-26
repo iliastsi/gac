@@ -67,7 +67,7 @@ data TExpr a where
     TExprFun    :: (IsFirstClass a) => TFuncCall (IO a) -> TExpr a
     TExprMinus  :: TExpr Int32 -> TExpr Int32
     TExprOp     :: (IsFirstClass a) =>
-                TExpr a -> Op -> TExpr a -> TExpr a
+                TExpr a -> Op -> TExpr a -> TType a -> TExpr a
 
 data AExpr = forall a. (IsFirstClass a) => AExpr (TExpr a) (TType a)
 
@@ -77,7 +77,7 @@ data TCond a where
     TCondFalse :: TCond Bool
     TCondNot   :: TCond Bool -> TCond Bool
     TCondOp    :: (IsFirstClass a) =>
-               TExpr a -> Op -> TExpr a -> TCond Bool
+               TExpr a -> Op -> TExpr a -> TType a -> TCond Bool
     TCondLog   :: TCond Bool -> Op -> TCond Bool -> TCond Bool
 
 data ACond = ACond (TCond Bool)

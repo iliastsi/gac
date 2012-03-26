@@ -348,7 +348,7 @@ typeCheckExpr luexpr@(L _ (UExprOp lue1 lop lue2)) = do
               then do
                   case test tt1 tt2 of
                        Just Eq -> do
-                           return $ AExpr (TExprOp te1 (unLoc lop) te2) tt1
+                           return $ AExpr (TExprOp te1 (unLoc lop) te2 tt1) tt1
                        Nothing -> do
                            tcOpExprErr luexpr (AType tt1) (AType tt2)
                            return $ AExpr unknown_expr TTypeUnknown
@@ -432,7 +432,7 @@ typeCheckCond lucond@(L _ (UCondOp lue1 lop lue2)) = do
               then do
                   case test tt1 tt2 of
                        Just Eq -> do
-                           return $ ACond (TCondOp te1 (unLoc lop) te2)
+                           return $ ACond (TCondOp te1 (unLoc lop) te2 tt1)
                        Nothing -> do
                            tcOpCondErr lucond (AType tt1) (AType tt2)
                            return $ ACond TCondFalse
