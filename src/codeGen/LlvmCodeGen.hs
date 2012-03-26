@@ -70,19 +70,22 @@ funName _ = panic "LlvmCodeGen.funName got unexpected input"
 -- -------------------------------------------------------------------
 -- Compile TDefVar into llvm
 compileDefVar :: ADefVar -> CodeGenFunction r ValueEnv
-compileDefVar (ADefVar (TDefVar ide vtype) _) =
-    case (test vtype TTypeInt, test vtype TTypeChar) of
+compileDefVar (ADefVar (TDefVar ide vtype) _) = do
+    let arr_size  = getArrSize vtype
+        arr_size' = (fromIntegral $ head arr_size) :: Word32
+        arr_type  = getVarType vtype
+    case (test arr_type TTypeInt, test arr_type TTypeChar) of
          (Just Eq, Nothing) ->
-             cmpVarAlloc ide vtype
+             cmpVarAlloc ide arr_size' arr_type
          (Nothing, Just Eq) ->
-             cmpVarAlloc ide vtype
+             cmpVarAlloc ide arr_size' arr_type
          _ -> panic "LlvmCodeGen.compileDefVar test had to return Eq"
 
 -- Helper function to allocate memory
 cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a) =>
-            Ide -> TType a -> CodeGenFunction r ValueEnv
-cmpVarAlloc ide vtype = do
-    (t::Value (Ptr a)) <- alloca
+            Ide -> Word32 -> TType a -> CodeGenFunction r ValueEnv
+cmpVarAlloc ide idx vtype = do
+    (t::Value (Ptr a)) <- arrayAlloca idx
     return (ide, AValue t (TTypePtr vtype))
 
 -- Allocate array memory
@@ -307,7 +310,7 @@ compileVariable env (TVarPtr tvar) = do
 -- We use this function when compiling Arrays
 compArray :: (IsFirstClass a) => Env -> TVariable a -> TType a ->
           [Int32] -> CodeGenFunction r ([Int32], Value (Ptr a))
-compArray (_,var_env) (TVar ide _) t_type (idx:idxs) = do
+compArray (_,var_env) (TVar ide _) t_type (_:idxs) = do
     case Map.lookup ide var_env of
          Just (AValue v_value v_type) ->
              case test (TTypePtr t_type) v_type of
@@ -328,6 +331,7 @@ getArrType :: TVariable a -> TType a
 getArrType (TVarArray tvar _) =
     getArrType tvar
 getArrType (TVar _ t_type) = t_type
+getArrType _ = panic "LlvmCodeGen.getArrType got unexpected input"
 
 -- Return the Type of our variable
 getVarType :: TType a -> TType a
