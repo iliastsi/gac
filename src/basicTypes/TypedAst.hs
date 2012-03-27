@@ -12,6 +12,7 @@
 --------------------------------------------------------------------------------
 
 {-# LANGUAGE GADTs, ExistentialQuantification, PatternGuards #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, FlexibleInstances, UndecidableInstances #-}
 module TypedAst where
 
 import UnTypedAst (Ide, Op)
@@ -21,7 +22,7 @@ import Data.Int
 import Data.Word
 import Foreign.Ptr
 import Control.Monad
-import LLVM.Core (IsFunction, IsFirstClass)
+import LLVM.Core (IsFunction, IsFirstClass, CodeGenFunction, FunctionArgs, Value)
 
 
 -- ---------------------------
@@ -32,15 +33,15 @@ type ADef = Either ADefFun ADefVar
 
 -- ---------------------------
 data TDefFun a where
-    TDefFun  :: (IsFirstClass a) =>
+    TDefFun  :: (IsFirstClass a, Translate (IO a)) =>
              Ide -> TType a -> [Either ADefFun ADefVar] -> TStmt -> TDefFun (IO a)
-    TDefPar  :: (IsFirstClass a, IsFunction b) =>
+    TDefPar  :: (IsFirstClass a, IsFunction b, Translate b) =>
              Ide -> TType a -> TDefFun b -> TDefFun (a->b)
     -- after LambdaLift we should have this instead of TDefFun
-    TDefFunL :: (IsFirstClass a) =>
+    TDefFunL :: (IsFirstClass a, Translate (IO a)) =>
              Ide -> TType a -> [ADefVar] -> TStmt -> TDefFun (IO a)
 
-data ADefFun = forall a. (IsFunction a) => ADefFun (TDefFun a) (TType a)
+data ADefFun = forall a. (IsFunction a, Translate a) => ADefFun (TDefFun a) (TType a)
 
 -- ---------------------------
 data TDefVar a where
@@ -100,12 +101,16 @@ data TType a where
     TTypeUnknown :: TType ()
     TTypeFunc    :: (IsFirstClass a, IsFunction b) =>
                  TType a -> TType b -> TType (a->b)
+    TTypeFuncR   :: (IsFirstClass a, IsFunction b, Translate b) =>
+                 TType a -> TType b -> TType (a->b)
     TTypeRetIO   :: (IsFirstClass a) => TType a -> TType (IO a)
     TTypeArr     :: (IsFirstClass a) => TType a -> Maybe Int32 -> TType a
 
 data AType = forall a. (IsFirstClass a) => AType (TType a)
 
 data ATypeF = forall a. (IsFunction a) => ATypeF (TType a)
+
+data ATypeR = forall a. (IsFirstClass a, Translate (IO a)) => ATypeR (TType a)
 
 instance Eq AType where
     (AType TTypeUnknown)    == (AType TTypeUnknown)    = True
@@ -175,3 +180,23 @@ test (TTypeRetIO a) (TTypeRetIO b) = do
     Eq <- test a b
     return Eq
 test _ _ = mzero
+
+
+-- -------------------------------------------------------------------
+-- We need this type families for FunctionArgs class
+type family Returns a
+type instance Returns (IO Int32) = Int32
+type instance Returns (IO Word8) = Word8
+type instance Returns (IO ())    = ()
+type instance Returns (a->b)     = Returns b
+
+type family CG a
+type instance CG (IO Int32) = CodeGenFunction Int32 ()
+type instance CG (IO Word8) = CodeGenFunction Word8 ()
+type instance CG (IO ())    = CodeGenFunction () ()
+type instance CG (a->b)     = Value a -> CG b
+
+class (FunctionArgs a (CG a) (Returns a))
+    => Translate a
+instance (FunctionArgs a (CG a) (Returns a))
+    => Translate a

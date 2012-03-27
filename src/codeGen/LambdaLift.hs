@@ -49,7 +49,7 @@ lambdaLiftAux adef@(ADefFun tdef _) (evars, efuns) =
 
 -- Disassemble a function definition
 disFunDef :: ADefFun -> (Ide, [ADef], TStmt)
-disFunDef (ADefFun (TDefPar _ atype def) (TTypeFunc atype' dtype)) =
+disFunDef (ADefFun (TDefPar _ atype def) (TTypeFuncR atype' dtype)) =
     case test atype atype' of
          Just Eq -> disFunDef $ ADefFun def dtype
          Nothing -> panic "LambdaLift.disFunDef had to return Eq"
@@ -75,7 +75,7 @@ atypeIsPtr _ = False
 
 -- Change the function definition to contain the free variables
 chFunDef :: ADefFun -> [FreeVar] -> (Ide, [ADefVar], TStmt) -> ADefFun
-chFunDef (ADefFun (TDefPar lide atype def) (TTypeFunc atype' rtype)) fv finfo =
+chFunDef (ADefFun (TDefPar lide atype def) (TTypeFuncR atype' rtype)) fv finfo =
     case test atype atype' of
          Just Eq ->
              case chFunDef (ADefFun def rtype) fv finfo of

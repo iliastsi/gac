@@ -13,8 +13,6 @@ module LlvmCodeGen (compile) where
 
 import TypedAst
 import UnTypedAst
-import UnTypedAst (Ide)
-import SrcLoc
 import Outputable
 
 import qualified Data.Map as Map
@@ -45,8 +43,10 @@ compile tasts = do
     -- Firstly declare all the functions
     funD <- declareFun ExternalLinkage $ head tasts
     funD' <- mapM (declareFun InternalLinkage) $ tail tasts
-    let funEnv = Map.fromList (funD:funD')
-    return ()
+    let fun_env = Map.fromList (funD:funD')
+        var_env = Map.empty
+        env = (fun_env, var_env)
+    mapM_ (compileDefFun env) tasts
 
 
 -- -------------------------------------------------------------------
@@ -68,9 +68,42 @@ funName _ = panic "LlvmCodeGen.funName got unexpected input"
 
 
 -- -------------------------------------------------------------------
+-- Compile TDefFun into llvm
+compileDefFun :: Env -> ADefFun -> CodeGenModule ()
+compileDefFun env@(fun_env,_) (ADefFun tdef t_type) = do
+    let fname = funName tdef
+    case Map.lookup fname fun_env of
+         Just (AFunc f_value f_type) ->
+             case test t_type f_type of
+                  Just Eq -> do
+                      defineFunction f_value (compDefFun env [] tdef)
+                      return ()
+                  Nothing -> panic "LlvmCodeGen.compileDefFun test had to return Eq"
+         Nothing -> panic "LlvmCodeGen.compileDefFun lookup returned Nothing"
+
+-- ---------------------------
+compDefFun :: (IsFunction a, Translate a) => Env -> [ValueEnv] -> TDefFun a -> CG a
+compDefFun env val_env (TDefFunL _ide ttype adefvar tstmt) = do
+    case (test ttype TTypeInt, test ttype TTypeChar, test ttype TTypeProc) of
+         (Just Eq, Nothing, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
+         (Nothing, Just Eq, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
+         (Nothing, Nothing, Just Eq) -> compDefFun' env val_env ttype adefvar tstmt
+         _ -> panic "LlvmCodeGen.compDefFun test had to return Eq"
+compDefFun env val_env (TDefPar ide ttype tdeffun) =
+    \v_value -> compDefFun env ((ide, AValue v_value ttype):val_env) tdeffun
+compDefFun _ _ _ = panic "LlvmCodeGen.compDefFun got unexpected input"
+
+compDefFun' :: Env -> [ValueEnv] -> TType r -> [ADefVar] -> TStmt -> CodeGenFunction r ()
+compDefFun' (fun_env,_) val_env ttype adefvar tstmt = do
+    val_env' <- mapM (compileDefVar ttype) adefvar
+    let val_env'' = Map.fromList (val_env ++ val_env')
+        env' = (fun_env, val_env'')
+    compileStmt env' ttype tstmt
+
+-- -------------------------------------------------------------------
 -- Compile TDefVar into llvm
-compileDefVar :: ADefVar -> CodeGenFunction r ValueEnv
-compileDefVar (ADefVar (TDefVar ide vtype) _) = do
+compileDefVar :: TType r -> ADefVar -> CodeGenFunction r ValueEnv
+compileDefVar _ (ADefVar (TDefVar ide vtype) _) = do
     let arr_size  = getArrSize vtype
         arr_size' = (fromIntegral $ head arr_size) :: Word32
         arr_type  = getVarType vtype
@@ -87,8 +120,6 @@ cmpVarAlloc :: forall a r s. (IsSized a s, IsFirstClass a) =>
 cmpVarAlloc ide idx vtype = do
     (t::Value (Ptr a)) <- arrayAlloca idx
     return (ide, AValue t (TTypePtr vtype))
-
--- Allocate array memory
 
 
 -- -------------------------------------------------------------------
@@ -110,7 +141,7 @@ compileStmt env rtype (TStmtCompound tstmts) =
     mapM_ (compileStmt env rtype) tstmts
 -- TStmtFun
 compileStmt env _rtype (TStmtFun afunc) = do
-    AFuncCall func (TTypeRetIO ftype) <- return afunc
+    AFuncCall func (TTypeRetIO _) <- return afunc
     t1 <- compileFuncCall env func
     _ <- t1
     return ()
@@ -337,6 +368,7 @@ getArrType _ = panic "LlvmCodeGen.getArrType got unexpected input"
 getVarType :: TType a -> TType a
 getVarType (TTypeArr t_type _) =
     getVarType t_type
+getVarType (TTypePtr _) = panic "LlvmCodeGen.getVarType got unexpected input"
 getVarType t_type = t_type
 
 -- Return the size of our array

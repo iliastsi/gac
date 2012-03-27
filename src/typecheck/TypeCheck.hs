@@ -60,12 +60,13 @@ typeCheckDef :: Located UDef -> TcM ADef
 -- UDefFun
 typeCheckDef (L loc (UDefFun lide luparams lutype ludefs lustmt)) = do
     aftype <- typeCheckType lutype
+    arftype <- tcRType lutype
     -- add function and get it's name
     fname <- addFuncM lide [] aftype
     let ide = unLoc lide
     rawOpenScopeM ide
     -- type check all
-    adef <- tcParamDef (loc, (fname,ide), aftype, ludefs, lustmt) luparams []
+    adef <- tcParamDef (loc, (fname,ide), arftype, ludefs, lustmt) luparams []
     return $ Left adef
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
@@ -78,9 +79,9 @@ typeCheckDef ludef@(L _ (UDefArr _ _)) = do
 
 -- ---------------------------
 -- Type Check parameters
-tcParamDef :: (SrcSpan, (Ide,Ide), AType, [Located UDef], Located UStmt)
+tcParamDef :: (SrcSpan, (Ide,Ide), ATypeR, [Located UDef], Located UStmt)
            -> [Located UParam] -> [(AType,Mode)] -> TcM ADefFun
-tcParamDef (loc, (fname,ide), AType ftype, ludefs, lustmt) [] par_types = do
+tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt) [] par_types = do
     -- update parameters in symbol table
     updateFuncM $ reverse par_types
     -- type check definitions
@@ -100,20 +101,20 @@ tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types =
          -- pass a non array by value
          (ModeByVal, False) -> do
              return $ ADefFun (TDefPar ide' ptype rest)
-                        (TTypeFunc ptype rest_type)
+                        (TTypeFuncR ptype rest_type)
          -- pass an array by value (error)
          (ModeByVal, True) -> do
              tcArrayParamErr luparam
              return $ ADefFun (TDefPar ide' ptype rest)
-                        (TTypeFunc ptype rest_type)
+                        (TTypeFuncR ptype rest_type)
          -- pass a non array by reference (change it to ptr)
          (ModeByRef, False) -> do
              return $ ADefFun (TDefPar ide' (TTypePtr ptype) rest)
-                        (TTypeFunc (TTypePtr ptype) rest_type)
+                        (TTypeFuncR (TTypePtr ptype) rest_type)
          -- pass an array by reference (still change it)
          (ModeByRef, True) -> do
              return $ ADefFun (TDefPar ide' (TTypePtr ptype) rest)
-                        (TTypeFunc (TTypePtr ptype) rest_type)
+                        (TTypeFuncR (TTypePtr ptype) rest_type)
 
 --  TypeCheck Array Types
 tcArrType :: Located UParam -> Located UType -> TcM AType
@@ -535,6 +536,19 @@ typeCheckType (L _ UTypeChar) =
 typeCheckType (L _ UTypeProc) =
     return $ AType TTypeProc
 typeCheckType _ = panic "TypeCheck.typeCheckType got unexpected input"
+
+tcRType :: Located UType -> TcM ATypeR
+-- UTypeInt
+tcRType (L _ UTypeInt) =
+    return $ ATypeR TTypeInt
+-- UTypeChar
+tcRType (L _ UTypeChar) =
+    return $ ATypeR TTypeChar
+-- UTypeProc
+tcRType (L _ UTypeProc) =
+    return $ ATypeR TTypeProc
+tcRType _ = panic "TypeCheck.typeCheckType got unexpected input"
+
 
 -- -------------------------------------------------------------------
 -- TypeCheck UFuncCall
