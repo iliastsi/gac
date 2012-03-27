@@ -238,7 +238,8 @@ typeCheckStmt ret_type lustmt@(L _ (UStmtReturn m_expr)) = do
              return (True, TStmtReturn Nothing)
          Just luexpr -> do
              aexpr@(AExpr _ expr_type) <- typeCheckExpr luexpr
-             when (ret_type /= (AType expr_type)) $
+             when ((AType expr_type) /= ret_type
+                && (AType expr_type) /= (AType TTypeUnknown)) $
                     tcRetStmtErr lustmt ret_type (AType expr_type)
              return (True, TStmtReturn (Just aexpr))
 
