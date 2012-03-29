@@ -148,7 +148,7 @@ getFuncM lide@(L loc ide) = do
                "Each undeclared identifier is reported only once for each function it appears in"
              -- add the function
              u <- getUnique
-             let finfo = FunInfo lide [] (AType TTypeUnknown) u False
+             let finfo = FunInfo lide [] (AType TTypeUnknown) u False False
              setTable (addFunc ide finfo t)
              return Nothing
 
@@ -191,11 +191,11 @@ addFuncM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
     case isFuncLocal ide t of
-         Just (FunInfo lprev _ _ _ _) ->
+         Just (FunInfo lprev _ _ _ _ _) ->
              addRedefError ide loc (getLoc lprev)
          Nothing -> return ()
     u <- getUnique
-    let finfo = FunInfo lide pt rt u True
+    let finfo = FunInfo lide pt rt u True False
     setTable (addFunc ide finfo t)
     return (getFuncName (Just finfo))
 
@@ -242,6 +242,6 @@ isUnusedVar (VarInfo (L loc vn) _ _ True)  =
     addTypeWarning loc (UnusedIdError vn) ""
 
 isUnusedFun :: FunInfo -> TcM ()
-isUnusedFun (FunInfo _ _ _ _ False) = return ()
-isUnusedFun (FunInfo (L loc fn) _ _ _ True) =
+isUnusedFun (FunInfo _ _ _ _ False _) = return ()
+isUnusedFun (FunInfo (L loc fn) _ _ _ True _) =
     addTypeWarning loc (UnusedIdError fn) ""
