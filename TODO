@@ -1,8 +1,5 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
-** Fix in configure.ac
-    - Use LIBRARY_VERSION when we introduce our libraries
-
 ** Fix in TypeCheck:
     - Outermost function has to take no arguments
 

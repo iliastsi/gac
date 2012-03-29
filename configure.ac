@@ -13,7 +13,7 @@ dnl
 # see what flags are available. (Better yet, read the documentation!)
 #
 
-AC_INIT([The Glorious Alan Compilation System], [0.7], [iliastsi@hotmail.com], [gac])
+AC_INIT([The Glorious Alan Compilation System], [0.8], [iliastsi@hotmail.com], [gac])
 
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])
 
@@ -201,9 +201,6 @@ AC_SUBST([LFLAGS])
 dnl --------------------------------------------------
 dnl ### program checking section ends here ###
 dnl --------------------------------------------------
-
-LIBRARY_gac_VERSION="$ProjectVersion"
-AC_SUBST(LIBRARY_gac_VERSION)
 
 if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
    AC_MSG_ERROR([src/gac.cabal.in contains tab characters; please remove them])
