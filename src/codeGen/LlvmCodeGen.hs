@@ -26,7 +26,7 @@ import LLVM.Core
 -- -------------------------------------------------------------------
 -- Some important data types to keep our Environment
 
-data AValue = forall a . AValue (Value a) (TType a)
+data AValue = forall a. AValue (Value a) (TType a)
 data AFunc = forall a. AFunc (Function a) (TType a)
 
 type ValueEnv = (Ide, AValue)
@@ -43,7 +43,8 @@ compile tasts = do
     -- Firstly declare all the functions
     funD <- declareFun ExternalLinkage $ head tasts
     funD' <- mapM (declareFun InternalLinkage) $ tail tasts
-    let fun_env = Map.fromList (funD:funD')
+    funD'' <- compilePrelude
+    let fun_env = Map.fromList $ (funD:funD') ++ funD''
         var_env = Map.empty
         env = (fun_env, var_env)
     mapM_ (compileDefFun env) tasts
@@ -109,9 +110,9 @@ compileDefVar _ (ADefVar (TDefVar ide vtype) _) = do
         arr_type  = getVarType vtype
     case (test arr_type TTypeInt, test arr_type TTypeChar) of
          (Just Eq, Nothing) ->
-             cmpVarAlloc ide arr_size' arr_type
+             cmpVarAlloc ide arr_size' vtype
          (Nothing, Just Eq) ->
-             cmpVarAlloc ide arr_size' arr_type
+             cmpVarAlloc ide arr_size' vtype
          _ -> panic "LlvmCodeGen.compileDefVar test had to return Eq"
 
 -- Helper function to allocate memory
@@ -137,7 +138,7 @@ compileStmt env _rtype (TStmtAssign avar aexpr) = do
          Just Eq -> store e_value v_value
          Nothing -> panic "LlvmCodeGen.compileStmt test had to return Eq"
 -- TStmtCompound
-compileStmt env rtype (TStmtCompound tstmts) =
+compileStmt env rtype (TStmtCompound _ tstmts) =
     mapM_ (compileStmt env rtype) tstmts
 -- TStmtFun
 compileStmt env _rtype (TStmtFun afunc) = do
@@ -156,13 +157,18 @@ compileStmt env rtype (TStmtIf acond if_stmt melse_stmt) = do
     -- cond was True
     defineBasicBlock true
     compileStmt env rtype if_stmt
-    br exit
+    if doesStmtReturn if_stmt
+       then return ()
+       else br exit
     -- cond was False
     defineBasicBlock false
     case melse_stmt of
-         Just else_stmt -> compileStmt env rtype else_stmt
-         Nothing -> return ()
-    br exit
+         Just else_stmt -> do
+             compileStmt env rtype else_stmt
+             if doesStmtReturn else_stmt
+                then return ()
+                else br exit
+         Nothing -> br exit
     -- exit block
     defineBasicBlock exit
     return ()
@@ -180,7 +186,9 @@ compileStmt env rtype (TStmtWhile acond tstmt) = do
     -- body block
     defineBasicBlock body
     compileStmt env rtype tstmt
-    br loop
+    if doesStmtReturn tstmt
+       then return ()
+       else br loop
     -- exit block
     defineBasicBlock exit
     return ()
@@ -200,6 +208,13 @@ compileStmt env rtype (TStmtReturn maexpr) = do
                       ret ()
                   Nothing ->
                       panic "LlvmCodeGen.compileStmt test had to return Eq"
+
+-- ---------------------------
+-- Check if a Stmt returns
+doesStmtReturn :: TStmt -> Bool
+doesStmtReturn (TStmtCompound has_ret _) = has_ret
+doesStmtReturn (TStmtReturn _) = True
+doesStmtReturn _ = False
 
 
 -- -------------------------------------------------------------------
@@ -326,9 +341,8 @@ compileVariable (_,var_env) (TVar ide t_type) = do
 -- TVarArray
 compileVariable env tvar@(TVarArray {}) = do
     let tt1 = getArrType tvar
-        tt2 = getVarType tt1
         ss1 = getArrSize tt1
-    (_, v_value) <- compArray env tvar tt2 ss1
+    (_, v_value) <- compArray env tvar ss1
     return v_value
 -- TVarPtr
 compileVariable env (TVarPtr tvar) = do
@@ -339,9 +353,9 @@ compileVariable env (TVarPtr tvar) = do
     return t1
 
 -- We use this function when compiling Arrays
-compArray :: (IsFirstClass a) => Env -> TVariable a -> TType a ->
-          [Int32] -> CodeGenFunction r ([Int32], Value (Ptr a))
-compArray (_,var_env) (TVar ide _) t_type (_:idxs) = do
+compArray :: (IsFirstClass a) => Env -> TVariable a -> [Int32]
+          -> CodeGenFunction r ([Int32], Value (Ptr a))
+compArray (_,var_env) (TVar ide t_type) (_:idxs) = do
     case Map.lookup ide var_env of
          Just (AValue v_value v_type) ->
              case test (TTypePtr t_type) v_type of
@@ -349,13 +363,13 @@ compArray (_,var_env) (TVar ide _) t_type (_:idxs) = do
                       return (idxs, v_value)
                   Nothing -> panic "LlvmCodeGen.compArray test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileArray lookup returned Nothing"
-compArray env (TVarArray tvar expr) t_type idxs = do
-    ((idx:idxs'), v_value) <- compArray env tvar t_type idxs
+compArray env (TVarArray tvar expr) idxs = do
+    ((idx:idxs'), v_value) <- compArray env tvar idxs
     t1 <- compileExpr env expr
     t2 <- mul t1 (valueOf idx)
     t3 <- getElementPtr v_value (t2, ())
     return $ (idxs', t3)
-compArray _ _ _ _ = panic "LlvmCodeGen.compArray got unexpected input"
+compArray _ _ _ = panic "LlvmCodeGen.compArray got unexpected input"
 
 -- Return the Type of a TVarArray
 getArrType :: TVariable a -> TType a
@@ -388,7 +402,7 @@ compileFuncCall :: forall a f r. (CallArgs f a r) =>
 compileFuncCall (fun_env,_) (TFuncCall ide t_type) = do
     case Map.lookup ide fun_env of
          Just (AFunc f_value f_type) ->
-             case test t_type f_type of
+             case test f_type t_type of
                   Just Eq -> return $ call f_value
                   Nothing -> panic "LlvmCodeGen.compileFuncCall test had to return Eq"
          Nothing -> panic "LlvmCodeGen.compileFuncCall lookup returned Nothing"
@@ -396,3 +410,57 @@ compileFuncCall env (TParamCall expr _ tfunc) = do
     t1 <- compileExpr env expr
     t2 <- compileFuncCall env tfunc
     return $ t2 t1
+
+
+-- -------------------------------------------------------------------
+-- Compile Prelude function definitions into llvm
+compilePrelude :: CodeGenModule [FuncEnv]
+compilePrelude = do
+    t1  <- newNamedFunction ExternalLinkage "writeInteger" :: TFunction (Int32 -> IO ())
+    t2  <- newNamedFunction ExternalLinkage "writeByte" :: TFunction (Word8 -> IO ())
+    t3  <- newNamedFunction ExternalLinkage "writeChar" :: TFunction (Word8 -> IO ())
+    t4  <- newNamedFunction ExternalLinkage "writeString" :: TFunction (Ptr Word8 -> IO ())
+    t5  <- newNamedFunction ExternalLinkage "readInteger" :: TFunction (IO Int32)
+    t6  <- newNamedFunction ExternalLinkage "readByte" :: TFunction (IO Word8)
+    t7  <- newNamedFunction ExternalLinkage "readChar" :: TFunction (IO Word8)
+    t8  <- newNamedFunction ExternalLinkage "readString" :: TFunction (Int32 -> Ptr Word8 -> IO ())
+    t9  <- newNamedFunction ExternalLinkage "extend" :: TFunction (Word8 -> IO Int32)
+    t10 <- newNamedFunction ExternalLinkage "shrink" :: TFunction (Int32 -> IO Word8)
+    t11 <- newNamedFunction ExternalLinkage "strlen" :: TFunction (Ptr Word8 -> IO Int32)
+    t12 <- newNamedFunction ExternalLinkage "strcmp" :: TFunction (Ptr Word8 -> Ptr Word8 -> IO Int32)
+    t13 <- newNamedFunction ExternalLinkage "strcpy" :: TFunction (Ptr Word8 -> Ptr Word8 -> IO ())
+    t14 <- newNamedFunction ExternalLinkage "strcat" :: TFunction (Ptr Word8 -> Ptr Word8 -> IO ())
+    return $
+      ("writeInteger", AFunc t1 $
+        TTypeFuncR TTypeInt (TTypeRetIO TTypeProc))
+      : ("writeByte", AFunc t2 $
+          TTypeFuncR TTypeChar (TTypeRetIO TTypeProc))
+      : ("writeChar", AFunc t3 $
+          TTypeFuncR TTypeChar (TTypeRetIO TTypeProc))
+      : ("writeString", AFunc t4 $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeProc))
+      : ("readInteger", AFunc t5 $
+          TTypeRetIO TTypeInt)
+      : ("readByte", AFunc t6 $
+          TTypeRetIO TTypeChar)
+      : ("readChar", AFunc t7 $
+          TTypeRetIO TTypeChar)
+      : ("readString", AFunc t8 $
+          TTypeFuncR TTypeInt $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeProc))
+      : ("extend", AFunc t9 $
+          TTypeFuncR TTypeChar (TTypeRetIO TTypeInt))
+      : ("shrink", AFunc t10 $
+          TTypeFuncR TTypeInt (TTypeRetIO TTypeChar))
+      : ("strlen", AFunc t11 $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeInt))
+      : ("strcmp", AFunc t12 $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeInt))
+      : ("strcpy", AFunc t13 $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeProc))
+      : ("strcat", AFunc t14 $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) $
+          TTypeFuncR (TTypePtr $ TTypeArr TTypeChar Nothing) (TTypeRetIO TTypeProc))
+      : []

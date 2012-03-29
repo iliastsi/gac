@@ -53,7 +53,7 @@ data ADefVar = forall a. (IsFirstClass a) => ADefVar (TDefVar a) (TType a)
 data TStmt
     = TStmtNothing
     | TStmtAssign AVariable AExpr
-    | TStmtCompound [TStmt]
+    | TStmtCompound Bool [TStmt]    -- true if there is a return
     | TStmtFun AFuncCall
     | TStmtIf ACond TStmt (Maybe TStmt)
     | TStmtWhile ACond TStmt
@@ -178,6 +178,14 @@ test (TTypeArr a _) (TTypeArr b _) = do
     return Eq
 test (TTypeRetIO a) (TTypeRetIO b) = do
     Eq <- test a b
+    return Eq
+test (TTypeFuncR t1 t2) (TTypeFunc t3 t4) = do
+    Eq <- test t1 t3
+    Eq <- test t2 t4
+    return Eq
+test (TTypeFuncR t1 t2) (TTypeFuncR t3 t4) = do
+    Eq <- test t1 t3
+    Eq <- test t2 t4
     return Eq
 test _ _ = mzero
 

@@ -83,7 +83,7 @@ Alan source code; compile
 
 .SS Code generation options
 .nh
-\-fasm   \-fllvm   \-fno\-code
+\-fllvm   \-fno\-code
 .hy
 
 .SS Linking options
@@ -103,7 +103,7 @@ Alan source code; compile
 
 .SS Compiler debugging options
 .nh
-\-ddump\-asm  \-ddump\-llvm  \-ddump\-parsed
+\-ddump\-parsed \-ddump\-to\-file
 .hy
 
 
@@ -353,12 +353,6 @@ Set optimisation level \fIn\fP
 .SH CODE GENERATION OPTIONS
 
 .TP
-\fB\-fasm\fP
-Use the native code generator
-.rj
-[dynamic]
-
-.TP
 \fB\-fllvm\fP
 Compile via LLVM
 .rj
@@ -455,20 +449,14 @@ pass \fIoption\fP to the LLVM compiler
 .SH COMPILER DEBUGGING OPTIONS
 
 .TP
-\fB\-ddump\-asm\fP
-Dump assembly
-.rj
-[dynamic]
-
-.TP
-\fB\-ddump\-llvm\fP
-Dump LLVM intermediate code
-.rj
-[dynamic]
-
-.TP
 \fB\-ddump\-parsed\fP
 Dump parse tree
+.rj
+[dynamic]
+
+.TP
+\fB\-ddump\-to\-file\fP
+Dump to files instead of stdout
 .rj
 [dynamic]
 

@@ -9,8 +9,6 @@
 
     Releases
 ~~~~~~~~~~~~~~~~~~~
-0.7 : Add llvm back end
-
 0.8 : Implement llvm libraries
 
 0.9 : Implement extensions

@@ -88,10 +88,16 @@ tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt) [] par_types = do
     adefs <- mapM typeCheckDef ludefs
     -- type check statements
     (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
-    when ((not does_ret) && ((AType ftype) /= (AType TTypeProc))) $
-            tcNoRetErr loc ide (AType ftype)
+    tstmt' <- case (does_ret, (AType ftype) == (AType TTypeProc)) of
+                   (False, False) -> do
+                       tcNoRetErr loc ide (AType ftype)
+                       return tstmt
+                   (False, True) ->
+                       return (TStmtCompound True (tstmt : TStmtReturn Nothing : []))
+                   (True, _) ->
+                       return tstmt
     rawCloseScopeM
-    return $ ADefFun (TDefFun fname ftype adefs tstmt) (TTypeRetIO ftype)
+    return $ ADefFun (TDefFun fname ftype adefs tstmt') (TTypeRetIO ftype)
 tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
     atype@(AType ptype) <- tcArrType luparam lutype
     ide' <- addVarM lide (AType ptype)
@@ -134,8 +140,9 @@ tcArrType _ lutype = typeCheckType lutype
 -- Type Check variable definitions
 tcVarDef :: Located UDef -> (AType -> AType) -> TcM ADefVar
 tcVarDef (L _ (UDefVar lide lutype)) type_fn = do
-    AType ftype <- typeCheckType lutype
-    ide' <- addVarM lide (type_fn (AType ftype))
+    atype <- typeCheckType lutype
+    AType ftype <- return $ type_fn atype
+    ide' <- addVarM lide (AType ftype)
     return $ ADefVar (TDefVar ide' ftype) ftype
 tcVarDef ludef@(L _ (UDefArr luarr lsize)) type_fn = do
     size' <- tcCheckArraySize ludef lsize
@@ -203,8 +210,8 @@ typeCheckStmt _ lustmt@(L _ (UStmtAssign luvar luexpr)) = do
                          return (False, TStmtNothing)
 -- UStmtCompound
 typeCheckStmt ret_type (L _ (UStmtCompound lustmts)) = do
-    (does_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
-    return (does_ret, TStmtCompound tstmts)
+    (does_ret, has_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
+    return (does_ret, TStmtCompound has_ret tstmts)
 -- UStmtFun
 typeCheckStmt _ (L loc (UStmtFun lf@(L _ (UFuncCall fname _)))) = do
     afunc@(AFuncCall _ ftype) <- typeCheckFunc lf
@@ -246,9 +253,9 @@ typeCheckStmt ret_type lustmt@(L _ (UStmtReturn m_expr)) = do
 -- ---------------------------
 -- Type Check compound stmts
 -- As first argument (AType) we have the return type of the block
-tcCompoundStmt :: AType -> [Located UStmt] -> [TStmt] -> TcM (Bool, [TStmt])
+tcCompoundStmt :: AType -> [Located UStmt] -> [TStmt] -> TcM (Bool, Bool, [TStmt])
 tcCompoundStmt _ [] acc = do
-    return (False, reverse acc)
+    return (False, False, reverse acc)
 tcCompoundStmt ret_type (lustmt:lustmts) acc = do
     (r1, tstmt)  <- typeCheckStmt ret_type lustmt
     if not r1
@@ -256,10 +263,11 @@ tcCompoundStmt ret_type (lustmt:lustmts) acc = do
            -- r1 is False thus we didn't get any return
            tcCompoundStmt ret_type lustmts (tstmt:acc)
        else do
+           let has_ret = isStmtReturn lustmt
            if null lustmts
               then do
                   -- we get return but this is the last command
-                  return (True, reverse (tstmt:acc))
+                  return (True, has_ret, reverse (tstmt:acc))
               else do
                   -- we get return and we have more to do
                   -- *bang*, unreachable code
@@ -267,7 +275,13 @@ tcCompoundStmt ret_type (lustmt:lustmts) acc = do
                       unreach_end   = srcSpanEnd (getLoc (last lustmts))
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
-                  return (True, reverse (tstmt:acc))
+                  return (True, has_ret, reverse (tstmt:acc))
+
+-- ---------------------------
+-- Check if a UStmt is of type UStmtReturn
+isStmtReturn :: Located UStmt -> Bool
+isStmtReturn (L _ UStmtReturn {}) = True
+isStmtReturn _ = False
 
 -- ---------------------------
 -- Error when the types of expression and variable in an assigment are different

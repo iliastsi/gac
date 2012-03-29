@@ -71,9 +71,7 @@ import System.IO
 -- | Enumerates the simple on-of-off dynamic flags
 data DynFlag
     -- debugging flags
-    = Opt_D_dump_asm
-    | Opt_D_dump_llvm
-    | Opt_D_dump_parsed
+    = Opt_D_dump_parsed
     | Opt_DumpToFile        -- ^ Append dump output to files instead of stdout
     | Opt_D_no_debug_output
 
@@ -436,12 +434,8 @@ dynamic_flags =
   , Flag "no-auto-link-packages" (NoArg (unSetDynFlag Opt_AutoLinkPackages))
 
     ---- Debugging ----
-  , Flag "ddump-asm"        (setDumpFlag Opt_D_dump_asm)
-  , Flag "ddump-llvm"       (NoArg (do { setObjTarget AlcLlvm
-                                       ; setDumpFlag' Opt_D_dump_llvm}))
   , Flag "ddump-parsed"     (setDumpFlag Opt_D_dump_parsed)
   , Flag "ddump-to-file"    (setDumpFlag Opt_DumpToFile)
-  , Flag "dshow-passes"     (NoArg (setVerbosity (Just 2)))
 
     ---- Warning opts ----
   , Flag "W"        (NoArg (mapM_ setDynFlag    minusWOpts))
@@ -458,7 +452,6 @@ dynamic_flags =
   , Flag "O"        (OptIntSuffix (\mb_n -> upd (setOptLevel (mb_n `orElse` 1))))
 
     ---- Compiler flags ----
-  , Flag "fasm"         (NoArg (setObjTarget AlcAsm))
   , Flag "fllvm"        (NoArg (setObjTarget AlcLlvm))
   , Flag "fno-code"     (NoArg (do upd $ \d -> d{ gacLink=NoLink }
                                    setTarget AlcNothing))
@@ -727,7 +720,7 @@ compilerInfo =
     ,("touch command",              FromDynFlags pgm_T)
     ,("Project version",            String PROJECT_VERSION)
     ,("Host platform",              String HOST_PLATFORM)
-    ,("Have llvm code generator",   String "NO")
+    ,("Have llvm code generator",   String "YES")
     ,("Have native code generator", String "NO")
     ,("Have UTF-8 support",         String (if ALEX_VERSION>="3" then "YES" else "NO"))
     ,("LibDir",                     FromDynFlags topDir)
