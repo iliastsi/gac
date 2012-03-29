@@ -188,11 +188,19 @@ localdefs :: { [Located UDef] }
 
 localdef :: { Located UDef }
     : funcdef                       { $1 }
+    | protodef ';'                  { $1 }
     | vardef ';'                    { $1 }
     | vardef error                  {% missing ';' }
     | ID error                      {% srcParseFail ("Probably missing `:' for variable definition" ++
                                                         " or `(' for function definition") }
     | error                         {% srcParseFail "Expected function or variable declaration" }
+
+protodef :: { Located UDef }
+    : ID fpar ':' rtype             {% do { x <- getDynFlags;
+                                          L span (ITid i) <- return $1;
+                                          if xopt Opt_ForwardDecls x
+                                              then return $  LL $ UDefProt (sL span i) $2 $4
+                                              else forwardDeclError }}
 
 vardef :: { Located UDef }
     : vardef2                       { $1 }
@@ -377,4 +385,8 @@ condSymbol (L loc str) =
 multiDimError :: P a
 multiDimError = srcParseFail $ "Alan doesn't support arrays bigger than one dimension"
                     ++ "\n\tUse -XMultiDimArrays if you want to enable this"
+
+forwardDeclError :: P a
+forwardDeclError = srcParseFail $ "Alan doesn't support function prototypes"
+                    ++ "\n\tUse -XForwardDeclarations if you want to enable this"
 }

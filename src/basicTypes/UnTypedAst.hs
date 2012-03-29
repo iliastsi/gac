@@ -98,9 +98,10 @@ dumpMode ModeByRef = "reference"
 type LUDef = Located UDef
 
 data UDef
-    = UDefFun LIde [LUParam] LUType [LUDef] LUStmt
-    | UDefVar LIde LUType
-    | UDefArr LUDef (Located Integer)
+    = UDefFun  LIde [LUParam] LUType [LUDef] LUStmt
+    | UDefProt LIde [LUParam] LUType
+    | UDefVar  LIde LUType
+    | UDefArr  LUDef (Located Integer)
 
 instance Show UDef where
     show = dumpUDef 0
@@ -112,6 +113,10 @@ dumpUDef ind (UDefFun lide luparams lutype ludefs lustmt) =
         ") : " ++ dumpUType (unLoc lutype) ++
         "\n" ++ dumpLUDefs (ind+1) ludefs ++
         dumpComp (ind+1) (unLoc lide) (unLoc lustmt)
+-- UDefProt
+dumpUDef ind (UDefProt lide luparams lutype) =
+    indent ind ++ dumpIde (unLoc lide) ++ "(" ++ dumpLUParams luparams ++
+        ") : " ++ dumpUType (unLoc lutype) ++ ";"
 -- UDefVar
 dumpUDef ind (UDefVar lide lutype) =
     indent ind ++ dumpIde (unLoc lide) ++ " : " ++

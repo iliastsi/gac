@@ -1,0 +1,4 @@
+pfail054.alan:2:22: Error: Parse error on input `;'
+	Alan doesn't support function prototypes
+	Use -XForwardDeclarations if you want to enable this
+
