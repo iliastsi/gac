@@ -199,7 +199,7 @@ protodef :: { Located UDef }
     : ID fpar ':' rtype             {% do { x <- getDynFlags;
                                           L span (ITid i) <- return $1;
                                           if xopt Opt_ForwardDecls x
-                                              then return $  LL $ UDefProt (sL span i) $2 $4
+                                              then return $ LL $ UDefProt (sL span i) $2 $4
                                               else forwardDeclError }}
 
 vardef :: { Located UDef }

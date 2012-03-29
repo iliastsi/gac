@@ -66,7 +66,18 @@ typeCheckDef (L loc (UDefFun lide luparams lutype ludefs lustmt)) = do
     let ide = unLoc lide
     rawOpenScopeM ide
     -- type check all
-    adef <- tcParamDef (loc, (fname,ide), arftype, ludefs, lustmt) luparams []
+    adef <- tcParamDef (loc, (fname,ide), arftype, ludefs, lustmt, False) luparams []
+    return $ Left adef
+-- UDefProt
+typeCheckDef (L loc (UDefProt lide luparams lutype)) = do
+    aftype <- typeCheckType lutype
+    arftype <- tcRType lutype
+    -- add prototype and get it's name
+    fname <- addProtoM lide [] aftype
+    let ide = unLoc lide
+        lustmt = L wiredInSrcSpan UStmtNothing
+    rawOpenScopeM ide
+    adef <- tcParamDef (loc, (fname,ide), arftype, [], lustmt, True) luparams []
     return $ Left adef
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
@@ -79,25 +90,30 @@ typeCheckDef ludef@(L _ (UDefArr _ _)) = do
 
 -- ---------------------------
 -- Type Check parameters
-tcParamDef :: (SrcSpan, (Ide,Ide), ATypeR, [Located UDef], Located UStmt)
+tcParamDef :: (SrcSpan, (Ide,Ide), ATypeR, [Located UDef], Located UStmt, Bool)
            -> [Located UParam] -> [(AType,Mode)] -> TcM ADefFun
-tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt) [] par_types = do
+tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_types = do
     -- update parameters in symbol table
     updateFuncM $ reverse par_types
-    -- type check definitions
-    adefs <- mapM typeCheckDef ludefs
-    -- type check statements
-    (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
-    tstmt' <- case (does_ret, (AType ftype) == (AType TTypeProc)) of
-                   (False, False) -> do
-                       tcNoRetErr loc ide (AType ftype)
-                       return tstmt
-                   (False, True) ->
-                       return (TStmtCompound True (tstmt : TStmtReturn Nothing : []))
-                   (True, _) ->
-                       return tstmt
-    rawCloseScopeM
-    return $ ADefFun (TDefFun fname ftype adefs tstmt') (TTypeRetIO ftype)
+    if prototype
+       then do
+           rawCloseScopeM
+           return $ ADefFun (TDefProt fname ftype) (TTypeRetIO ftype)
+       else do
+           -- type check definitions
+           adefs <- mapM typeCheckDef ludefs
+           -- type check statements
+           (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
+           tstmt' <- case (does_ret, (AType ftype) == (AType TTypeProc)) of
+                          (False, False) -> do
+                              tcNoRetErr loc ide (AType ftype)
+                              return tstmt
+                          (False, True) ->
+                              return (TStmtCompound True (tstmt : TStmtReturn Nothing : []))
+                          (True, _) ->
+                              return tstmt
+           rawCloseScopeM
+           return $ ADefFun (TDefFun fname ftype adefs tstmt') (TTypeRetIO ftype)
 tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
     atype@(AType ptype) <- tcArrType luparam lutype
     ide' <- addVarM lide (AType ptype)

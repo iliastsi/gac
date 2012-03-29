@@ -1,0 +1,6 @@
+ForwardDeclaration() : proc
+  foo(x : int) : proc;
+  foo2() : proc
+  { foo(5); }
+{
+}
