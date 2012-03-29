@@ -46,6 +46,7 @@ data MsgCode
   | ArrSizeError  String  -- array definition errors
   | UnusedIdError String  -- variable/function defined but not used
   | UnusedRsError String  -- unused result
+  | ProtoError    String  -- prototype declaration errors
   | UnknownError
 
 data Severity
@@ -154,4 +155,5 @@ instance Show MsgCode where
     show (ArrSizeError buf)  = "Array definition error at `" ++ buf ++ "'"
     show (UnusedIdError buf) = "Defined but not used: `" ++ buf ++ "'"
     show (UnusedRsError buf) = "Unused return value of function `" ++ buf ++ "'"
+    show (ProtoError buf)    = "Declaration for `" ++ buf ++ "' doesn't match prototype"
     show UnknownError        = "Unknown Error :@"

@@ -13,13 +13,13 @@ module TcMonad (
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getDynFlags, getTable, getUnique, setTable,
     mkTcState, addTypeWarning, addTypeError,
-    getTcMessages,
+    getTcMessages, getTcProtos,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
     getFuncM, getFuncNameM, getFuncParamsM, getFuncRetTypeM,
     getVarM, getVarNameM, getVarTypeM,
-    addFuncM, addVarM, updateFuncM,
+    addFuncM, addProtoM, addVarM, updateFuncM,
     rawOpenScopeM, rawCloseScopeM
   ) where
 
@@ -29,8 +29,10 @@ import ErrUtils
 import UnTypedAst (Ide, Mode)
 import TypedAst (AType(..), TType(..))
 import DynFlags
+import Util
 
 import Control.Monad
+import Data.Maybe
 
 
 -- -------------------------------------------------------------------
@@ -43,7 +45,10 @@ data TcState = TcState {
     dflags      :: DynFlags,
     table       :: Table,           -- the symbol table
     messages    :: Messages,        -- the error messages
-    unique      :: !Int             -- unique id number
+    unique      :: !Int,            -- unique id number
+    -- here are the functions for which we had a prototype
+    -- but not a definition (real name, (location,changed name))
+    prototypes  :: [(Ide, (SrcSpan, Ide))]
   }
 
 newtype TcM a = TcM { unTcM :: TcState -> TcResult a }
@@ -89,6 +94,12 @@ getUnique = TcM $ \s@(TcState{unique=u}) -> TcOk s{unique=u+1} u
 setTable :: Table -> TcM ()
 setTable t = TcM $ \s -> TcOk s{table=t} ()
 
+getPrototypes :: TcM [(Ide, (SrcSpan, Ide))]
+getPrototypes = TcM $ \s@(TcState{prototypes=pts}) -> TcOk s pts
+
+setPrototypes :: [(Ide, (SrcSpan, Ide))] -> TcM ()
+setPrototypes pts = TcM $ \s -> TcOk s{prototypes=pts} ()
+
 -- create a type check state
 --
 mkTcState :: DynFlags -> Table -> TcState
@@ -97,7 +108,8 @@ mkTcState flags t =
         dflags      = flags,
         table       = t,
         messages    = emptyMessages,
-        unique      = 0
+        unique      = 0,
+        prototypes  = []
     }
 
 -- Errors/Warnings
@@ -112,15 +124,21 @@ addTypeError loc msg_code msg_extra =
         TcOk s{ messages=(addError (mkErrMsg loc msg_code msg_extra) msgs) } ()
 
 addRedefError :: Ide -> SrcSpan -> SrcSpan -> TcM ()
-addRedefError ide curr prev = do
-    let msg = ("Bound at: " ++ showSrcSpan prev ++ "\n\t" ++
+addRedefError ide loc1 loc2 = do
+    let [prev,curr] = sortLe (\a b -> a<= b) [loc1, loc2]
+        msg = ("Bound at: " ++ showSrcSpan prev ++ "\n\t" ++
                "          " ++ showSrcSpan curr)
     TcM $ \s@(TcState{messages=msgs}) ->
         TcOk s{ messages=(addError (mkErrMsg curr (RedefError ide) msg) msgs) } ()
 
 
+-- ---------------------------
+--
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms
+
+getTcProtos :: TcState -> [(Ide, (SrcSpan, Ide))]
+getTcProtos TcState{prototypes=pts} = pts
 
 
 ----------------------------------------------------------------------
@@ -191,11 +209,40 @@ addFuncM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
     case isFuncLocal ide t of
+         Just (FunInfo lprev _ _ _ _ False) -> do
+             -- function is already defined
+             addRedefError ide loc (getLoc lprev)
+             u <- getUnique
+             let finfo = FunInfo lide pt rt u True False
+             setTable (addFunc ide finfo t)
+             return (getFuncName (Just finfo))
+         Just (FunInfo (L loc' _) pt' rt' u un True) -> do
+             -- we have a function prototype defined
+             when (pt' /= pt || rt' /= rt) $
+                 addTypeError loc (ProtoError ide)
+                    ("Bound at: " ++ showSrcSpan loc' ++ "\n\t" ++
+                     "          " ++ showSrcSpan loc)
+             let finfo = FunInfo lide pt' rt' u un False
+             setTable (addFunc ide finfo t)
+             return (getFuncName (Just finfo))
+         Nothing -> do
+             -- we define the function for the first time
+             u <- getUnique
+             let finfo = FunInfo lide pt rt u True False
+             setTable (addFunc ide finfo t)
+             return (getFuncName (Just finfo))
+
+-- Add function prototype
+addProtoM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
+addProtoM lide@(L loc ide) pt rt = do
+    t <- getTable
+    case isFuncLocal ide t of
          Just (FunInfo lprev _ _ _ _ _) ->
              addRedefError ide loc (getLoc lprev)
-         Nothing -> return ()
+         Nothing ->
+             return ()
     u <- getUnique
-    let finfo = FunInfo lide pt rt u True False
+    let finfo = FunInfo lide pt rt u True True
     setTable (addFunc ide finfo t)
     return (getFuncName (Just finfo))
 
@@ -234,6 +281,7 @@ rawCloseScopeM = do
         mapM_ isUnusedFun $ getLocalFuncs t
     when (dopt Opt_WarnUnusedVariable flags) $
         mapM_ isUnusedVar $ getLocalVars t
+    addProtos t
     setTable (rawCloseScope t)
 
 isUnusedVar :: VarInfo -> TcM ()
@@ -245,3 +293,23 @@ isUnusedFun :: FunInfo -> TcM ()
 isUnusedFun (FunInfo _ _ _ _ False _) = return ()
 isUnusedFun (FunInfo (L loc fn) _ _ _ True _) =
     addTypeWarning loc (UnusedIdError fn) ""
+
+-- ---------------------------
+-- Handle prototypes
+getProtos :: FunInfo -> Maybe (Ide, (SrcSpan, Ide))
+getProtos (FunInfo _ _ _ _ _ False ) = Nothing
+getProtos finfo@(FunInfo (L loc fn) _ _ _ _ True) =
+    let changed_name = getFuncName $ Just finfo in
+    Just (fn, (loc, changed_name))
+
+addProtos :: Table -> TcM ()
+addProtos t = do
+    protos <- getPrototypes
+    let protos' = catMaybes $ map getProtos $ getLocalFuncs t
+    mapM_ (\(ide, (loc, _)) ->
+        case lookup ide protos of
+             Just (loc', _) -> addRedefError ide loc loc'
+             Nothing -> return ()
+        ) protos'
+    setPrototypes (protos' ++ protos)
+    return ()
