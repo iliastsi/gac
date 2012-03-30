@@ -1,0 +1,4 @@
+foo(x : int) : int
+{
+  return 42;
+}

@@ -68,7 +68,7 @@ Alan source code; compile
 
 .SS Language options
 .nh
-\-XNoForwardDeclarations \-XForwardDeclarations \-XNoMultiDimArrays \-XMultiDimArrays
+\-XNoForwardDeclarations \-XForwardDeclarations \-XNoMultiDimArrays \-XMultiDimArrays \-XNoExplicitMain \-XExplicitMain
 .hy
 
 .SS Warnings
@@ -268,6 +268,12 @@ Enable forward declaration for functions
 .TP
 \fB\-XMultiDimArrays\fP
 Enable support for arrays bigger than one dimension
+.rj
+[dynamic]
+
+.TP
+\fB\-XExplicitMain\fP
+The user has to explicitly define a main function
 .rj
 [dynamic]
 

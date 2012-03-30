@@ -38,6 +38,7 @@ import SrcLoc
 import Outputable (panic)
 import DynFlags
 import ErrUtils (MsgCode(..))
+import Util
 
 import Data.Int
 import Data.Char
@@ -52,11 +53,36 @@ typeCheckAst luast = do
     -- Set the outermost function as a prototype
     -- (mainly because we don't want user to define any other
     -- prototype with the same name)
-    let UDefFun (L loc name) _ _ _ _ = unLoc luast
+    let UDefFun (L loc name) luparams lutype _ _ = unLoc luast
     setPrototypes [(loc, name, name)]
     adef <- typeCheckDef luast
+    dflags <- getDynFlags
     case adef of
-         Left tast -> return tast
+         Left tast -> do
+             case (notNull luparams, xopt Opt_ExplicitMain dflags) of
+                  (True, True) -> do
+                      -- The outermost function takes arguments
+                      -- This is allowed because we have ExplicitMain enabled
+                      return tast
+                  (True, False) -> do
+                      -- Now this is not allowed
+                      let loc' = combineSrcSpans loc (getLoc lutype)
+                      addTypeError loc' (TypeError $ show $ unLoc luast)
+                            "Outermost function has to take no arguments"
+                      return tast
+                  (False, True) -> do
+                      -- Return it as it is
+                      return tast
+                  (False, False) -> do
+                      -- We have to add a main function
+                      AType ttype <- typeCheckType lutype
+                      if name /= "main"
+                         then return $ ADefFun
+                            (TDefFun "main" TTypeProc ([tast],[])
+                            (TStmtFun (AFuncCall (TFuncCall name (TTypeRetIO ttype))
+                            (TTypeRetIO ttype))))
+                            (TTypeRetIO TTypeProc)
+                         else return tast
          Right _   -> panic "typeCheck.typeCheckAst Either had to return Left"
 
 

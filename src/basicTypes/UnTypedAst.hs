@@ -104,7 +104,10 @@ data UDef
     | UDefArr  LUDef (Located Integer)
 
 instance Show UDef where
-    show = dumpUDef 0
+    show (UDefFun lide luparams lutype _ _) =
+        dumpIde (unLoc lide) ++ "(" ++ dumpLUParams luparams ++
+            ") : " ++ dumpUType (unLoc lutype)
+    show udef = dumpUDef 0 udef
 
 dumpUDef :: Int -> UDef -> String
 -- UDefFun
