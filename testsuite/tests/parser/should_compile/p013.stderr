@@ -1,0 +1,11 @@
+==================== Parser ====================
+ForwardDeclaration() : proc
+  foo(x :  int) : proc;
+  foo2() : proc
+  { -- foo2
+    foo(5);
+  } -- foo2
+{ -- ForwardDeclaration
+} -- ForwardDeclaration
+
+

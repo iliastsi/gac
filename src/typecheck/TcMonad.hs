@@ -210,7 +210,8 @@ getVarTypeM = return . getVarType
 
 -- ---------------------------
 -- Add functions
-addFuncM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide
+addFuncM :: Located Ide -> [(AType,Mode)] -> AType
+         -> TcM (Ide, Maybe (SrcSpan, [(AType,Mode)], AType))
 addFuncM lide@(L loc ide) pt rt = do
     t <- getTable
     case isFuncLocal ide t of
@@ -220,22 +221,18 @@ addFuncM lide@(L loc ide) pt rt = do
              u <- getUnique
              let finfo = FunInfo lide pt rt u True False
              setTable (addFunc ide finfo t)
-             return (getFuncName (Just finfo))
+             return (getFuncName (Just finfo), Nothing)
          Just (FunInfo (L loc' _) pt' rt' u un True) -> do
              -- we have a function prototype defined
-             when (pt' /= pt || rt' /= rt) $
-                 addTypeError loc (ProtoError ide)
-                    ("Bound at: " ++ showSrcSpan loc' ++ "\n\t" ++
-                     "          " ++ showSrcSpan loc)
              let finfo = FunInfo lide pt' rt' u un False
              setTable (addFunc ide finfo t)
-             return (getFuncName (Just finfo))
+             return (getFuncName (Just finfo), Just (loc', pt', rt'))
          Nothing -> do
              -- we define the function for the first time
              u <- getUnique
              let finfo = FunInfo lide pt rt u True False
              setTable (addFunc ide finfo t)
-             return (getFuncName (Just finfo))
+             return (getFuncName (Just finfo), Nothing)
 
 -- Add function prototype
 addProtoM :: Located Ide -> [(AType,Mode)] -> AType -> TcM Ide

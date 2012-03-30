@@ -1,0 +1,15 @@
+tcfail021.alan:4:3-10: Error: Conflicting definitions for `internal'
+	Bound at: tcfail021.alan:3:3-10
+	          tcfail021.alan:4:3-10
+
+tcfail021.alan:8:5-12: Error: Conflicting definitions for `external'
+	Bound at: tcfail021.alan:2:3-10
+	          tcfail021.alan:8:5-12
+
+tcfail021.alan:12:12-23: Error: Type mismatch at `external(42)'
+	The function `external' is applied to 1 parameters but its type has 2
+
+tcfail021.alan:17:3-10: Error: Declaration for `internal' doesn't match prototype
+	Bound at: tcfail021.alan:4:3-10
+	          tcfail021.alan:17:3-10
+

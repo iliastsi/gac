@@ -1,0 +1,21 @@
+ForwardDeclaration() : proc
+  external(x : reference byte, y : int) : int;
+  internal(y : int) : int;
+  internal(y : int) : proc;
+  foo() : proc;
+
+  foo2() : proc
+    external(x : reference byte, y : int) : proc;
+    internal() : proc
+    { }
+    foo() : int;
+  { foo(); external(42); }
+
+  foo() : proc
+  { }
+
+  internal(x : byte) : proc
+  { }
+{
+  foo();
+}

@@ -59,7 +59,10 @@ declareFun' :: forall a. (IsFunction a) =>
             Linkage -> TDefFun a -> TType a -> CodeGenModule FuncEnv
 declareFun' linkage tdef ttype = do
     let f_name = funName tdef
-    (f_value::Function a) <- newNamedFunction linkage f_name
+        linkage' = if isPrototype tdef
+                      then ExternalLinkage
+                      else linkage
+    (f_value::Function a) <- newNamedFunction linkage' f_name
     return (f_name, AFunc f_value ttype)
 
 funName :: forall a. (IsFunction a) => TDefFun a -> Ide
@@ -106,7 +109,7 @@ compDefFun' (fun_env,_) val_env ttype adefvar tstmt = do
 
 
 -- Check if it is a prototype definition
-isPrototype :: (IsFunction a, Translate a) => TDefFun a -> Bool
+isPrototype :: (IsFunction a) => TDefFun a -> Bool
 isPrototype (TDefPar _ _ tdef) =
     isPrototype tdef
 isPrototype (TDefProt _ _) = True

@@ -68,11 +68,11 @@ typeCheckDef (L loc (UDefFun lide luparams lutype ludefs lustmt)) = do
     aftype <- typeCheckType lutype
     arftype <- tcRType lutype
     -- add function and get it's name
-    fname <- addFuncM lide [] aftype
-    let ide = unLoc lide
-    rawOpenScopeM ide
+    (fname, mProto) <- addFuncM lide [] aftype
+    rawOpenScopeM $ unLoc lide
     -- type check all
-    adef <- tcParamDef (loc, (fname,ide), arftype, ludefs, lustmt, False) luparams []
+    adef <- tcParamDef (loc, (fname,lide), arftype, ludefs, lustmt)
+                (False, mProto, aftype) luparams []
     return $ Left adef
 -- UDefProt
 typeCheckDef (L loc (UDefProt lide luparams lutype)) = do
@@ -83,7 +83,8 @@ typeCheckDef (L loc (UDefProt lide luparams lutype)) = do
     let ide = unLoc lide
         lustmt = L wiredInSrcSpan UStmtNothing
     rawOpenScopeM ide
-    adef <- tcParamDef (loc, (fname,ide), arftype, [], lustmt, True) luparams []
+    adef <- tcParamDef (loc, (fname,lide), arftype, [], lustmt)
+                (True, Nothing, aftype) luparams []
     return $ Left adef
 -- UDefVar
 typeCheckDef ludef@(L _ (UDefVar _ _)) = do
@@ -96,16 +97,26 @@ typeCheckDef ludef@(L _ (UDefArr _ _)) = do
 
 -- ---------------------------
 -- Type Check parameters
-tcParamDef :: (SrcSpan, (Ide,Ide), ATypeR, [Located UDef], Located UStmt, Bool)
+tcParamDef :: (SrcSpan, (Ide,LIde), ATypeR, [Located UDef], Located UStmt)
+           -> (Bool, Maybe (SrcSpan, [(AType,Mode)], AType), AType)
            -> [Located UParam] -> [(AType,Mode)] -> TcM ADefFun
-tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_types = do
+tcParamDef (loc, (fname,lide), ATypeR ftype, ludefs, lustmt) (isP, mP, aftype) [] par_types = do
     -- update parameters in symbol table
-    updateFuncM $ reverse par_types
-    if prototype
+    let par_types' = reverse par_types
+    updateFuncM par_types'
+    if isP
        then do
            rawCloseScopeM
            return $ ADefFun (TDefProt fname ftype) (TTypeRetIO ftype)
        else do
+           -- check if our definition is inconsistent with the prototype
+           case mP of
+                Just (prot_loc, prot_par_types, prot_ret_type) ->
+                    when (prot_par_types /= par_types' || prot_ret_type /= aftype) $
+                        addTypeError (getLoc lide) (ProtoError $ unLoc lide)
+                            ("Bound at: " ++ showSrcSpan prot_loc ++ "\n\t" ++
+                             "          " ++ showSrcSpan (getLoc lide))
+                Nothing -> return ()
            -- type check definitions
            adefs <- mapM typeCheckDef ludefs
            let adefs' = partitionEithers adefs
@@ -113,7 +124,7 @@ tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_ty
            (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
            tstmt' <- case (does_ret, (AType ftype) == (AType TTypeProc)) of
                           (False, False) -> do
-                              tcNoRetErr loc ide (AType ftype)
+                              tcNoRetErr loc (unLoc lide) (AType ftype)
                               return tstmt
                           (False, True) ->
                               return (TStmtCompound True (tstmt : TStmtReturn Nothing : []))
@@ -121,11 +132,11 @@ tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_ty
                               return tstmt
            rawCloseScopeM
            return $ ADefFun (TDefFun fname ftype adefs' tstmt') (TTypeRetIO ftype)
-tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
+tcParamDef f_info prot_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
     atype@(AType ptype) <- tcArrType luparam lutype
     ide' <- addVarM lide (AType ptype)
     -- type check the rest parameters
-    ADefFun rest rest_type <- tcParamDef f_info luparams ((atype,mode):par_types)
+    ADefFun rest rest_type <- tcParamDef f_info prot_info luparams ((atype,mode):par_types)
     case (mode, atypeIsArray atype) of
          -- pass a non array by value
          (ModeByVal, False) -> do
