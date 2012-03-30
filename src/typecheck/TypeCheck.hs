@@ -42,12 +42,18 @@ import ErrUtils (MsgCode(..))
 import Data.Int
 import Data.Char
 import Control.Monad
+import Data.Either
 
 
 -- ---------------------------
 --
 typeCheckAst :: Located UAst -> TcM TAst
 typeCheckAst luast = do
+    -- Set the outermost function as a prototype
+    -- (mainly because we don't want user to define any other
+    -- prototype with the same name)
+    let UDefFun (L loc name) _ _ _ _ = unLoc luast
+    setPrototypes [(loc, name, name)]
     adef <- typeCheckDef luast
     case adef of
          Left tast -> return tast
@@ -102,6 +108,7 @@ tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_ty
        else do
            -- type check definitions
            adefs <- mapM typeCheckDef ludefs
+           let adefs' = partitionEithers adefs
            -- type check statements
            (does_ret, tstmt) <- typeCheckStmt (AType ftype) lustmt
            tstmt' <- case (does_ret, (AType ftype) == (AType TTypeProc)) of
@@ -113,7 +120,7 @@ tcParamDef (loc, (fname,ide), ATypeR ftype, ludefs, lustmt, prototype) [] par_ty
                           (True, _) ->
                               return tstmt
            rawCloseScopeM
-           return $ ADefFun (TDefFun fname ftype adefs tstmt') (TTypeRetIO ftype)
+           return $ ADefFun (TDefFun fname ftype adefs' tstmt') (TTypeRetIO ftype)
 tcParamDef f_info (luparam@(L _ (UParam lide mode lutype)):luparams) par_types = do
     atype@(AType ptype) <- tcArrType luparam lutype
     ide' <- addVarM lide (AType ptype)

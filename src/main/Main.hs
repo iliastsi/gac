@@ -153,14 +153,16 @@ driverTypeCheck postLoadMode dflags p_messages luast = do
                     printMessages dflags tc_messages'
                     exitFailure
                 else do
-                    driverCodeGen postLoadMode dflags tc_messages' tast
+                    let protos = getTcProtos tc_state'
+                    driverCodeGen postLoadMode dflags tc_messages' protos tast
 
 -- ---------------------------
 -- generate llvm code and return
 -- the produced object file (if any)
-driverCodeGen :: PostLoadMode -> DynFlags -> Messages -> TAst -> IO (Maybe String)
-driverCodeGen _postLoadMode dflags tc_messages tast = do
-    let tast' = lambdaLift tast
+driverCodeGen :: PostLoadMode -> DynFlags -> Messages
+              -> [Prototype] -> TAst -> IO (Maybe String)
+driverCodeGen _postLoadMode dflags tc_messages protos tast = do
+    let tast' = lambdaLift protos tast
     mFoo <- newModule
     defineModule mFoo (compile tast')
 --    writeBitcodeToFile "foo.br" mFoo

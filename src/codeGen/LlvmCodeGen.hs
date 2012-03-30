@@ -64,8 +64,8 @@ declareFun' linkage tdef ttype = do
 
 funName :: forall a. (IsFunction a) => TDefFun a -> Ide
 funName (TDefPar _ _ tdef) = funName tdef
-funName (TDefFunL ide _ _ _) = ide
-funName _ = panic "LlvmCodeGen.funName got unexpected input"
+funName (TDefFun ide _ _ _) = ide
+funName (TDefProt ide _) = ide
 
 
 -- -------------------------------------------------------------------
@@ -73,18 +73,21 @@ funName _ = panic "LlvmCodeGen.funName got unexpected input"
 compileDefFun :: Env -> ADefFun -> CodeGenModule ()
 compileDefFun env@(fun_env,_) (ADefFun tdef t_type) = do
     let fname = funName tdef
-    case Map.lookup fname fun_env of
-         Just (AFunc f_value f_type) ->
-             case test t_type f_type of
-                  Just Eq -> do
-                      defineFunction f_value (compDefFun env [] tdef)
-                      return ()
-                  Nothing -> panic "LlvmCodeGen.compileDefFun test had to return Eq"
-         Nothing -> panic "LlvmCodeGen.compileDefFun lookup returned Nothing"
+    if isPrototype tdef
+       then return ()
+       else do
+           case Map.lookup fname fun_env of
+                Just (AFunc f_value f_type) ->
+                    case test t_type f_type of
+                         Just Eq -> do
+                             defineFunction f_value (compDefFun env [] tdef)
+                             return ()
+                         Nothing -> panic "LlvmCodeGen.compileDefFun test had to return Eq"
+                Nothing -> panic "LlvmCodeGen.compileDefFun lookup returned Nothing"
 
 -- ---------------------------
 compDefFun :: (IsFunction a, Translate a) => Env -> [ValueEnv] -> TDefFun a -> CG a
-compDefFun env val_env (TDefFunL _ide ttype adefvar tstmt) = do
+compDefFun env val_env (TDefFun _ide ttype (_,adefvar) tstmt) = do
     case (test ttype TTypeInt, test ttype TTypeChar, test ttype TTypeProc) of
          (Just Eq, Nothing, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
          (Nothing, Just Eq, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
@@ -100,6 +103,14 @@ compDefFun' (fun_env,_) val_env ttype adefvar tstmt = do
     let val_env'' = Map.fromList (val_env ++ val_env')
         env' = (fun_env, val_env'')
     compileStmt env' ttype tstmt
+
+
+-- Check if it is a prototype definition
+isPrototype :: (IsFunction a, Translate a) => TDefFun a -> Bool
+isPrototype (TDefPar _ _ tdef) =
+    isPrototype tdef
+isPrototype (TDefProt _ _) = True
+isPrototype (TDefFun _ _ _ _) = False
 
 -- -------------------------------------------------------------------
 -- Compile TDefVar into llvm

@@ -34,14 +34,11 @@ type ADef = Either ADefFun ADefVar
 -- ---------------------------
 data TDefFun a where
     TDefFun  :: (IsFirstClass a, Translate (IO a)) =>
-             Ide -> TType a -> [Either ADefFun ADefVar] -> TStmt -> TDefFun (IO a)
+             Ide -> TType a -> ([ADefFun], [ADefVar]) -> TStmt -> TDefFun (IO a)
     TDefProt :: (IsFirstClass a, Translate (IO a)) =>
              Ide -> TType a -> TDefFun (IO a)
     TDefPar  :: (IsFirstClass a, IsFunction b, Translate b) =>
              Ide -> TType a -> TDefFun b -> TDefFun (a->b)
-    -- after LambdaLift we should have this instead of TDefFun
-    TDefFunL :: (IsFirstClass a, Translate (IO a)) =>
-             Ide -> TType a -> [ADefVar] -> TStmt -> TDefFun (IO a)
 
 data ADefFun = forall a. (IsFunction a, Translate a) => ADefFun (TDefFun a) (TType a)
 

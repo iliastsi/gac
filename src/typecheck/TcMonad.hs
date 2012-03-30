@@ -13,7 +13,7 @@ module TcMonad (
     failTcM, failSpanMsgTcM, failExprMsgTcM,
     getTcState, getDynFlags, getTable, getUnique, setTable,
     mkTcState, addTypeWarning, addTypeError,
-    getTcMessages, getTcProtos,
+    getTcMessages, Prototype, setPrototypes, getTcProtos,
 
     -- symbol table functionality
     getNameM, getCurrDepthM,
@@ -48,7 +48,7 @@ data TcState = TcState {
     unique      :: !Int,            -- unique id number
     -- here are the functions for which we had a prototype
     -- but not a definition (real name, (location,changed name))
-    prototypes  :: [(Ide, (SrcSpan, Ide))]
+    prototypes  :: [Prototype]
   }
 
 newtype TcM a = TcM { unTcM :: TcState -> TcResult a }
@@ -94,10 +94,15 @@ getUnique = TcM $ \s@(TcState{unique=u}) -> TcOk s{unique=u+1} u
 setTable :: Table -> TcM ()
 setTable t = TcM $ \s -> TcOk s{table=t} ()
 
-getPrototypes :: TcM [(Ide, (SrcSpan, Ide))]
+-- ---------------------------
+-- Keep info for a prototype
+-- (Location, real name, changed name)
+type Prototype = (SrcSpan, Ide, Ide)
+
+getPrototypes :: TcM [Prototype]
 getPrototypes = TcM $ \s@(TcState{prototypes=pts}) -> TcOk s pts
 
-setPrototypes :: [(Ide, (SrcSpan, Ide))] -> TcM ()
+setPrototypes :: [Prototype] -> TcM ()
 setPrototypes pts = TcM $ \s -> TcOk s{prototypes=pts} ()
 
 -- create a type check state
@@ -137,7 +142,7 @@ addRedefError ide loc1 loc2 = do
 getTcMessages :: TcState -> Messages
 getTcMessages TcState{messages=ms} = ms
 
-getTcProtos :: TcState -> [(Ide, (SrcSpan, Ide))]
+getTcProtos :: TcState -> [Prototype]
 getTcProtos TcState{prototypes=pts} = pts
 
 
@@ -296,19 +301,19 @@ isUnusedFun (FunInfo (L loc fn) _ _ _ True _) =
 
 -- ---------------------------
 -- Handle prototypes
-getProtos :: FunInfo -> Maybe (Ide, (SrcSpan, Ide))
+getProtos :: FunInfo -> Maybe Prototype
 getProtos (FunInfo _ _ _ _ _ False ) = Nothing
 getProtos finfo@(FunInfo (L loc fn) _ _ _ _ True) =
     let changed_name = getFuncName $ Just finfo in
-    Just (fn, (loc, changed_name))
+    Just (loc, fn, changed_name)
 
 addProtos :: Table -> TcM ()
 addProtos t = do
     protos <- getPrototypes
     let protos' = catMaybes $ map getProtos $ getLocalFuncs t
-    mapM_ (\(ide, (loc, _)) ->
-        case lookup ide protos of
-             Just (loc', _) -> addRedefError ide loc loc'
+    mapM_ (\(loc, ide, _) ->
+        case lookupWith (\(_, ide', _) -> ide==ide') protos of
+             Just (loc', _, _) -> addRedefError ide loc loc'
              Nothing -> return ()
         ) protos'
     setPrototypes (protos' ++ protos)

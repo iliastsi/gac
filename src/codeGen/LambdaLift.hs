@@ -17,10 +17,12 @@ module LambdaLift (lambdaLift) where
 import TypedAst
 import UnTypedAst (Ide)
 import Outputable
+import TcMonad (Prototype)
+import Util
 
 
-lambdaLift :: TAst -> [TAst]
-lambdaLift tast = fst $ lambdaLiftAux tast ([],[])
+lambdaLift :: [Prototype] -> TAst -> [TAst]
+lambdaLift protos tast = fst $ lambdaLiftAux protos tast ([],[])
 
 -- a list of the free variables so far
 type FreeVar = (Ide, AType)
@@ -36,25 +38,40 @@ type Env = ([FreeVar], [FreeFun])
 -- Take a Function Definition (in form of ADef) and the Environment
 -- and return the new Environment, the Function Definition and
 -- a list of Funtions lifted (in form of function definitions)
-lambdaLiftAux :: ADefFun -> Env -> ([ADefFun], FreeFun)
-lambdaLiftAux adef@(ADefFun tdef _) (evars, efuns) =
-    let (ide, defs, stmts) = disFunDef adef
-        evars' = paramToFreeVar tdef [] ++ evars
-        efuns' = (ide, evars) : efuns
-        (dvars, dfuns, efuns'') = liftDefs defs ([], [], (evars', efuns'))
-        stmts' = liftStmts stmts (efuns'++efuns'')
-        adef' = chFunDef adef evars (ide, dvars, stmts')
-    in
-    (adef':dfuns, (ide, evars))
+lambdaLiftAux :: [Prototype] -> ADefFun -> Env -> ([ADefFun], Maybe FreeFun)
+lambdaLiftAux protos adef@(ADefFun tdef _) (evars, efuns) =
+    case disFunDef adef of
+         Right (ide, (fun_defs, var_defs), stmts) ->
+             let evars' = paramToFreeVar tdef [] ++ evars
+                 efuns' = (ide, evars) : efuns
+                 evars'' = liftVarDefs var_defs evars'
+                 (fun_defs', efuns'') = liftFunDefs protos fun_defs ([], (evars'', efuns'))
+                 stmts' = liftStmts protos stmts efuns''
+                 adef' = chFunDef adef evars (ide, var_defs, stmts')
+             in
+             (adef':fun_defs', Just (ide, evars))
+         Left ide ->
+             case protoNotDefined protos ide of
+                  Just ide' -> let adef' = chProtoDef adef ide'
+                               in ([adef'], Nothing)
+                  Nothing -> ([], Nothing)
+
+-- Check if a prototype is defined or is external
+protoNotDefined :: [Prototype] -> Ide -> Maybe Ide
+protoNotDefined protos ide =
+    case lookupWith (\(_, _, changed_name) -> changed_name==ide) protos of
+         Just (_, ide', _) -> Just ide'
+         Nothing -> Nothing
 
 -- Disassemble a function definition
-disFunDef :: ADefFun -> (Ide, [ADef], TStmt)
+disFunDef :: ADefFun -> Either Ide (Ide, ([ADefFun], [ADefVar]), TStmt)
 disFunDef (ADefFun (TDefPar _ atype def) (TTypeFuncR atype' dtype)) =
     case test atype atype' of
          Just Eq -> disFunDef $ ADefFun def dtype
          Nothing -> panic "LambdaLift.disFunDef had to return Eq"
 disFunDef (ADefFun (TDefFun ide _ adefs tstmt) _) =
-    (ide, adefs, tstmt)
+    Right (ide, adefs, tstmt)
+disFunDef (ADefFun (TDefProt ide _) _) = Left ide
 disFunDef _ = panic "LambdaLift.disFunDef got unexpected input"
 
 -- Turn pamaters to FreeVars
@@ -89,41 +106,80 @@ chFunDef dfun@(ADefFun (TDefFun {}) _) ((ide,AType itype):fvs) finfo =
              ADefFun (TDefPar ide itype def)
                     (TTypeFuncR itype dtype)
 chFunDef (ADefFun (TDefFun _ atype _ _) rtype) [] (ide, adef, tstmt) =
-    ADefFun (TDefFunL ide atype adef tstmt) rtype
+    ADefFun (TDefFun ide atype ([],adef) tstmt) rtype
 chFunDef _ _ _ = panic "LambdaLift.chFunDef got unexpected input"
 
+-- Change the name of the prototype definition
+chProtoDef :: ADefFun -> Ide -> ADefFun
+chProtoDef (ADefFun (TDefPar ide atype def) (TTypeFuncR atype' rtype)) pname =
+    case test atype atype' of
+         Just Eq ->
+             case chProtoDef (ADefFun def rtype) pname of
+                  ADefFun def' dtype ->
+                      ADefFun (TDefPar ide atype def')
+                                (TTypeFuncR atype dtype)
+         Nothing -> panic "LambdaLift.chProtoDef had to return Eq"
+chProtoDef (ADefFun (TDefProt _ide ptype) atype) pname =
+    ADefFun (TDefProt pname ptype) atype
+chProtoDef _ _ = panic "LambdaLift.chProtoDef got unexpected input"
+
 -- ---------------------------
--- Take a list of ADefs (definitions for one function)
--- and add the variables/functions to the current environment
--- Return first the variables, then the lifted functions
-liftDefs :: [ADef] -> ([ADefVar], [ADefFun], Env) -> ([ADefVar], [ADefFun],[FreeFun])
-liftDefs ((Right adef@(ADefVar (TDefVar ide atype) _)):adefs) (var_acc, fun_acc, (evars, efuns)) =
+-- Take a list of ADefVars (variable definitions for one function)
+-- and add the variables to the current environment
+-- Return the new environment
+liftVarDefs :: [ADefVar] -> [FreeVar] -> [FreeVar]
+liftVarDefs ((ADefVar (TDefVar ide atype) _):adefs) evars =
     -- return the free variable as an array
-    liftDefs adefs (adef:var_acc, fun_acc, ((ide, AType $ TTypePtr atype):evars, efuns))
-liftDefs ((Left fundef):adefs) (var_acc, fun_acc, env@(evars, efuns)) =
-    let (funs, efun) = lambdaLiftAux fundef env
-    in liftDefs adefs (var_acc, funs++fun_acc, (evars, efun:efuns))
-liftDefs [] (var_acc, fun_acc, (_,free_fun)) = (var_acc, fun_acc, free_fun)
+    liftVarDefs adefs ((ide, AType $ TTypePtr atype):evars)
+liftVarDefs [] evars = evars
+
+-- ---------------------------
+-- Take a list of ADefFuns (function definitions for one function)
+-- and lift the functions using the current environment
+-- Return the lifted functions and the new environment
+liftFunDefs :: [Prototype] -> [ADefFun] -> ([ADefFun], Env) -> ([ADefFun], [FreeFun])
+liftFunDefs protos (adef:adefs) (fun_acc, env@(evars, efuns)) =
+    case lambdaLiftAux protos adef env of
+         (fun_defs, Just efun) ->
+             liftFunDefs protos adefs (fun_defs++fun_acc, (evars, efun:efuns))
+         (fun_defs, Nothing) ->
+             liftFunDefs protos adefs (fun_defs++fun_acc, (evars, efuns))
+liftFunDefs _ [] (fun_acc, (_,efuns)) = (fun_acc, efuns)
 
 -- ---------------------------
 -- Take a TStmt and replace all function calls with
 -- new ones, containing all free variables
 -- We add this `free variables' at the end of the parameters
-liftStmts :: TStmt -> [FreeFun] -> TStmt
-liftStmts (TStmtCompound has_ret tstmts) env =
-    TStmtCompound has_ret $ map (\s -> liftStmts s env) tstmts
-liftStmts tstmt@(TStmtFun afun@(AFuncCall tfun rtype)) env =
+liftStmts :: [Prototype] -> TStmt -> [FreeFun] -> TStmt
+liftStmts protos (TStmtCompound has_ret tstmts) env =
+    TStmtCompound has_ret $ map (\s -> liftStmts protos s env) tstmts
+liftStmts protos tstmt@(TStmtFun afun@(AFuncCall tfun rtype)) env =
     let fname = getFunName tfun in
     case lookup fname env of
          Just fv -> TStmtFun (liftCall afun (reverse fv) id (ATypeF rtype))
-         -- The function is not in scope (probably library function)
-         Nothing -> tstmt
-liftStmts tstmt _env = tstmt
+         -- The function is not in scope
+         Nothing ->
+             -- check if function is external
+             case lookupWith (\(_, _, cn) -> cn==fname) protos of
+                  -- it is external (change it's name)
+                  Just (_,ename,_) -> TStmtFun $ AFuncCall (changeCallName tfun ename) rtype
+                  -- probably a library function
+                  Nothing -> tstmt
+liftStmts _ tstmt _env = tstmt
 
 -- Return the name of the function (given a TFuncCall)
 getFunName :: forall a . TFuncCall a -> Ide
 getFunName (TParamCall _ _ tfun) = getFunName tfun
 getFunName (TFuncCall ide _) = ide
+
+-- ---------------------------
+-- Change the name of an external function
+-- in a function call
+changeCallName :: TFuncCall a -> Ide -> TFuncCall a
+changeCallName (TParamCall texpr etype tfun) fname =
+    TParamCall texpr etype $ changeCallName tfun fname
+changeCallName (TFuncCall _ide ttype) fname =
+    TFuncCall fname ttype
 
 -- ---------------------------
 -- Lift a function call

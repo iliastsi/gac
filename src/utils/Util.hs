@@ -22,6 +22,8 @@ module Util (
     isSingleton, singleton,
     notNull,
 
+    lookupWith,
+
     -- * List operations controlled by another list
     split,
 
@@ -165,6 +167,12 @@ isSingleton _   = False
 notNull :: [a] -> Bool
 notNull [] = False
 notNull _  = True
+
+------------------------------
+lookupWith :: (a -> Bool) -> [a] -> Maybe a
+lookupWith _ [] = Nothing
+lookupWith f (x:xs) =
+    if f x then Just x else lookupWith f xs
 
 
 -- -------------------------------------------------------------------
