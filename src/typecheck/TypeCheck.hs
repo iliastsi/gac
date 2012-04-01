@@ -79,8 +79,9 @@ typeCheckAst luast = do
                       if name /= "main"
                          then return $ ADefFun
                             (TDefFun "main" TTypeProc ([tast],[])
-                            (TStmtFun (AFuncCall (TFuncCall name (TTypeRetIO ttype))
-                            (TTypeRetIO ttype))))
+                            (TStmtCompound True
+                            [(TStmtFun (AFuncCall (TFuncCall name (TTypeRetIO ttype))
+                            (TTypeRetIO ttype))), TStmtReturn Nothing]))
                             (TTypeRetIO TTypeProc)
                          else return tast
          Right _   -> panic "typeCheck.typeCheckAst Either had to return Left"

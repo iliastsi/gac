@@ -1,12 +1,8 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
-** Fix in TypeCheck:
-    - Outermost function has to take no arguments
 
 
     Releases
 ~~~~~~~~~~~~~~~~~~~
-0.8 : Implement llvm libraries
-
-0.9 : Implement extensions
-      - Multiple files compilation
+** Get command line options
+** Enable verbosity

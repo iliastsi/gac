@@ -26,14 +26,11 @@ module SysTools (
     runLlvmOpt,
     runLlvmLlc,
 
-    touch,              -- String -> String -> IO ()
     copy,
     copyWithHeader,
 
     -- Temporary-file management
-    setTmpDir,
-    newTempName,
-    cleanTempDirs, cleanTempFiles, cleanTempFilesExcept,
+    cleanTempFiles, cleanTempFilesExcept,
     addFilesToClean,
 
     Option(..)
@@ -46,7 +43,6 @@ import ErrUtils
 import Util
 
 import Data.IORef
-import Control.Monad
 import Control.Exception as Exception
 import System.Exit
 import System.Environment
@@ -56,8 +52,6 @@ import System.IO.Error as IO
 import System.Directory
 import Data.Char
 import Data.List
-import qualified Data.Map as Map
-import qualified System.Posix.Internals
 import System.Process (runInteractiveProcess, getProcessExitCode)
 import Control.Concurrent
 
@@ -71,22 +65,18 @@ initSysTools :: Maybe String    -- Maybe TopDir path (without the '-B' prefix)
                                 -- the system programs
 initSysTools mbMinusB dflags0 = do
     top_dir <- findTopDir mbMinusB
-    tmpdir <- getTemporaryDirectory
-    let dflags1 = setTmpDir tmpdir dflags0
     -- TODO: actually figure out this program locations
     let gcc_prog   = "gcc"
-        touch_path = "touch"
         as_prog    = gcc_prog
         ld_prog    = gcc_prog
         lc_prog    = "llc"
         lo_prog    = "opt"
-    return dflags1
+    return dflags0
         { topDir  = top_dir
         , pgm_a   = (as_prog,[])
         , pgm_l   = (ld_prog,[])
         , pgm_lo  = (lo_prog,[])
         , pgm_lc  = (lc_prog,[])
-        , pgm_T   = touch_path
         }
 
 -- returns a Unix-format path (relying on getBaseDir to do so too)
@@ -148,10 +138,6 @@ runLink dflags args = do
     mb_env <- getGccEnv args1
     runSomethingFiltered dflags id "Linker" p args1 mb_env
 
-touch :: DynFlags -> String -> String -> IO ()
-touch dflags purpose arg =
-    runSomething dflags purpose (pgm_T dflags) [FileOption "" arg]
-
 copy :: DynFlags -> String -> FilePath -> FilePath -> IO ()
 copy dflags purpose from to =
     copyWithHeader dflags purpose Nothing from to
@@ -171,81 +157,24 @@ copyWithHeader _dflags _purpose maybe_header from to = do
 -- -------------------------------------------------------------------
 -- Managing temporary files
 
-cleanTempDirs :: DynFlags -> IO ()
-cleanTempDirs dflags =
-    unless (dopt Opt_KeepTmpFiles dflags)
-        $ do let ref = dirsToClean dflags
-             ds <- readIORef ref
-             removeTmpDirs dflags (Map.elems ds)
-             writeIORef ref Map.empty
-
 cleanTempFiles :: DynFlags -> IO ()
-cleanTempFiles dflags =
-    unless (dopt Opt_KeepTmpFiles dflags)
-        $ do let ref = filesToClean dflags
-             fs <- readIORef ref
-             removeTmpFiles dflags fs
-             writeIORef ref []
+cleanTempFiles dflags = do
+    let ref = filesToClean dflags
+    fs <- readIORef ref
+    removeTmpFiles dflags fs
+    writeIORef ref []
 
 cleanTempFilesExcept :: DynFlags -> [FilePath] -> IO ()
-cleanTempFilesExcept dflags dont_delete =
-    unless (dopt Opt_KeepTmpFiles dflags)
-        $ do let ref = filesToClean dflags
-             files <- readIORef ref
-             let (to_keep, to_delete) = partition (`elem` dont_delete) files
-             removeTmpFiles dflags to_delete
-             writeIORef ref to_keep
-
--- find a temporary name that doesn't already exist
-newTempName :: DynFlags -> String -> IO FilePath
-newTempName dflags extn = do
-    d <- getTempDir dflags
-    x <- getProcessID
-    findTempName (d </> "gac" ++ show x ++ "_") 0
-  where
-    findTempName :: FilePath -> Integer -> IO FilePath
-    findTempName prefix x = do
-        let filename = (prefix ++ show x) <.> extn
-        b <- doesFileExist filename
-        if b then findTempName prefix (x+1)
-             else do --clean it up later
-                     consIORef (filesToClean dflags) filename
-                     return filename
-
--- return our temporary directory within tmp_dir, creating one if we
--- don't have one yet
-getTempDir :: DynFlags -> IO FilePath
-getTempDir dflags@(DynFlags{tmpDir=tmp_dir}) = do
-    let ref = dirsToClean dflags
-    mapping <- readIORef ref
-    case Map.lookup tmp_dir mapping of
-         Nothing -> do
-             x <- getProcessID
-             let prefix = tmp_dir </> "gac" ++ show x ++ "_"
-                 mkTempDir :: Integer -> IO FilePath
-                 mkTempDir x =
-                     let dirname = prefix ++ show x
-                     in do
-                         createDirectory dirname
-                         let mapping' = Map.insert tmp_dir dirname mapping
-                         writeIORef ref mapping'
-                         return dirname
-                      `Exception.catch` \e ->
-                          if IO.isAlreadyExistsError e
-                             then mkTempDir (x+1)
-                             else ioError e
-             mkTempDir 0
-         Just d -> return d
+cleanTempFilesExcept dflags dont_delete = do
+    let ref = filesToClean dflags
+    files <- readIORef ref
+    let (to_keep, to_delete) = partition (`elem` dont_delete) files
+    removeTmpFiles dflags to_delete
+    writeIORef ref to_keep
 
 addFilesToClean :: DynFlags -> [FilePath] -> IO ()
 -- May include wildcards
 addFilesToClean dflags files = mapM_ (consIORef (filesToClean dflags)) files
-
-removeTmpDirs :: DynFlags -> [FilePath] -> IO ()
-removeTmpDirs dflags ds =
-    traceCmd dflags "Deleting temp dirs"
-            ("Deleting: " ++ unwords ds)
-            (mapM_ (removeWith dflags removeDirectory) ds)
 
 removeTmpFiles :: DynFlags -> [FilePath] -> IO ()
 removeTmpFiles dflags fs =
@@ -418,12 +347,10 @@ data BuildMessage
     | EOF
 
 traceCmd :: DynFlags -> String -> String -> IO () -> IO ()
--- a) trace the command (at two levels of verbosity)
--- b) don't do it at all if dry-run is set
-traceCmd dflags _phase_name _cmd_line action = do
+-- trace the command (at two levels of verbosity)
+traceCmd _dflags _phase_name _cmd_line action = do
     hFlush stderr
-    -- Test for -n flag
-    unless (dopt Opt_DryRun dflags) action
+    action
 
 
 -- -------------------------------------------------------------------
@@ -433,9 +360,6 @@ getBaseDir :: IO (Maybe String)
 -- Assuming we are running gac, accessed by path $(stuff)/bin/gac,
 -- return the path $(stuff)/lib.
 getBaseDir = return Nothing
-
-getProcessID :: IO Int
-getProcessID = System.Posix.Internals.c_getpid >>= return . fromIntegral
 
 -- Divvy up text stram into lines, taking platform dependent
 -- line termination into accound.

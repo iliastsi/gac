@@ -68,11 +68,14 @@ printMsgBag dflags msgBag =
 
 -- -------------------------------------------------------------------
 -- Print dumped Ast
-printDumpedAst :: UAst -> IO ()
-printDumpedAst uast = do
-    putStrLn "==================== Parser ===================="
-    putStrLn (dumpedUAst uast)
-    putStr "\n\n"
+printDumpedAst :: Bool -> String -> UAst -> IO ()
+printDumpedAst to_file out_file uast = do
+    if to_file
+       then writeFile out_file $ dumpedUAst uast
+       else do
+           putStrLn "==================== Parser ===================="
+           putStrLn (dumpedUAst uast)
+           putStr "\n\n"
 
 
 -- -------------------------------------------------------------------

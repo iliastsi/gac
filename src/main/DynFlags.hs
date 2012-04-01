@@ -34,7 +34,6 @@ module DynFlags (
     getOpts,                -- DynFlags -> (DynFlags -> [a]) -> [a]
     getVerbFlag,
     updOptLevel,
-    setTmpDir,
 
     -- ** Parsing DynFlags
     parseDynamicFlags,
@@ -49,7 +48,6 @@ module DynFlags (
 
 #include "config.h"
 
-import Platform
 import CmdLineParser
 import {-# SOURCE #-} Outputable
 import Util
@@ -59,9 +57,6 @@ import {-# SOURCE #-} ErrUtils
 
 import Data.IORef
 import Data.List
-import Data.Map (Map)
-import qualified Data.Map as Map
-import System.FilePath
 import System.IO
 
 
@@ -73,7 +68,6 @@ data DynFlag
     -- debugging flags
     = Opt_D_dump_parsed
     | Opt_DumpToFile        -- ^ Append dump output to files instead of stdout
-    | Opt_D_no_debug_output
 
     | Opt_WarnIsError       -- -Werror; makes warnings fatal
     | Opt_WarnUnreachableCode
@@ -85,15 +79,11 @@ data DynFlag
     | Opt_WarnDeprecatedFlags
 
     -- misc opts
-    | Opt_DryRun            -- does not actually run any external commands
     | Opt_ErrorSpans        -- Include full span info in error messages
-
-    -- temporary flags
-    | Opt_AutoLinkPackages
 
     -- keeping stuff
     | Opt_KeepSFiles
-    | Opt_KeepTmpFiles
+    | Opt_KeepObjFiles
     | Opt_KeepLlvmFiles
   deriving (Eq, Show)
 
@@ -108,17 +98,14 @@ data ExtensionFlag
 data DynFlags = DynFlags {
     gacLink             :: GacLink,
     alcTarget           :: AlcTarget,
-    alcOutName          :: String,      -- ^ Name of the output file
     verbosity           :: Int,         -- ^ Verbosity level: see Note [Verbosity levels]
-    optLevel            :: Int,         -- ^ Optimisation level
+    optLevel            :: Int,         -- ^ Optimisation level (0-3)
 
     -- paths etc
-    objectDir           :: Maybe String,
-    objectSuf           :: String,
+    outputDir           :: Maybe String,
     outputFile          :: Maybe String,
 
     libraryPaths        :: [String],
-    tmpDir              :: String,
 
     -- options for particular phases
     opt_a               :: [String],
@@ -131,14 +118,12 @@ data DynFlags = DynFlags {
     pgm_l               :: (String,[Option]),
     pgm_lo              :: (String,[Option]),   -- LLVM: opt llvm optimiser
     pgm_lc              :: (String,[Option]),   -- LLVM: llc static compiler
-    pgm_T               :: String,
 
     -- Package flags
     topDir              :: FilePath,    -- filled in by SysTools
 
     -- Temporary files
     filesToClean        :: IORef [FilePath],
-    dirsToClean         :: IORef (Map FilePath FilePath),
 
     -- gac dynamic flags
     flags               :: [DynFlag],
@@ -160,14 +145,13 @@ data DynFlags = DynFlags {
 -- 'AlcNothing' can be used to aboid generating any output
 --
 data AlcTarget
-    = AlcAsm        -- ^ Generate assembly using the native code generator
-    | AlcLlvm       -- ^ Generate assembly using the llvm code generator
+    = AlcLlvm       -- ^ Generate assembly using the llvm code generator
+--    | AlcAsm        -- ^ Generate assembly using the native code generator
     | AlcNothing    -- ^ Don't generate any code
   deriving (Eq, Show)
 
 -- | Will this target result in an object file on the disk?
 isObjectTarget :: AlcTarget -> Bool
-isObjectTarget AlcAsm   = True
 isObjectTarget AlcLlvm  = True
 isObjectTarget _        = False
 
@@ -175,7 +159,6 @@ isObjectTarget _        = False
 data GacLink
     = NoLink        -- ^ Don't link at all
     | LinkBinary    -- ^ Link object code into a binary
-    | LinkDynLib    -- ^ Link objects into a dynamic lib (DSO on ELF platforms)
   deriving (Eq, Show)
 
 isNoLink :: GacLink -> Bool
@@ -194,10 +177,8 @@ defaultObjectTarget = AlcLlvm
 initDynFlags :: DynFlags -> IO DynFlags
 initDynFlags dflags = do
     refFilesToClean <- newIORef []
-    refDirsToClean <- newIORef Map.empty
     return dflags{
-        filesToClean    = refFilesToClean,
-        dirsToClean     = refDirsToClean
+        filesToClean    = refFilesToClean
     }
 
 -- | The normal 'DynFlags'. Note that they is not suitable for use in this form
@@ -206,16 +187,13 @@ defaultDynFlags =
     DynFlags {
         gacLink             = LinkBinary,
         alcTarget           = defaultAlcTarget,
-        alcOutName          = "",
         verbosity           = 0,
-        optLevel            = 0,
+        optLevel            = 1,
 
-        objectDir           = Nothing,
-        objectSuf           = "o",
-
+        outputDir           = Nothing,
         outputFile          = Nothing,
+
         libraryPaths        = [],
-        tmpDir              = defaultTmpDir,
 
         opt_a               = [],
         opt_l               = [],
@@ -228,11 +206,9 @@ defaultDynFlags =
         pgm_l               = panic "defaultDynFlags: No pgm_l",
         pgm_lo              = panic "defaultDynFlags: No pgm_lo",
         pgm_lc              = panic "defaultDynFlags: No pgm_lc",
-        pgm_T               = panic "defaultDynFlags: No pgm_T",
         -- end of initSynTools values
 
         filesToClean        = panic "defaultDynFlags: No filesToClean",
-        dirsToClean         = panic "defaultDynFlags: No dirsToClean",
 
         flags               = defaultFlags,
         extensions          = [],
@@ -315,13 +291,11 @@ getVerbFlag dflags
     | verbosity dflags >= 3 = "-v"
     | otherwise = ""
 
-setObjectDir, setOutputDir, setObjectSuf, addOptl
+setOutputDir, addOptl
     :: String -> DynFlags -> DynFlags
 setOutputFile
     :: Maybe String -> DynFlags -> DynFlags
-setObjectDir        f d = d{ objectDir = Just f }
-setOutputDir = setObjectDir
-setObjectSuf        f d = d{ objectSuf = f}
+setOutputDir        f d = d{ outputDir = Just f }
 addOptl             f d = d{ opt_l = f : opt_l d }
 setOutputFile       f d = d{ outputFile = f }
 
@@ -394,8 +368,7 @@ allFlags = map ('-':) $
 -- The main flags themselves
 dynamic_flags :: [Flag (CmdLineP DynFlags)]
 dynamic_flags =
-  [ Flag "n"            (NoArg (setDynFlag Opt_DryRun))
-  , Flag "v"            (OptIntSuffix setVerbosity)
+  [ Flag "v"            (OptIntSuffix setVerbosity)
   , Flag "ferror-spans" (NoArg (setDynFlag Opt_ErrorSpans))
 
     ---- Specific phases ----
@@ -411,17 +384,13 @@ dynamic_flags =
 
     ---- Linking ----
   , Flag "no-link"  (noArg (\d -> d{ gacLink=NoLink }))
-  , Flag "shared"   (noArg (\d -> d{ gacLink=LinkDynLib }))
 
     ---- Libraries ----
   , Flag "L"    (Prefix    addLibraryPath)
   , Flag "l"    (AnySuffix (upd . addOptl))
 
     ---- Output Redirection ----
-  , Flag "odir"         (hasArg setObjectDir)
   , Flag "o"            (SepArg (upd . setOutputFile . Just))
-  , Flag "osuf"         (hasArg setObjectSuf)
-  , Flag "tmpdir"       (hasArg setTmpDir)
   , Flag "outputdir"    (hasArg setOutputDir)
 
     ---- Keeping temporary files ----
@@ -429,10 +398,8 @@ dynamic_flags =
   , Flag "keep-s-files"     (NoArg (setDynFlag Opt_KeepSFiles))
   , Flag "keep-llvm-file"   (NoArg (setDynFlag Opt_KeepLlvmFiles))
   , Flag "keep-llvm-files"  (NoArg (setDynFlag Opt_KeepLlvmFiles))
-  , Flag "keep-tmp-files"   (NoArg (setDynFlag Opt_KeepTmpFiles))
-
-    ---- Miscellaneous ----
-  , Flag "no-auto-link-packages" (NoArg (unSetDynFlag Opt_AutoLinkPackages))
+  , Flag "keep-obj-file"    (NoArg (setDynFlag Opt_KeepObjFiles))
+  , Flag "keep-obj-files"   (NoArg (setDynFlag Opt_KeepObjFiles))
 
     ---- Debugging ----
   , Flag "ddump-parsed"     (setDumpFlag Opt_D_dump_parsed)
@@ -523,8 +490,7 @@ xFlags = [
 
 defaultFlags :: [DynFlag]
 defaultFlags =
-    [ Opt_AutoLinkPackages ]
-    ++ standarWarnings
+    standarWarnings
 
 impliedFlags :: [(ExtensionFlag, TurnOnFlag, ExtensionFlag)]
 impliedFlags = []
@@ -699,13 +665,6 @@ splitPathList s = filter notNull (splitUp s)
 
 
 -- -------------------------------------------------------------------
--- tmpDir, where we store temporary files.
-
-setTmpDir :: FilePath -> DynFlags -> DynFlags
-setTmpDir dir dflags = dflags{ tmpDir = normalise dir }
-
-
--- -------------------------------------------------------------------
 -- Compiler Info
 
 data Printable
@@ -719,7 +678,6 @@ compilerInfo =
     ,("linker command",             FromDynFlags $ fst . pgm_l)
     ,("llvm compiler",              FromDynFlags $ fst . pgm_lc)
     ,("llvm optimiser",             FromDynFlags $ fst . pgm_lo)
-    ,("touch command",              FromDynFlags pgm_T)
     ,("Project version",            String PROJECT_VERSION)
     ,("Host platform",              String HOST_PLATFORM)
     ,("Have llvm code generator",   String "YES")

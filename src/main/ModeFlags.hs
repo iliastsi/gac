@@ -150,8 +150,10 @@ mode_flags =
     ] ++
     [ ---- primary modes ----
       Flag "c"          (PassFlag (\f -> do setMode stopBeforeLnMode f
-                                            addFlag "-no-link" f))
-    , Flag "S"          (PassFlag (setMode stopBeforeAsMode))
+                                            addFlag "-no-link" f
+                                            addFlag "-keep-obj-files" f))
+    , Flag "S"          (PassFlag (\f -> do setMode stopBeforeAsMode f
+                                            addFlag "-keep-s-files" f))
     ]
 
 setMode :: Mode -> String -> EwM ModeM ()

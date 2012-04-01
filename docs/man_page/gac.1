@@ -39,7 +39,7 @@ Alan source code; compile
 
 .SS Help and verbosity options
 .nh
-\-?  \-help  \-n  \-v  \-v\fIn\fP  \-V  \-\-supported\-extensions \-\-info  \-\-version  \-\-numeric\-version  \-\-print\-libdir  \-ferror\-spans
+\-?  \-help  \-v  \-v\fIn\fP  \-V  \-\-supported\-extensions \-\-info  \-\-version  \-\-numeric\-version  \-\-print\-libdir  \-ferror\-spans
 .hy
 
 .SS Which phases to run
@@ -49,7 +49,7 @@ Alan source code; compile
 
 .SS Redirecting output
 .nh
-\-o \fIfilename\fP  \-odir \fIdir\fP  \-osuf \fIsuffix\fP  \-outputdir \fIdir\fP
+\-o \fIfilename\fP   \-outputdir \fIdir\fP
 .hy
 
 .SS Keeping intermediate files
@@ -58,12 +58,7 @@ Alan source code; compile
 .br
 \-keep\-s\-file or \-keep\-s\-files
 .br
-\-keep\-tmp\-files
-.hy
-
-.SS Temporary files
-.nh
-\-tmpdir
+\-keep\-obj\-file or \-keep\-obj\-files
 .hy
 
 .SS Language options
@@ -88,7 +83,7 @@ Alan source code; compile
 
 .SS Linking options
 .nh
-\-shared  \-l\fIlib\fP  \-L\fIdir\fP  \-no\-link
+\-l\fIlib\fP  \-L\fIdir\fP  \-no\-link
 .hy
 
 .SS Replacing phases
@@ -121,12 +116,6 @@ help
 help
 .rj
 [mode]
-
-.TP
-\fB\-n\fP
-do a dry run
-.rj
-[dynamic]
 
 .TP
 \fB\-v\fP
@@ -207,18 +196,6 @@ set output filename
 [dynamic]
 
 .TP
-\fB\-odir\fP \fIdir\fP
-set directory for object files
-.rj
-[dynamic]
-
-.TP
-\fB\-osuf\fP \fIsuffix\fP
-set the output file suffix
-.rj
-[dynamic]
-
-.TP
 \fB\-outputdir\fP \fIdir\fP
 set output directory
 .rj
@@ -230,7 +207,7 @@ set output directory
 .TP
 \fB\-keep\-llvm\-file\fP or \fB\-keep\-llvm\-files\fP
 .br
-retain intermediate LLVM \f(CR.ll\fP files
+retain intermediate LLVM \f(CR.br\fP files
 .rj
 [dynamic]
 
@@ -242,17 +219,8 @@ retain intermediate \f(CR.s\fP files
 [dynamic]
 
 .TP
-\fB\-keep\-tmp\-files\fP
-retain all intermediate temporary files
-.rj
-[dynamic]
-
-
-.SH TEMPORARY FILES
-
-.TP
-\fB\-tmpdir\fP
-set the directory for temporary files
+\fB\-keep\-obj\-file\fP or \fB\-keep\-obj\-files\fP
+retain intermediate object \f(CR.o\fP files
 .rj
 [dynamic]
 
@@ -372,12 +340,6 @@ Omit code generation
 
 
 .SH LINKING OPTIONS
-
-.TP
-\fB\-shared\fP
-Generate a shared library (as opposed to an executable)
-.rj
-[dynamic]
 
 .TP
 \fB\-l\fP\fIlib\fP

@@ -15,6 +15,7 @@ import TypedAst
 import UnTypedAst
 import Outputable
 
+import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Data.Map as Map
 import Prelude hiding (and, or)
 import Data.Map (Map)
@@ -41,10 +42,9 @@ data SArray = forall n. Nat n => SArray (Global (Array n Word8))
 compile :: [TAst] -> CodeGenModule ()
 compile tasts = do
     -- Firstly declare all the functions
-    funD <- declareFun ExternalLinkage $ head tasts
-    funD' <- mapM (declareFun InternalLinkage) $ tail tasts
-    funD'' <- compilePrelude
-    let fun_env = Map.fromList $ (funD:funD') ++ funD''
+    funD <- mapM declareFun tasts
+    funD' <- compilePrelude
+    let fun_env = Map.fromList $ funD ++ funD'
         var_env = Map.empty
         env = (fun_env, var_env)
     mapM_ (compileDefFun env) tasts
@@ -52,17 +52,17 @@ compile tasts = do
 
 -- -------------------------------------------------------------------
 -- Declare one function
-declareFun :: Linkage -> ADefFun -> CodeGenModule FuncEnv
-declareFun linkage (ADefFun tdef ttype) = declareFun' linkage tdef ttype
+declareFun :: ADefFun -> CodeGenModule FuncEnv
+declareFun (ADefFun tdef ttype) = declareFun' tdef ttype
 
 declareFun' :: forall a. (IsFunction a) =>
-            Linkage -> TDefFun a -> TType a -> CodeGenModule FuncEnv
-declareFun' linkage tdef ttype = do
+            TDefFun a -> TType a -> CodeGenModule FuncEnv
+declareFun' tdef ttype = do
     let f_name = funName tdef
-        linkage' = if isPrototype tdef
-                      then ExternalLinkage
-                      else linkage
-    (f_value::Function a) <- newNamedFunction linkage' f_name
+        linkage = if '.' `elem` f_name
+                     then InternalLinkage
+                     else ExternalLinkage
+    (f_value::Function a) <- newNamedFunction linkage f_name
     return (f_name, AFunc f_value ttype)
 
 funName :: forall a. (IsFunction a) => TDefFun a -> Ide
@@ -161,7 +161,7 @@ compileStmt env _rtype (TStmtFun afunc) = do
     _ <- t1
     return ()
 -- TStmtIf
-compileStmt env rtype (TStmtIf acond if_stmt melse_stmt) = do
+compileStmt env rtype (TStmtIf acond if_stmt Nothing) = do
     true <- newBasicBlock
     false <- newBasicBlock
     exit <- newBasicBlock
@@ -176,16 +176,50 @@ compileStmt env rtype (TStmtIf acond if_stmt melse_stmt) = do
        else br exit
     -- cond was False
     defineBasicBlock false
-    case melse_stmt of
-         Just else_stmt -> do
-             compileStmt env rtype else_stmt
-             if doesStmtReturn else_stmt
-                then return ()
-                else br exit
-         Nothing -> br exit
+    br exit
     -- exit block
     defineBasicBlock exit
     return ()
+-- TStmtIf (with else)
+compileStmt env rtype (TStmtIf acond if_stmt (Just else_stmt)) = do
+    -- this is a little bit trickier because if both if_stmt
+    -- and ese_stmt returns then we MUST NOT define an exit basic block
+    if doesStmtReturn if_stmt && doesStmtReturn else_stmt
+       then do
+           true <- newBasicBlock
+           false <- newBasicBlock
+           ACond cond <- return acond
+           t1 <- compileCond env cond
+           condBr t1 true false
+           -- cond was True
+           defineBasicBlock true
+           compileStmt env rtype if_stmt
+           -- cond was False
+           defineBasicBlock false
+           compileStmt env rtype else_stmt
+           return ()
+       else do
+           true <- newBasicBlock
+           false <- newBasicBlock
+           exit <- newBasicBlock
+           ACond cond <- return acond
+           t1 <- compileCond env cond
+           condBr t1 true false
+           -- cond was True
+           defineBasicBlock true
+           compileStmt env rtype if_stmt
+           if doesStmtReturn if_stmt
+              then return ()
+              else br exit
+           -- cond was False
+           defineBasicBlock false
+           compileStmt env rtype else_stmt
+           if doesStmtReturn else_stmt
+              then return ()
+              else br exit
+           -- exit block
+           defineBasicBlock exit
+           return ()
 -- TStmtWhile
 compileStmt env rtype (TStmtWhile acond tstmt) = do
     loop <- newBasicBlock
@@ -240,8 +274,20 @@ compileExpr _ (TExprInt i)    = return $ valueOf i
 compileExpr _ (TExprChar c)   = return $ valueOf c
 -- TExprString
 compileExpr _ (TExprString s) = do
-    SArray msg <- liftCodeGenModule $ withStringNul s (return . SArray)
-    getElementPtr msg (0::Word32, (0::Word32, ()))
+    -- Llvm binding for haskell doesn't support UTF-8 string
+    -- To solve this we use this (ugly) hack
+    let utf8_s = UTF8.encode s
+    if length s == length utf8_s
+       then do
+           -- everething is fine here and we can use the
+           -- build in `withString' function
+           SArray msg <- liftCodeGenModule $ withStringNul s (return . SArray)
+           getElementPtr msg (0::Word32, (0::Word32, ()))
+       else do
+           let arr_size = fromIntegral (length utf8_s + 1) :: Word32
+           t1 <- arrayAlloca arr_size
+           storeUTF8String t1 utf8_s
+           return t1
 -- TExprVar
 compileExpr env (TExprVar v) = do
     t1 <- compileVariable env v
@@ -272,6 +318,17 @@ cmpArithOp OpTimes = mul
 cmpArithOp OpDiv   = idiv
 cmpArithOp OpMod   = irem
 cmpArithOp _ = panic "LlvmCodeGen.cmpArithOp got unexpected input"
+
+-- ---------------------------
+-- We use this as a hack to store a UTF8
+-- string to allocated memory 
+storeUTF8String :: Value (Ptr Word8) -> [Word8] -> CodeGenFunction r ()
+storeUTF8String arr [] =
+    store (valueOf (0::Word8)) arr
+storeUTF8String arr (x:xs) = do
+    store (valueOf x) arr
+    arr' <- getElementPtr arr (1::Word32, ())
+    storeUTF8String arr' xs
 
 
 -- -------------------------------------------------------------------

@@ -91,22 +91,41 @@ main' postLoadMode dflags0 args = do
          Right (dflags1, fileish_args, dynamicFlagWarnings) -> do
              printLocWarns dynamicFlagWarnings
              let normal_fileish_paths = map (normalise . unLoc) fileish_args
-             (srcs, objs) <- partition_args normal_fileish_paths [] []
-             if (null objs) && (length srcs == 1)
-                then do
-                    main'' postLoadMode dflags1 srcs objs
-                else do
-                    printErrs [ progName ++ ": you must specify one alan source file"
-                              , usageString ]
-                    exitFailure
+             (srcs, asms, objs) <- partition_args normal_fileish_paths [] [] []
+             case length srcs of
+                  0 -> do
+                      printErrs [ progName ++ ": no input files", usageString ]
+                      exitFailure
+                  1 -> main'' postLoadMode dflags1 srcs asms objs
+                  _ -> do
+                      if xopt Opt_ExplicitMain dflags1
+                         then main'' postLoadMode dflags1 srcs asms objs
+                         else do
+                             printErrs [ progName ++ ": cannot handle multiple source files"
+                                       , "Use -XExplicitMain if you want to enable this" ]
+                             exitFailure
 
 -- ---------------------------
 -- Right now handle only one file
-main'' :: PostLoadMode -> DynFlags -> [String] -> [String] -> IO ()
-main'' postLoadMode dflags0 srcs objs = do
-    src_objs <- mapM (driverParse postLoadMode dflags0) srcs
-    let _objs' = (reverse . catMaybes) src_objs ++ objs
-    exitSuccess
+main'' :: PostLoadMode -> DynFlags -> [String] -> [String] -> [String] -> IO ()
+main'' postLoadMode dflags srcs asms objs = do
+    -- firstly compile our source files into assembly code
+    src_asms <- mapM (driverParse dflags) srcs
+    case postLoadMode of
+         StopBeforeAs -> do
+             cleanAndExit True dflags
+         StopBeforeLn -> do
+             -- ------------------
+             -- Run the assembler
+             let asms' = (reverse .catMaybes) src_asms ++ asms
+             src_objs <- mapM (driverAssemble dflags) asms'
+             if isNoLink (gacLink dflags)
+                then cleanAndExit True dflags
+                else do
+                    -- -------------------------
+                    -- Link into one executable
+                    driverLink dflags (src_objs ++ objs)
+                    cleanAndExit True dflags
 
 
 -- -------------------------------------------------------------------
@@ -114,73 +133,162 @@ main'' postLoadMode dflags0 srcs objs = do
 
 -- ---------------------------
 -- parse a file and call the typechecker
-driverParse :: PostLoadMode -> DynFlags -> String -> IO (Maybe String)
-driverParse postLoadMode dflags filename = do
+driverParse :: DynFlags -> String -> IO (Maybe String)
+driverParse dflags filename = do
+    let out_file = case outputDir dflags of
+                        Just od -> replaceDirectory filename od
+                        Nothing -> filename
     contents <- BS.readFile filename
     let p_state = mkPState dflags contents (mkSrcLoc filename 1 1)
     case unP parser p_state of
          PFailed msg        -> do
              printMessages dflags msg
-             exitFailure
+             cleanAndExit False dflags
          POk p_state' luast -> do
              when (dopt Opt_D_dump_parsed dflags) $
-                    printDumpedAst (unLoc luast)
+                 printDumpedAst (dopt Opt_DumpToFile dflags)
+                    (replaceExtension out_file "dump-parsed") (unLoc luast)
              let p_messages = getPMessages p_state'
              if errorsFound p_messages ||
                  (warnsFound p_messages && dopt Opt_WarnIsError dflags)
                 then do
                     printMessages dflags p_messages
-                    exitFailure
+                    cleanAndExit False dflags
                 else do
-                    driverTypeCheck postLoadMode dflags p_messages luast
+                    driverTypeCheck dflags p_messages out_file luast
 
 -- ---------------------------
 -- type check an UAst and call the codeGenerator
 -- the produced object file (if any)
-driverTypeCheck :: PostLoadMode -> DynFlags -> Messages -> (Located UAst) -> IO (Maybe String)
-driverTypeCheck postLoadMode dflags p_messages luast = do
+driverTypeCheck :: DynFlags -> Messages -> String -> (Located UAst) -> IO (Maybe String)
+driverTypeCheck dflags p_messages out_file luast = do
     let tc_state = mkTcState dflags predefinedTable
     case unTcM (typeCheckAst luast) tc_state of
          TcFailed msg         -> do
              printMessages dflags msg
-             exitFailure
+             cleanAndExit False dflags
          TcOk tc_state' tast -> do
              let tc_messages  = (getTcMessages tc_state')
                  tc_messages' = unionMessages p_messages tc_messages
+             printMessages dflags tc_messages'
              if errorsFound tc_messages' ||
                  (warnsFound tc_messages && dopt Opt_WarnIsError dflags)
                 then do
-                    printMessages dflags tc_messages'
-                    exitFailure
+                    -- errors found
+                    cleanAndExit False dflags
                 else do
-                    let protos = getTcProtos tc_state'
-                    driverCodeGen postLoadMode dflags tc_messages' protos tast
+                    -- check for `-fno-code'
+                    if isObjectTarget $ alcTarget dflags
+                       then do
+                           let protos = getTcProtos tc_state'
+                           driverCodeGen dflags out_file protos tast
+                       else do
+                           return Nothing
 
 -- ---------------------------
 -- generate llvm code and return
 -- the produced object file (if any)
-driverCodeGen :: PostLoadMode -> DynFlags -> Messages
-              -> [Prototype] -> TAst -> IO (Maybe String)
-driverCodeGen _postLoadMode dflags tc_messages protos tast = do
+driverCodeGen :: DynFlags -> String -> [Prototype] -> TAst -> IO (Maybe String)
+driverCodeGen dflags out_file protos tast = do
     let tast' = lambdaLift protos tast
-    mFoo <- newModule
-    defineModule mFoo (compile tast')
---    writeBitcodeToFile "foo.br" mFoo
-    printMessages dflags tc_messages
-    return Nothing
+    llvm_module <- newModule
+    defineModule llvm_module (compile tast')
+    -- -----------------------
+    -- output llvm file
+    let br_file = replaceExtension out_file "br"
+    when (not $ dopt Opt_KeepLlvmFiles dflags) $
+        addFilesToClean dflags [br_file]
+    writeBitcodeToFile br_file llvm_module
+    -- -----------------------
+    -- optimize bytecode llvm
+    -- don't specify anything if user has specified commands. We do this for
+    -- opt but not llc since opt is very specifically for optimisation passes
+    -- only, so if the user is passing us extra options we assume they know
+    -- what they are doing and don't get in the way.
+    let lo_opts  = getOpts dflags opt_lo
+        opt_lvl  = optLevel dflags
+        opt_Opts = ["-mem2reg", "-O1", "-O2", "-O3"]
+        optFlag  = if null lo_opts
+                     then [Option (opt_Opts !! opt_lvl)]
+                     else []
+    runLlvmOpt dflags
+        ([FileOption "" br_file,
+            Option "-o",
+            FileOption "" br_file]
+        ++ optFlag
+        ++ map Option lo_opts)
+    -- -----------------------
+    -- generate assembly
+    let asm_file = replaceExtension out_file "s"
+    when (not $ dopt Opt_KeepSFiles dflags) $
+        addFilesToClean dflags [asm_file]
+    let lc_opts  = getOpts dflags opt_lc
+        llc_Opts = ["-O1", "-O2", "-O3", "-O4"]
+    runLlvmLlc dflags
+        ([Option (llc_Opts !! opt_lvl),
+            FileOption "" br_file,
+            Option "-o", FileOption "" asm_file]
+        ++ map Option lc_opts)
+    return (Just asm_file)
+
+
+-- ---------------------------
+-- generate assembly code
+-- return the produced asm file
+driverAssemble :: DynFlags -> String -> IO String
+driverAssemble dflags input_file = do
+    let output_file = replaceExtension input_file "o"
+        as_opts = getOpts dflags opt_a
+    when (not $ dopt Opt_KeepObjFiles dflags) $
+        addFilesToClean dflags [output_file]
+    runAs dflags
+        (map Option as_opts
+        ++ [ Option "-c"
+           , FileOption "" input_file
+           , Option "-o"
+           , FileOption "" output_file ])
+    return output_file
+
+-- ---------------------------
+-- generate executable
+driverLink :: DynFlags -> [String] -> IO ()
+driverLink dflags input_files = do
+    let verb = getVerbFlag dflags
+        out_file = exeFileName dflags
+        lib_paths = (topDir dflags) : (libraryPaths dflags)
+        lib_paths_opts = map ("-L"++) lib_paths
+        extra_ld_opts = getOpts dflags opt_l
+    runLink dflags (
+        [ Option verb
+        , Option "-o"
+        , FileOption "" out_file
+        ]
+        ++ map (FileOption "") input_files
+        ++ map Option (lib_paths_opts ++ extra_ld_opts))
+    return ()
 
 
 -- -------------------------------------------------------------------
--- Splitting arguments into source files and object files.
+-- Clean temp files and exit
+cleanAndExit :: Bool -> DynFlags -> IO a
+cleanAndExit is_success dflags = do
+    cleanTempFiles dflags
+    if is_success
+       then exitSuccess
+       else exitFailure
 
-partition_args :: [String] -> [String] -> [String]
-               -> IO ([String], [String])
-partition_args [] srcs objs = return (reverse srcs, reverse objs)
-partition_args (arg:args) srcs objs
-  | looks_like_an_input arg = partition_args args (arg:srcs) objs
-  | looks_like_an_obj   arg = partition_args args srcs (arg:objs)
-  | otherwise               = do
-      printErrs [ progName ++ ": unrecognised flags: " ++ arg
+-- -------------------------------------------------------------------
+-- Splitting arguments into source files, assembly files and object files.
+
+partition_args :: [FilePath] -> [String] -> [String] -> [String]
+               -> IO ([String], [String], [String])
+partition_args [] srcs asms objs = return (reverse srcs, reverse asms, reverse objs)
+partition_args (arg:args) srcs asms objs
+  | looks_like_an_input arg = partition_args args (arg:srcs) asms objs
+  | looks_like_an_asm   arg = partition_args args srcs (arg:asms) objs
+  | looks_like_an_obj   arg = partition_args args srcs asms (arg:objs)
+  | otherwise = do
+      printErrs [ progName ++ ": unrecognised flag `" ++ arg ++ "'"
                 , usageString ]
       exitFailure
 
@@ -192,5 +300,17 @@ partition_args (arg:args) srcs objs
 looks_like_an_input :: String -> Bool
 looks_like_an_input m = (drop 1 $ takeExtension m) == "alan"
 
+looks_like_an_asm :: String -> Bool
+looks_like_an_asm m = (drop 1 $ takeExtension m) == "s"
+
 looks_like_an_obj :: String -> Bool
 looks_like_an_obj m = (drop 1 $ takeExtension m) == "o"
+
+-- ---------------------------
+exeFileName :: DynFlags -> FilePath
+exeFileName dflags =
+    case (outputFile dflags, outputDir dflags) of
+         (Just s, Just d) -> d </> s
+         (Just s, Nothing) -> s
+         (Nothing, Just d) -> d </> "a.out"
+         (Nothing, Nothing) -> "a.out"

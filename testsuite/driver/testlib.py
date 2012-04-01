@@ -506,7 +506,8 @@ def test_common_work (name, opts, func, args):
                    '.run.stderr',               '.run.stdout',
                    '.run.stderr.normalised',    '.run.stdout.normalised',
                    '.comp.stderr',              '.comp.stdout',
-                   '.comp.stderr.normalised',   '.comp.stdout.normalised']))
+                   '.comp.stderr.normalised',   '.comp.stdout.normalised',
+                   '.o', '.s', '.br']))
 
         clean(getTestOpts().clean_files)
 
