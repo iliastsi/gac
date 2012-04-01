@@ -264,7 +264,8 @@ driverLink dflags input_files = do
         , FileOption "" out_file
         ]
         ++ map (FileOption "") input_files
-        ++ map Option (lib_paths_opts ++ extra_ld_opts))
+        ++ map Option (lib_paths_opts ++ extra_ld_opts)
+        ++ [Option "-lprelude"])
     return ()
 
 
