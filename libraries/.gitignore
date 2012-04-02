@@ -6,3 +6,4 @@
 *.bc
 *.s
 /Makefile
+/prelude/Prelude

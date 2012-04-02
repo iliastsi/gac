@@ -35,7 +35,7 @@ prelude.s: prelude.bc
 	$(llc) -O3 $< -o $@
 
 prelude.bc: Main.hs
-	$(ghc) $< -o Prelude
+	$(ghc) -Wall $< -o Prelude
 	./Prelude
 	$(opt) -O3 $@ -o $@
 
