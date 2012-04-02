@@ -92,20 +92,42 @@ compileDefFun env@(fun_env,_) (ADefFun tdef t_type) = do
 compDefFun :: (IsFunction a, Translate a) => Env -> [ValueEnv] -> TDefFun a -> CG a
 compDefFun env val_env (TDefFun _ide ttype (_,adefvar) tstmt) = do
     case (test ttype TTypeInt, test ttype TTypeChar, test ttype TTypeProc) of
-         (Just Eq, Nothing, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
-         (Nothing, Just Eq, Nothing) -> compDefFun' env val_env ttype adefvar tstmt
-         (Nothing, Nothing, Just Eq) -> compDefFun' env val_env ttype adefvar tstmt
+         (Just Eq, Nothing, Nothing) -> compDefFun' env ([],val_env) ttype adefvar tstmt
+         (Nothing, Just Eq, Nothing) -> compDefFun' env ([],val_env) ttype adefvar tstmt
+         (Nothing, Nothing, Just Eq) -> compDefFun' env ([],val_env) ttype adefvar tstmt
          _ -> panic "LlvmCodeGen.compDefFun test had to return Eq"
 compDefFun env val_env (TDefPar ide ttype tdeffun) =
     \v_value -> compDefFun env ((ide, AValue v_value ttype):val_env) tdeffun
 compDefFun _ _ _ = panic "LlvmCodeGen.compDefFun got unexpected input"
 
-compDefFun' :: Env -> [ValueEnv] -> TType r -> [ADefVar] -> TStmt -> CodeGenFunction r ()
-compDefFun' (fun_env,_) val_env ttype adefvar tstmt = do
+compDefFun' :: Env -> ([ValueEnv], [ValueEnv]) -> TType r
+            -> [ADefVar] -> TStmt -> CodeGenFunction r ()
+compDefFun' (fun_env,_) (val_env,[]) ttype adefvar tstmt = do
     val_env' <- mapM (compileDefVar ttype) adefvar
     let val_env'' = Map.fromList (val_env ++ val_env')
         env' = (fun_env, val_env'')
     compileStmt env' ttype tstmt
+compDefFun' env (val_env,ves) ttype adefvar tstmt = do
+    -- we have to allocate memory for our (non ptr) parameters
+    let ve   = head ves
+        ves' = tail ves
+    (ide, AValue v_value vtype) <- return ve
+    case (test vtype TTypeInt, test vtype TTypeChar) of
+         (Just Eq, Nothing) -> do
+             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (0::Word32) vtype
+             case test (TTypePtr vtype) vtype' of
+                  Just Eq -> do
+                      store v_value t1
+                      compDefFun' env (v:val_env, ves') ttype adefvar tstmt
+                  Nothing -> panic "LlvmCodeGen.compDefFun' test had to return Eq"
+         (Nothing, Just Eq) -> do
+             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (0::Word32) vtype
+             case test (TTypePtr vtype) vtype' of
+                  Just Eq -> do
+                      store v_value t1
+                      compDefFun' env (v:val_env, ves') ttype adefvar tstmt
+                  Nothing -> panic "LlvmCodeGen.compDefFun' test had to return Eq"
+         _ -> compDefFun' env (ve:val_env, ves') ttype adefvar tstmt
 
 
 -- Check if it is a prototype definition
@@ -114,6 +136,7 @@ isPrototype (TDefPar _ _ tdef) =
     isPrototype tdef
 isPrototype (TDefProt _ _) = True
 isPrototype (TDefFun _ _ _ _) = False
+
 
 -- -------------------------------------------------------------------
 -- Compile TDefVar into llvm
