@@ -1,0 +1,28 @@
+foo() : proc
+  x : int;
+  b : byte;
+  s : byte[128];
+{
+  writeString("Give me a number: ");
+  x = readInteger();
+  writeString("\nYou gave me: ");
+  writeInteger(x);
+
+  writeString("\nGive me a byte: ");
+  b = readByte();
+  writeString("\nYou gave me: ");
+  writeByte(b);
+
+  writeString("\nGive me a char: ");
+  readChar(); -- read previous line feed
+  b = readChar();
+  writeString("\nYou gave me: ");
+  writeChar(b);
+  readChar();
+
+  writeString("\nBy the way what\'s your name? ");
+  readString(128, s);
+  writeString("\nHello, ");
+  writeString(s);
+  writeChar('\n');
+}

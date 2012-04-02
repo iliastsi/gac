@@ -6,6 +6,7 @@
 --
 --------------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
 import Data.Word
@@ -20,6 +21,8 @@ prelude = do
         TFunction (Ptr Word8 -> VarArgs Word32)
     scanf <- newNamedFunction ExternalLinkage "scanf"  ::
         TFunction (Ptr Word8 -> VarArgs Word32)
+    getchar <- newNamedFunction ExternalLinkage "getchar" ::
+        TFunction (IO Int32)
     writeInteger <- newNamedFunction ExternalLinkage "writeInteger" ::
         TFunction (Int32 -> IO ())
     writeByte <- newNamedFunction ExternalLinkage "writeByte" ::
@@ -55,6 +58,7 @@ prelude = do
         print_b = castVarArgs printf :: Function (Ptr Word8 -> Word8 -> IO Word32)
         print_s = castVarArgs printf :: Function (Ptr Word8 -> IO Word32)
         read_d = castVarArgs scanf :: Function (Ptr Word8 -> Ptr Int32 -> IO Word32)
+        read_c = castVarArgs scanf :: Function (Ptr Word8 -> Ptr Word8 -> IO Word32)
 
     -- -----------------------
     -- writeInteger
@@ -99,6 +103,64 @@ prelude = do
             t3 <- load t1
             ret t3
         )
+
+    -- -----------------------
+    -- readByte
+    defineFunction readByte $ do
+        t1 <- call readInteger
+        (t2 :: Value Word8) <- trunc t1
+        ret t2
+
+    -- -----------------------
+    -- readChar
+    withStringNul "%c" (\fmt ->
+        defineFunction readChar $ do
+            t1 <- alloca
+            t2 <- getElementPtr fmt (0::Word32, (0::Word32, ()))
+            _ <- call read_c t2 t1
+            t3 <- load t1
+            ret t3
+        )
+
+    -- -----------------------
+    -- readString
+    defineFunction readString $ \n s -> do
+        top <- getCurrentBasicBlock
+        loop <- newBasicBlock
+        body <- newBasicBlock
+        bb1 <- newBasicBlock
+        bb2 <- newBasicBlock
+        exit <- newBasicBlock
+        n' <- sub n (valueOf (1::Int32))
+        br loop
+        -- loop
+        defineBasicBlock loop
+        i <- phi [(n', top)] -- i starts as (n-1), when entered from top bb
+        p <- phi [(s, top)] -- p starts as s, when entered from top bb
+        t1 <- cmp CmpGT i (valueOf (0::Int32))
+        condBr t1 body exit
+        -- body
+        defineBasicBlock body
+        t2 <- call getchar
+        t3 <- cmp CmpEQ t2 (valueOf (10::Int32))
+        condBr t3 exit bb1
+        -- bb1
+        defineBasicBlock bb1
+        t4 <- cmp CmpEQ t2 (valueOf (-1::Int32))
+        condBr t4 exit bb2
+        -- bb2
+        defineBasicBlock bb2
+        (t5 :: Value Word8) <- trunc t2
+        store t5 p
+        i' <- sub i (valueOf (1::Int32))
+        p' <- getElementPtr p (1::Word32, ())
+        addPhiInputs i [(i', bb2)]
+        addPhiInputs p [(p', bb2)]
+        br loop
+        -- exit
+        defineBasicBlock exit
+        store (valueOf (0::Word8)) p
+        ret ()
 
     return ()
 
