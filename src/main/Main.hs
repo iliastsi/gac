@@ -119,12 +119,13 @@ main'' postLoadMode dflags srcs asms objs = do
              -- Run the assembler
              let asms' = (reverse .catMaybes) src_asms ++ asms
              src_objs <- mapM (driverAssemble dflags) asms'
-             if isNoLink (gacLink dflags)
+             let objs' = src_objs ++ objs
+             if isNoLink (gacLink dflags) || null objs'
                 then cleanAndExit True dflags
                 else do
                     -- -------------------------
                     -- Link into one executable
-                    driverLink dflags (src_objs ++ objs)
+                    driverLink dflags objs'
                     cleanAndExit True dflags
 
 
