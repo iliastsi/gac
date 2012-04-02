@@ -196,10 +196,10 @@ driverCodeGen dflags out_file protos tast = do
     defineModule llvm_module (compile tast')
     -- -----------------------
     -- output llvm file
-    let br_file = replaceExtension out_file "br"
+    let bc_file = replaceExtension out_file "bc"
     when (not $ dopt Opt_KeepLlvmFiles dflags) $
-        addFilesToClean dflags [br_file]
-    writeBitcodeToFile br_file llvm_module
+        addFilesToClean dflags [bc_file]
+    writeBitcodeToFile bc_file llvm_module
     -- -----------------------
     -- optimize bytecode llvm
     -- don't specify anything if user has specified commands. We do this for
@@ -213,9 +213,9 @@ driverCodeGen dflags out_file protos tast = do
                      then [Option (opt_Opts !! opt_lvl)]
                      else []
     runLlvmOpt dflags
-        ([FileOption "" br_file,
+        ([FileOption "" bc_file,
             Option "-o",
-            FileOption "" br_file]
+            FileOption "" bc_file]
         ++ optFlag
         ++ map Option lo_opts)
     -- -----------------------
@@ -227,7 +227,7 @@ driverCodeGen dflags out_file protos tast = do
         llc_Opts = ["-O1", "-O2", "-O3", "-O4"]
     runLlvmLlc dflags
         ([Option (llc_Opts !! opt_lvl),
-            FileOption "" br_file,
+            FileOption "" bc_file,
             Option "-o", FileOption "" asm_file]
         ++ map Option lc_opts)
     return (Just asm_file)
