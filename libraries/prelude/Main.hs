@@ -43,13 +43,13 @@ prelude = do
         TFunction (Word8 -> IO Int32)
     shrink <- newNamedFunction ExternalLinkage "shrink" ::
         TFunction (Int32 -> IO Word8)
-    strlen <- newNamedFunction ExternalLinkage "strlen" ::
+    _ <- newNamedFunction ExternalLinkage "strlen" ::
         TFunction (Ptr Word8 -> IO Int32)
-    strcmp <- newNamedFunction ExternalLinkage "strcmp" ::
+    _ <- newNamedFunction ExternalLinkage "strcmp" ::
         TFunction (Ptr Word8 -> Ptr Word8 -> IO Int32)
-    strcpy <- newNamedFunction ExternalLinkage "strcpy" ::
+    _ <- newNamedFunction ExternalLinkage "strcpy" ::
         TFunction (Ptr Word8 -> Ptr Word8 -> IO ())
-    strcat <- newNamedFunction ExternalLinkage "strcat" ::
+    _ <- newNamedFunction ExternalLinkage "strcat" ::
         TFunction (Ptr Word8 -> Ptr Word8 -> IO ())
 
     -- -----------------------
@@ -174,7 +174,9 @@ prelude = do
         (t1 :: Value Word8) <- trunc i
         ret t1
 
-
+    -- -----------------------
+    -- string functions are
+    -- the same with libc
     return ()
 
 

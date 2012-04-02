@@ -1,0 +1,14 @@
+strings() : proc
+  s : byte[128];
+{
+  writeInteger(strlen("Ilias"));
+  writeChar('\n');
+  strcpy(s, "Ilias");
+  writeInteger(strcmp(s, "Ilias"));
+  writeChar('\n');
+  strcat(s, "2");
+  writeInteger(strcmp(s, "Ilias"));
+  writeChar('\n');
+  writeString(s);
+  writeChar('\n');
+}
