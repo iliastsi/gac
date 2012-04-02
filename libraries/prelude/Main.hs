@@ -162,6 +162,19 @@ prelude = do
         store (valueOf (0::Word8)) p
         ret ()
 
+    -- -----------------------
+    -- extend
+    defineFunction extend $ \w -> do
+        (t1 :: Value Int32) <- zext w
+        ret t1
+
+    -- -----------------------
+    -- shrink
+    defineFunction shrink $ \i -> do
+        (t1 :: Value Word8) <- trunc i
+        ret t1
+
+
     return ()
 
 

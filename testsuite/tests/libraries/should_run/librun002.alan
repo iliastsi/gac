@@ -1,4 +1,4 @@
-foo() : proc
+read() : proc
   x : int;
   b : byte;
   s : byte[128];

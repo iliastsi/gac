@@ -1,0 +1,9 @@
+conversions() : proc
+{
+  writeInteger(extend('*'));
+  writeChar('\n');
+  writeByte(shrink(42));
+  writeChar('\n');
+  writeChar(shrink(43));
+  writeChar('\n');
+}
