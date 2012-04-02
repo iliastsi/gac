@@ -3,3 +3,6 @@
 *.hi
 *.o
 *.a
+*.bc
+*.s
+/Makefile

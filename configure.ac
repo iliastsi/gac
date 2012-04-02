@@ -152,6 +152,18 @@ chmod +x install-sh
 dnl ** figure out how to do a BSD-ish install
 AC_PROG_INSTALL
 
+dnl ** Find the path to gcc
+AC_PROG_CC(gcc)
+
+dnl ** Find the path to ar
+AC_PATH_PROGS(ArCmd,ar,ar)
+
+dnl ** Find the path to llc
+AC_PATH_PROGS(LlcCmd,llc,llc)
+
+dnl ** Find the path to opt
+AC_PATH_PROGS(OptCmd,opt,opt)
+
 dnl ** Find the path to sed
 AC_PATH_PROGS(SedCmd,gsed sed,sed)
 
@@ -206,7 +218,7 @@ if grep '	' src/gac.cabal.in 2>&1 >/dev/null; then
    AC_MSG_ERROR([src/gac.cabal.in contains tab characters; please remove them])
 fi
 
-AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile src/config.h])
+AC_CONFIG_FILES([Makefile src/gac.cabal src/Makefile src/config.h libraries/Makefile])
 AC_OUTPUT
 
 # We get caught by

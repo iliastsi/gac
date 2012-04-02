@@ -1,0 +1,34 @@
+# -----------------------------------------------------------------------------
+#
+# (c) 2011-2012 Tsitsimpis Ilias
+#
+# This file is part of the GAC build system.
+#
+# To understand how the build system works and how to modify it, see HACKING
+#
+# -----------------------------------------------------------------------------
+
+libdir =
+
+ghc          = @GHC@
+gcc          = @CC@
+ar           = @ArCmd@
+llc          = @LlcCmd@
+opt          = @OptCmd@
+INSTALL      = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+
+.PHONY: all
+all:
+	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
+	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+
+.PHONY: install
+install:
+	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
+	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+
+.PHONY: clean
+clean:
+	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
+	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@

@@ -44,6 +44,7 @@ build:
 inplace: build $(builddir)/$(PACKAGE_TARNAME)
 	$(INSTALL_PROG) -D $(builddir)/build/$(PACKAGE_TARNAME)/$(PACKAGE_TARNAME) \
 			$(builddir)/inplace/bin/$(PACKAGE_TARNAME)
+	$(MAKE) -C libraries libdir=$(builddir)/inplace install
 
 $(builddir)/$(PACKAGE_TARNAME):
 	$(call shell-wrapper,'gac_shell',$(builddir)/inplace)
@@ -71,6 +72,7 @@ install: build
 	    < docs/man_page/gac.1 | $(GZIP) - > docs/man_page/gac.1.gz
 	$(INSTALL_DATA) -D docs/man_page/gac.1.gz $(mandir)/man1/$(PACKAGE_TARNAME).1.gz
 	$(RM) docs/man_page/gac.1.gz
+	$(MAKE) -C libraries libdir=$(libdir) install
 	@echo "\n\nInstallation of $(ARCHIVE) was successful."
 	@echo "To use, add $(bindir) to your PATH."
 
@@ -117,14 +119,15 @@ distcheck: dist
 ###########################
 .PHONY: clean
 clean:
-	$(MAKE) -C src $@
+	$(MAKE) -C src clean
 	$(MAKE) -C testsuite clean
+	$(MAKE) -C libraries clean
 	$(RM) testsuite_summary.txt
 
 .PHONY: distclean
 distclean: clean
 	$(RM) Makefile src/Makefile src/config.h src/gac.cabal
-	$(RM) config.log config.status
+	$(RM) libraries/Makefile config.log config.status
 
 .PHONY: maintainer-clean
 maintainer-clean: distclean
