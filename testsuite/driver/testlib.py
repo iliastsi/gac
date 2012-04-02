@@ -697,7 +697,7 @@ def do_compile( name, way, should_fail, extra_hc_opts ):
 # -----------------------------------------------------------------------------
 # Compile-and-run tests
 
-def compile_and_run__( name, way, extra_hc_opts, ):
+def compile_and_run__( name, way, extra_hc_opts ):
     # print 'Compile and run, extra args = ', extra_hc_opts
     pretest_cleanup(name)
 
@@ -714,7 +714,7 @@ def compile_and_run__( name, way, extra_hc_opts, ):
     return simple_run( name, way, cmd, getTestOpts().extra_run_opts )
 
 def compile_and_run( name, way, extra_hc_opts ):
-    return compile_and_run__( name, way, extra_hc_opts, '')
+    return compile_and_run__( name, way, extra_hc_opts )
 
 # -----------------------------------------------------------------------------
 # Build a single-module program
@@ -837,15 +837,7 @@ def simple_run( name, way, prog, args ):
     return 'pass'
 
 def rts_flags(way):
-    if (way == ''):
         return ''
-    else:
-        args = config.way_rts_flags[way]
-
-    if args == []:
-        return ''
-    else:
-        return '+RTS ' + join(args,' ') + ' -RTS'
 
 # -----------------------------------------------------------------------------
 # Run a program in the interpreter and check its output

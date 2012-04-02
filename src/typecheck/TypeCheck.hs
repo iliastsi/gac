@@ -78,11 +78,12 @@ typeCheckAst luast = do
                       AType ttype <- typeCheckType lutype
                       if name /= "main"
                          then return $ ADefFun
-                            (TDefFun "main" TTypeProc ([tast],[])
+                            (TDefFun "main" TTypeInt ([tast],[])
                             (TStmtCompound True
                             [(TStmtFun (AFuncCall (TFuncCall name (TTypeRetIO ttype))
-                            (TTypeRetIO ttype))), TStmtReturn Nothing]))
-                            (TTypeRetIO TTypeProc)
+                            (TTypeRetIO ttype))),
+                            TStmtReturn $ Just $ AExpr (TExprInt 0) TTypeInt]))
+                            (TTypeRetIO TTypeInt)
                          else return tast
          Right _   -> panic "typeCheck.typeCheckAst Either had to return Left"
 

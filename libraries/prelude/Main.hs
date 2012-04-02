@@ -54,6 +54,7 @@ prelude = do
     let print_d = castVarArgs printf :: Function (Ptr Word8 -> Int32 -> IO Word32)
         print_b = castVarArgs printf :: Function (Ptr Word8 -> Word8 -> IO Word32)
         print_s = castVarArgs printf :: Function (Ptr Word8 -> IO Word32)
+        read_d = castVarArgs scanf :: Function (Ptr Word8 -> Ptr Int32 -> IO Word32)
 
     -- -----------------------
     -- writeInteger
@@ -87,6 +88,17 @@ prelude = do
     defineFunction writeString $ \s -> do
         _ <- call print_s s
         ret ()
+
+    -- -----------------------
+    -- readInteger
+    withStringNul "%d" (\fmt ->
+        defineFunction readInteger $ do
+            t1 <- alloca
+            t2 <- getElementPtr fmt (0::Word32, (0::Word32, ()))
+            _ <- call read_d t2 t1
+            t3 <- load t1
+            ret t3
+        )
 
     return ()
 

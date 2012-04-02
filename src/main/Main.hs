@@ -224,7 +224,7 @@ driverCodeGen dflags out_file protos tast = do
     when (not $ dopt Opt_KeepSFiles dflags) $
         addFilesToClean dflags [asm_file]
     let lc_opts  = getOpts dflags opt_lc
-        llc_Opts = ["-O1", "-O2", "-O3", "-O4"]
+        llc_Opts = ["-O0", "-O1", "-O2", "-O3"]
     runLlvmLlc dflags
         ([Option (llc_Opts !! opt_lvl),
             FileOption "" bc_file,

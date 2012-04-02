@@ -1,0 +1,8 @@
+write() : proc
+{
+  writeString("Lucky number is ");
+  writeInteger(42);
+  writeString(" or ");
+  writeByte('*');
+  writeChar('\n');
+}
