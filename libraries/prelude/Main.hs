@@ -52,15 +52,41 @@ prelude = do
     -- -----------------------
     -- cast printf/scanf
     let print_d = castVarArgs printf :: Function (Ptr Word8 -> Int32 -> IO Word32)
+        print_b = castVarArgs printf :: Function (Ptr Word8 -> Word8 -> IO Word32)
+        print_s = castVarArgs printf :: Function (Ptr Word8 -> IO Word32)
 
     -- -----------------------
     -- writeInteger
-    withStringNul "%d" (\d ->
+    withStringNul "%d" (\fmt ->
         defineFunction writeInteger $ \i -> do
-            t1 <- getElementPtr d (0::Word32, (0::Word32, ()))
+            t1 <- getElementPtr fmt (0::Word32, (0::Word32, ()))
             _ <- call print_d t1 i
             ret ()
         )
+
+    -- -----------------------
+    -- writeByte
+    withStringNul "%d" (\fmt ->
+        defineFunction writeByte $ \b -> do
+            t1 <- getElementPtr fmt (0::Word32, (0::Word32, ()))
+            _ <- call print_b t1 b
+            ret ()
+        )
+
+    -- -----------------------
+    -- writeChar
+    withStringNul "%c" (\fmt ->
+        defineFunction writeChar $ \c -> do
+            t1 <- getElementPtr fmt (0::Word32, (0::Word32, ()))
+            _ <- call print_b t1 c
+            ret ()
+        )
+
+    -- -----------------------
+    -- writeString
+    defineFunction writeString $ \s -> do
+        _ <- call print_s s
+        ret ()
 
     return ()
 
