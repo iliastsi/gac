@@ -92,18 +92,17 @@ main' postLoadMode dflags0 args = do
              printLocWarns dynamicFlagWarnings
              let normal_fileish_paths = map (normalise . unLoc) fileish_args
              (srcs, asms, objs) <- partition_args normal_fileish_paths [] [] []
-             case length srcs of
-                  0 -> do
-                      printErrs [ progName ++ ": no input files", usageString ]
-                      exitFailure
-                  1 -> main'' postLoadMode dflags1 srcs asms objs
-                  _ -> do
-                      if xopt Opt_ExplicitMain dflags1
-                         then main'' postLoadMode dflags1 srcs asms objs
-                         else do
-                             printErrs [ progName ++ ": cannot handle multiple source files"
-                                       , "Use -XExplicitMain if you want to enable this" ]
-                             exitFailure
+             if (sum $ map length [srcs, asms, objs]) == 0
+                then do
+                    printErrs [ progName ++ ": no input files", usageString ]
+                    exitFailure
+                else do
+                    if length srcs <= 1 || xopt Opt_ExplicitMain dflags1
+                       then main'' postLoadMode dflags1 srcs asms objs
+                       else do
+                           printErrs [ progName ++ ": cannot handle multiple source files"
+                                     , "Use -XExplicitMain if you want to enable this" ]
+                           exitFailure
 
 -- ---------------------------
 -- Right now handle only one file

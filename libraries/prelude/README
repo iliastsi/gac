@@ -1,0 +1,49 @@
+      Alan's prelude Library
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- writeInteger (n : int) : proc
+    Write an integer to standard output (without new line).
+
+- writeByte (b : byte) : proc
+    Write a byte to standard output.
+
+- writeChar (b : byte) : proc
+    Write a byte as a char to standard output.
+
+- writeString (s : reference byte []) : proc
+    Write a string to standard output.
+
+- readInteger () : int
+    Read an integer from standard input.
+
+- readByte () : byte
+    Read a byte from standard input.
+
+- readChar () : byte
+    Read a char from standard input.
+
+- readString (n : int, s : reference byte []) : proc
+    Read a string (size up to n, including '\0') from standard input
+    until EOL or EOF (but do not save EOL or EOF).
+
+- extend (b : byte) : int
+    Zero extend a byte to an integer.
+
+- shrink (i : int) : byte
+    Truncate an integer into a byte
+
+- strlen (s : reference byte []) : int
+    Get the size of a string.
+
+- strcmp (s1 : reference byte [], s2 : reference byte []) : int
+    Compare two string s1 and s2. Returns an integer less than, equal to,
+    or greater than zero if s1 is found, respectively, to be less than,
+    to match, or be greater than s2.
+
+- strcpy (trg : reference byte [], src : reference byte []) : proc
+    Copies the string pointed to by src, including the terminating
+    null byte ('\0'), to the buffer pointed to by trg.
+
+- strcat (trg : reference byte [], src : reference byte []) : proc
+    Appends the src string to the trg string, overwriting the terminating
+    null byte ('\0') at the end of trg, and then adds a terminating null byte.

@@ -1,0 +1,14 @@
+      Alan's math Library
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- abs (n : int) : proc
+    Computes the absolute value of the integer argument n.
+
+- pow (x : int, y : int) : int
+    Returns the value of x raised to the power of y.
+
+- maxInt () : int
+    Returns the maximum integer value.
+
+- minInt () : int
+    Returns the minimum integer value.

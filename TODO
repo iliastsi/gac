@@ -1,16 +1,10 @@
     Bugs
 ~~~~~~~~~~~~~~~~~~~
-** support `'' in strings
-** support `"' in chars
 
 
     Releases
 ~~~~~~~~~~~~~~~~~~~
 ** Libraries
--- ---- (math)
-- pow
-- maxInt
-- minInt
 -- ---- (stdlib)
 - atoi
 - rand

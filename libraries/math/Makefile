@@ -22,10 +22,10 @@ install: libmath.a
 	$(INSTALL) -D $< $(libdir)
 
 ##############################
-libmath.a: abs.o
+libmath.a: Abs.o Pow.o MaxInt.o MinInt.o
 	$(ar) rcs $@ $^
 
-abs.o: abs.alan
+%.o: %.alan
 	$(gac) -XExplicitMain -c $<
 
 ##############################

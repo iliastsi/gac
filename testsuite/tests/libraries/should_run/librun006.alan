@@ -1,0 +1,28 @@
+math() : proc
+  maxInt() : int;
+  minInt() : int;
+  pow(x : int, y : int) : int;
+
+  max() : proc
+  {
+    writeString("Max integer is ");
+    writeInteger(maxInt());
+    writeChar('\n');
+  }
+  min() : proc
+  {
+    writeString("Min integer is ");
+    writeInteger(minInt());
+    writeChar('\n');
+  }
+  power() : proc
+  {
+    writeString("By the way 5^8 = ");
+    writeInteger(pow(5, 8));
+    writeChar('\n');
+  }
+{
+  max();
+  min();
+  power();
+}
