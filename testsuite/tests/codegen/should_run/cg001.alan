@@ -1,0 +1,15 @@
+nestedFuns() : proc
+  x : int;
+  s : byte[64];
+  foo1() : proc
+  {
+    if(x==0)
+      writeString(s);
+  }
+{
+  x = 1;
+  strcpy(s, "This message\n");
+  foo1();
+  x = 0;
+  foo1();
+}

@@ -1,0 +1,25 @@
+byRef() : proc
+  x : int;
+  s : byte[64];
+  foo1(x : reference int) : proc
+  {
+    writeString("In foo1 x = ");
+    writeInteger(x);
+    writeChar('\n');
+    x = 42;
+  }
+  foo2(y : reference byte []) : proc
+  {
+    writeString("In foo2 y = ");
+    writeString(y);
+    writeChar('\n');
+    strcat(y, " version 2");
+  }
+{
+  x = 0;
+  strcpy(s, "This message");
+  foo1(x);
+  foo2(s);
+  foo1(x);
+  foo2(s);
+}

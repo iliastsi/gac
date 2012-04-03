@@ -13,7 +13,7 @@ dnl
 # see what flags are available. (Better yet, read the documentation!)
 #
 
-AC_INIT([The Glorious Alan Compilation System], [0.8], [iliastsi@hotmail.com], [gac])
+AC_INIT([The Glorious Alan Compilation System], [1.0], [iliastsi@hotmail.com], [gac])
 
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])
 

@@ -1,0 +1,27 @@
+multiDimArrays() : proc
+  x : int[3][3];
+  i : int;
+  j : int;
+{
+  i = 0;
+  while(i<3) {
+    j = 0;
+    while(j<3) {
+      x[i][j] = i + j;
+      j = j + 1;
+    }
+    i = i + 1;
+  }
+
+  i = 0;
+  while(i<3) {
+    j = 0;
+    while(j<3) {
+      writeInteger(x[i][j]);
+      writeString(", ");
+      j = j + 1;
+    }
+    writeChar('\n');
+    i = i + 1;
+  }
+}

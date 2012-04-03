@@ -1,0 +1,4 @@
+In foo1 x = 0
+In foo2 y = This message
+In foo1 x = 42
+In foo2 y = This message version 2
