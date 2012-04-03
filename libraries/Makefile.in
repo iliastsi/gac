@@ -9,6 +9,7 @@
 # -----------------------------------------------------------------------------
 
 libdir =
+gac =
 
 ghc          = @GHC@
 gcc          = @CC@
@@ -20,15 +21,21 @@ INSTALL_DATA = @INSTALL_DATA@
 
 .PHONY: all
 all:
-	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
-	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C prelude libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C math libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
 
 .PHONY: install
 install:
-	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
-	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C prelude libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C math libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
 
 .PHONY: clean
 clean:
-	$(MAKE) -C prelude libdir="$(libdir)" ghc="$(ghc)" gcc="$(gcc)" \
-	   	ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C prelude libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@
+	$(MAKE) -C math libdir="$(libdir)" gac="$(gac)" ghc="$(ghc)" gcc="$(gcc)" \
+		ar="$(ar)" llc="$(llc)" opt="$(opt)" INSTALL="$(INSTALL_DATA)" $@

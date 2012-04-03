@@ -114,14 +114,14 @@ compDefFun' env (val_env,ves) ttype adefvar tstmt = do
     (ide, AValue v_value vtype) <- return ve
     case (test vtype TTypeInt, test vtype TTypeChar) of
          (Just Eq, Nothing) -> do
-             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (0::Word32) vtype
+             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (1::Word32) vtype
              case test (TTypePtr vtype) vtype' of
                   Just Eq -> do
                       store v_value t1
                       compDefFun' env (v:val_env, ves') ttype adefvar tstmt
                   Nothing -> panic "LlvmCodeGen.compDefFun' test had to return Eq"
          (Nothing, Just Eq) -> do
-             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (0::Word32) vtype
+             v@(_, AValue t1 vtype') <- cmpVarAlloc ide (1::Word32) vtype
              case test (TTypePtr vtype) vtype' of
                   Just Eq -> do
                       store v_value t1

@@ -208,7 +208,7 @@ driverCodeGen dflags out_file protos tast = do
     -- what they are doing and don't get in the way.
     let lo_opts  = getOpts dflags opt_lo
         opt_lvl  = optLevel dflags
-        opt_Opts = ["-mem2reg", "-O1", "-O2", "-O3"]
+        opt_Opts = ["", "-O1", "-O2", "-O3"]
         optFlag  = if null lo_opts
                      then [Option (opt_Opts !! opt_lvl)]
                      else []

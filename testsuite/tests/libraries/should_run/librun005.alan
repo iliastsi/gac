@@ -1,0 +1,11 @@
+foo() : proc
+  x : int;
+
+  abs(x : int) : int;
+{
+  x = -7;
+  writeInteger(abs(x)*2 - 1);
+  writeString(", ");
+  writeInteger(abs(-x)*2 + 1);
+  writeChar('\n');
+}
