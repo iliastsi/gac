@@ -32,6 +32,7 @@ import System.FilePath
 import Data.List
 import Data.Maybe
 import Control.Monad (when)
+import qualified Control.Exception as E
 import qualified Data.ByteString as BS
 import LLVM.Core
 
@@ -138,7 +139,12 @@ driverParse dflags filename = do
     let out_file = case outputDir dflags of
                         Just od -> replaceDirectory filename od
                         Nothing -> filename
-    contents <- BS.readFile filename
+    contents <- E.catch (BS.readFile filename)
+                        (\e -> do let _err = show (e :: E.IOException)
+                                  printErrs [ progName ++ ": couldn't open `"
+                                    ++ filename ++ "'" ]
+                                  cleanAndExit False dflags
+                        )
     let p_state = mkPState dflags contents (mkSrcLoc filename 1 1)
     case unP parser p_state of
          PFailed msg        -> do
@@ -196,8 +202,6 @@ driverCodeGen dflags out_file protos tast = do
     -- -----------------------
     -- output llvm file
     let bc_file = replaceExtension out_file "bc"
-    when (not $ dopt Opt_KeepLlvmFiles dflags) $
-        addFilesToClean dflags [bc_file]
     writeBitcodeToFile bc_file llvm_module
     -- -----------------------
     -- optimize bytecode llvm
@@ -211,24 +215,28 @@ driverCodeGen dflags out_file protos tast = do
         optFlag  = if null lo_opts
                      then [Option (opt_Opts !! opt_lvl)]
                      else []
-    runLlvmOpt dflags
-        ([FileOption "" bc_file,
-            Option "-o",
-            FileOption "" bc_file]
-        ++ optFlag
-        ++ map Option lo_opts)
+    rlo <- runLlvmOpt dflags
+                ([FileOption "" bc_file,
+                  Option "-o",
+                  FileOption "" bc_file]
+                ++ optFlag
+                ++ map Option lo_opts)
+    when (not rlo) $ cleanAndExit False dflags
+    when (not $ dopt Opt_KeepLlvmFiles dflags) $
+        addFilesToClean dflags [bc_file]
     -- -----------------------
     -- generate assembly
     let asm_file = replaceExtension out_file "s"
-    when (not $ dopt Opt_KeepSFiles dflags) $
-        addFilesToClean dflags [asm_file]
     let lc_opts  = getOpts dflags opt_lc
         llc_Opts = ["-O0", "-O1", "-O2", "-O3"]
-    runLlvmLlc dflags
-        ([Option (llc_Opts !! opt_lvl),
-            FileOption "" bc_file,
-            Option "-o", FileOption "" asm_file]
-        ++ map Option lc_opts)
+    rll <- runLlvmLlc dflags
+                ([Option (llc_Opts !! opt_lvl),
+                  FileOption "" bc_file,
+                  Option "-o", FileOption "" asm_file]
+                ++ map Option lc_opts)
+    when (not rll) $ cleanAndExit False dflags
+    when (not $ dopt Opt_KeepSFiles dflags) $
+        addFilesToClean dflags [asm_file]
     return (Just asm_file)
 
 
@@ -239,14 +247,15 @@ driverAssemble :: DynFlags -> String -> IO String
 driverAssemble dflags input_file = do
     let output_file = replaceExtension input_file "o"
         as_opts = getOpts dflags opt_a
+    ra <- runAs dflags
+            (map Option as_opts
+            ++ [ Option "-c"
+               , FileOption "" input_file
+               , Option "-o"
+               , FileOption "" output_file ])
+    when (not ra) $ cleanAndExit False dflags
     when (not $ dopt Opt_KeepObjFiles dflags) $
         addFilesToClean dflags [output_file]
-    runAs dflags
-        (map Option as_opts
-        ++ [ Option "-c"
-           , FileOption "" input_file
-           , Option "-o"
-           , FileOption "" output_file ])
     return output_file
 
 -- ---------------------------
@@ -258,14 +267,15 @@ driverLink dflags input_files = do
         lib_paths = (topDir dflags) : (libraryPaths dflags)
         lib_paths_opts = map ("-L"++) lib_paths
         extra_ld_opts = getOpts dflags opt_l
-    runLink dflags (
-        [ Option verb
-        , Option "-o"
-        , FileOption "" out_file
-        ]
-        ++ map (FileOption "") input_files
-        ++ map Option (lib_paths_opts ++ extra_ld_opts)
-        ++ [Option "-lprelude"])
+    rl <- runLink dflags (
+            [ Option verb
+            , Option "-o"
+            , FileOption "" out_file
+            ]
+            ++ map (FileOption "") input_files
+            ++ map Option (lib_paths_opts ++ extra_ld_opts)
+            ++ [Option "-lprelude"])
+    when (not rl) $ cleanAndExit False dflags
     return ()
 
 

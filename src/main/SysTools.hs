@@ -114,24 +114,24 @@ getGccEnv opts =
             (path, '\"' : head b_dirs ++ "\";" ++ paths)
         mangle_path other = other
 
-runAs :: DynFlags -> [Option] -> IO ()
+runAs :: DynFlags -> [Option] -> IO Bool
 runAs dflags args = do
     let (p,args0) = pgm_a dflags
         args1 = args0 ++ args
     mb_env <- getGccEnv args1
     runSomethingFiltered dflags id "Assembler" p args1 mb_env
 
-runLlvmOpt :: DynFlags -> [Option] -> IO ()
+runLlvmOpt :: DynFlags -> [Option] -> IO Bool
 runLlvmOpt dflags args = do
     let (p,args0) = pgm_lo dflags
     runSomething dflags "LLVM Optimiser" p (args0++args)
 
-runLlvmLlc :: DynFlags -> [Option] -> IO ()
+runLlvmLlc :: DynFlags -> [Option] -> IO Bool
 runLlvmLlc dflags args = do
     let (p,args0) = pgm_lc dflags
     runSomething dflags "LLVM Compiler" p (args0++args)
 
-runLink :: DynFlags -> [Option] -> IO ()
+runLink :: DynFlags -> [Option] -> IO Bool
 runLink dflags args = do
     let (p,args0) = pgm_l dflags
         args1 = args0 ++ args
@@ -161,7 +161,7 @@ cleanTempFiles :: DynFlags -> IO ()
 cleanTempFiles dflags = do
     let ref = filesToClean dflags
     fs <- readIORef ref
-    removeTmpFiles dflags fs
+    _ <- removeTmpFiles dflags fs
     writeIORef ref []
 
 cleanTempFilesExcept :: DynFlags -> [FilePath] -> IO ()
@@ -169,18 +169,19 @@ cleanTempFilesExcept dflags dont_delete = do
     let ref = filesToClean dflags
     files <- readIORef ref
     let (to_keep, to_delete) = partition (`elem` dont_delete) files
-    removeTmpFiles dflags to_delete
+    _ <- removeTmpFiles dflags to_delete
     writeIORef ref to_keep
 
 addFilesToClean :: DynFlags -> [FilePath] -> IO ()
 -- May include wildcards
 addFilesToClean dflags files = mapM_ (consIORef (filesToClean dflags)) files
 
-removeTmpFiles :: DynFlags -> [FilePath] -> IO ()
+removeTmpFiles :: DynFlags -> [FilePath] -> IO Bool
 removeTmpFiles dflags fs =
     traceCmd dflags "Deleting temp files"
             ("Deleting: " ++ unwords deletees)
-            (mapM_ (removeWith dflags removeFile) deletees)
+            (do mapM_ (removeWith dflags removeFile) deletees
+                return True)
     where
         (_non_deletees, deletees) = partition isAlanUserSrcFilename fs
         isAlanUserSrcFilename str = (drop 1 $ takeExtension str) == "alan"
@@ -196,13 +197,13 @@ runSomething :: DynFlags
              -> String      -- For -v message
              -> String      -- Command name (possibly a full path)
              -> [Option]    -- Arguments
-             -> IO ()
+             -> IO Bool
 runSomething dflags phase_name pgm args =
     runSomethingFiltered dflags id phase_name pgm args Nothing
 
 runSomethingFiltered
   :: DynFlags -> (String->String) -> String -> String -> [Option]
-  -> Maybe [(String,String)] -> IO ()
+  -> Maybe [(String,String)] -> IO Bool
 runSomethingFiltered dflags filter_fn phase_name pgm args mb_env = do
     let real_args = filter notNull (map showOpt args)
     traceCmd dflags phase_name (unwords (pgm:real_args)) $ do
@@ -228,9 +229,14 @@ runSomethingFiltered dflags filter_fn phase_name pgm args mb_env = do
                            then return (ExitFailure 1, True)
                            else IO.ioError err)
     case (doesn'tExist, exit_code) of
-         (True, _)        -> putStrLn ("Could not execute: " ++ pgm)
-         (_, ExitSuccess) -> return ()
-         _                -> putStrLn ("Phase `" ++ phase_name ++"' failed with exit code " ++ show exit_code)
+         (True, _)        -> do
+             putStrLn ("Could not execute: " ++ pgm)
+             return False
+         (_, ExitSuccess) -> do
+             return True
+         _                -> do
+             putStrLn ("Phase `" ++ phase_name ++"' failed with exit code " ++ show exit_code)
+             return False
 
 builderMainLoop :: DynFlags -> (String -> String) -> FilePath
                 -> [String] -> Maybe [(String, String)]
@@ -346,7 +352,7 @@ data BuildMessage
     | BuildError    !SrcLoc !String
     | EOF
 
-traceCmd :: DynFlags -> String -> String -> IO () -> IO ()
+traceCmd :: DynFlags -> String -> String -> IO Bool -> IO Bool
 -- trace the command (at two levels of verbosity)
 traceCmd _dflags _phase_name _cmd_line action = do
     hFlush stderr
