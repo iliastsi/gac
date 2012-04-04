@@ -1,0 +1,13 @@
+testUTF_8() : proc
+  s : byte [64];
+{
+  (* Θέλουμε να δοκιμάσουμε την εκτύπωση ελληνικών *)
+  writeString("Ελληνικά με UTF-8\n");
+  (* Διάβασμα ελληνικών *)
+  writeString("Δώσε μου ένα string στα ελληνικά: ");
+  readString(63, s);
+  writeChar('\n');
+  writeString("Μου έδωσες: ");
+  writeString(s);
+  writeChar('\n');
+}

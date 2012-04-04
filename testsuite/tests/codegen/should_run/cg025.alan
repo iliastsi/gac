@@ -1,0 +1,26 @@
+func () : proc
+
+   inc (x : int) : int
+   {
+      return x + 1;
+   }
+   
+   odd (x : int) : byte
+   {
+      return shrink(x % 2);
+   }
+
+   f (x : int) : int
+   {
+      if (odd(x) != '\0')
+         return x;
+      else
+         return x * inc(x);
+   }
+
+   x : int;
+{
+   x = f(6);
+   writeInteger(x);
+   writeString("\n");
+}

@@ -1,0 +1,147 @@
+main () : int
+
+   correct () : proc
+   {
+      writeString("---\n");
+      writeString("INSIDE MAIN:\n");
+      writeString("a[5]=20\n");
+      writeString("a[b[5]]=80\n");
+      writeString("a[b[c[5]]]=320\n");
+      writeString("a[b[5+1]]=96\n");
+      writeString("a[b[5]+1]=84\n");
+      writeString("a[b[5]+c[1]]=96\n");
+      writeString("a[b[c[5]+a[5]]+c[5]*2]=800\n");
+      writeString("INSIDE ByReference:\n");
+      writeString("a[5]=21\n");
+      writeString("a[b[5]]=85\n");
+      writeString("a[b[c[5]]]=341\n");
+      writeString("a[b[5+1]]=101\n");
+      writeString("a[b[5]+1]=89\n");
+      writeString("a[b[5]+c[1]]=105\n");
+      writeString("a[b[c[5]+a[5]]+c[5]*2]=845\n");
+      writeString("INSIDE ByAR:\n");
+      writeString("a[5]=22\n");
+      writeString("a[b[5]]=90\n");
+      writeString("a[b[c[5]]]=362\n");
+      writeString("a[b[5+1]]=106\n");
+      writeString("a[b[5]+1]=94\n");
+      writeString("a[b[5]+c[1]]=114\n");
+      writeString("a[b[c[5]+a[5]]+c[5]*2]=890\n");
+   }
+
+   a : int [255];
+   b : int [255];
+   c : int [255];
+   i : int;
+   temp : int;
+
+   byRef (a : reference int [], b : reference int [],
+          c : reference int []) : proc
+   {
+      i = 0;
+      while (i<255) {
+         temp = 4*i+1;
+         a[i] = temp;
+         b[i] = temp;
+         c[i] = temp;
+         i = i+1;
+      }
+
+      writeString("INSIDE ByReference:\n");
+      writeString("a[5]=");
+      writeInteger(a[5]);
+      writeString("\n");
+      writeString("a[b[5]]=");
+      writeInteger(a[b[5]]);
+      writeString("\n");
+      writeString("a[b[c[5]]]=");
+      writeInteger(a[b[c[5]]]);
+      writeString("\n");
+      writeString("a[b[5+1]]=");
+      writeInteger(a[b[5 + 1]]);
+      writeString("\n");
+      writeString("a[b[5]+1]=");
+      writeInteger(a[b[5] + 1]);
+      writeString("\n");
+      writeString("a[b[5]+c[1]]=");
+      writeInteger(a[b[5] + c[1]]);
+      writeString("\n");
+      writeString("a[b[c[5]+a[5]]+c[5]*2]=");
+      writeInteger(a[b[c[5] + a[5]] + c[5] * 2]);
+      writeString("\n");
+   }
+
+   byAR () : proc
+   {
+      i = 0;
+      while (i<255) {
+         temp = 4*i+2;
+         a[i] = temp;
+         b[i] = temp;
+         c[i] = temp;
+         i = i+1;
+      }
+
+      writeString("INSIDE ByAR:\n");
+      writeString("a[5]=");
+      writeInteger(a[5]);
+      writeString("\n");
+      writeString("a[b[5]]=");
+      writeInteger(a[b[5]]);
+      writeString("\n");
+      writeString("a[b[c[5]]]=");
+      writeInteger(a[b[c[5]]]);
+      writeString("\n");
+      writeString("a[b[5+1]]=");
+      writeInteger(a[b[5 + 1]]);
+      writeString("\n");
+      writeString("a[b[5]+1]=");
+      writeInteger(a[b[5] + 1]);
+      writeString("\n");
+      writeString("a[b[5]+c[1]]=");
+      writeInteger(a[b[5] + c[1]]);
+      writeString("\n");
+      writeString("a[b[c[5]+a[5]]+c[5]*2]=");
+      writeInteger(a[b[c[5] + a[5]] + c[5] * 2]);
+      writeString("\n");
+   }
+
+{
+   i = 0;
+   while (i<255) {
+      temp = 4*i;
+      a[i] = temp;
+      b[i] = temp;
+      c[i] = temp;
+      i = i+1;
+   }
+
+   writeString("INSIDE MAIN:\n");
+   writeString("a[5]=");
+   writeInteger(a[5]);
+   writeString("\n");
+   writeString("a[b[5]]=");
+   writeInteger(a[b[5]]);
+   writeString("\n");
+   writeString("a[b[c[5]]]=");
+   writeInteger(a[b[c[5]]]);
+   writeString("\n");
+   writeString("a[b[5+1]]=");
+   writeInteger(a[b[5 + 1]]);
+   writeString("\n");
+   writeString("a[b[5]+1]=");
+   writeInteger(a[b[5] + 1]);
+   writeString("\n");
+   writeString("a[b[5]+c[1]]=");
+   writeInteger(a[b[5] + c[1]]);
+   writeString("\n");
+   writeString("a[b[c[5]+a[5]]+c[5]*2]=");
+   writeInteger(a[b[c[5] + a[5]] + c[5] * 2]);
+   writeString("\n");
+
+   byRef(a, b, c);
+   byAR ();
+   correct ();
+
+   return 0;
+}

@@ -1,0 +1,7 @@
+test_else() : proc
+{
+  if (1 == 1)
+    if (2 == 2) if (3 == 3) writeString("42\n");
+      else writeString("wrong 1!!!\n");
+    else writeString("wrong 2!!!\n");
+}

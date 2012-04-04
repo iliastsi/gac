@@ -1,0 +1,16 @@
+arrpar() : proc
+
+   reverse (s : reference byte [], r : reference byte [], c : byte) : proc
+   {
+      if (true) writeChar(c);
+      else if (false) writeChar(s[0]);
+      else writeChar (r[0]);
+   }
+
+   p : byte [20];
+   s : byte [20];
+{
+   reverse(s, p, '4');
+   reverse("Hello", p, '2');
+   reverse(p, "Hello", '\n');
+}

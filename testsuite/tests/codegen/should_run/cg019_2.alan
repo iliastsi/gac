@@ -1,0 +1,5 @@
+cg019Aux(x : int) : int
+{
+  writeString("Inside cg019Aux\n");
+  return x;
+}

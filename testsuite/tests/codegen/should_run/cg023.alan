@@ -1,0 +1,13 @@
+array() : proc
+   a : int[10];
+   i : int;
+{
+   i = 0;
+   while (i < 10) {
+      a[i] = i * (i + 1);
+      i = i + 1;
+   }
+   writeInteger(a[6]);
+   writeString("\n");
+}
+

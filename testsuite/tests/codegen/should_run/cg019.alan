@@ -1,0 +1,11 @@
+main() : int
+  x : int;
+  cg019Aux(x : int) : int;
+{
+  x = cg019Aux(42);
+  writeString("cg019Aux returned ");
+  writeInteger(x);
+  writeChar('\n');
+
+  return 0;
+}
