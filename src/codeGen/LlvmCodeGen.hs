@@ -392,31 +392,33 @@ cmpCompOp _ = panic "LlvmCodeGen.cmpCompOp got unexpected input"
 -- We have to use short circuit evaluation
 cmpLogOp :: Env -> TCond Bool -> CodeGenFunction r (Value Bool)
 cmpLogOp env (TCondLog c1 OpAnd c2) = do
-    top <- getCurrentBasicBlock
     true <- newBasicBlock
     false <- newBasicBlock
     t1 <- compileCond env c1
+    bb1 <- getCurrentBasicBlock
     condBr t1 true false
     -- c1 was True
     defineBasicBlock true
     t2 <- compileCond env c2
+    bb2 <- getCurrentBasicBlock
     br false
     -- c1 was False
     defineBasicBlock false
-    phi [(t1, top), (t2, true)]
+    phi [(valueOf False, bb1), (t2, bb2)]
 cmpLogOp env (TCondLog c1 OpOr c2) = do
-    top <- getCurrentBasicBlock
     true <- newBasicBlock
     false <- newBasicBlock
     t1 <- compileCond env c1
+    bb1 <- getCurrentBasicBlock
     condBr t1 true false
     -- c1 was False
     defineBasicBlock false
     t2 <- compileCond env c2
+    bb2 <- getCurrentBasicBlock
     br true
     -- c1 was True
     defineBasicBlock true
-    phi [(t1, top), (t2, false)]
+    phi [(valueOf True, bb1), (t2, bb2)]
 cmpLogOp _ _ = panic "LlvmCodeGen.cmpLogOp got unexpected input"
 
 

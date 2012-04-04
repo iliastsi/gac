@@ -1,0 +1,7 @@
+char () : proc
+   c : byte;
+{
+   c = '\x2a';
+   writeByte(c);
+   writeChar('\x0a');
+}

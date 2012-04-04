@@ -1,0 +1,26 @@
+primes () : proc
+   n : int;
+   p : int;
+   t : int;
+   c : int;
+{
+   writeString("Limit: ");
+   n = readInteger();
+   c = 1;
+   writeInteger(2);
+   p = 3;
+   writeString("\n");
+   while (p < n) {
+      t = 3;
+      while (p % t != 0)
+         t = t + 2;
+      if (p == t) {
+         writeInteger(p);
+         writeString("\n");
+         c = c + 1;
+      }
+      p = p + 2;
+   }
+   writeInteger(c);
+   writeString(" prime number(s) found.\n");
+}

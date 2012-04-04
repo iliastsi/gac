@@ -1,0 +1,25 @@
+test_byte () : proc
+
+   correct () : proc
+   {
+      writeString("\n---\n");
+      writeString("10100\n");
+   }
+
+   lala (a : byte, b : reference byte) : byte
+   {
+      return a * b;
+   }
+
+   a : byte;
+   b : byte;
+{
+   a = '\x01';
+   b = '\0';
+   writeByte('\x01');
+   writeByte('\0');
+   writeByte(a);
+   writeByte(b);
+   writeByte(lala('\0', a));
+   correct();
+}

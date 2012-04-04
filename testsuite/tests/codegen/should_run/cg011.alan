@@ -1,0 +1,9 @@
+predef () : proc
+   newline () : proc { writeString("\n"); }
+   writeString (i : int) : proc { writeInteger(i); }
+   writeInteger : int;
+{
+   writeInteger = 42;
+   writeString(writeInteger);
+   newline();
+}

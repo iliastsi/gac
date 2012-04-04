@@ -1,0 +1,21 @@
+swap () : proc
+
+   swap (a : reference int, b : reference int) : proc
+      t : int;
+   {
+      t = a;
+      a = b;
+      b = t;
+   }
+
+   x : int;
+   y : int;
+
+{
+   x = 2;
+   y = 4;
+   swap(x, y);
+   writeInteger(x);
+   writeInteger(y);
+   writeString("\n");
+}
