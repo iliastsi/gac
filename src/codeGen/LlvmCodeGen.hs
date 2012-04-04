@@ -284,6 +284,8 @@ compileStmt env rtype (TStmtReturn maexpr) = do
 -- Check if a Stmt returns
 doesStmtReturn :: TStmt -> Bool
 doesStmtReturn (TStmtCompound has_ret _) = has_ret
+doesStmtReturn (TStmtIf _ if_stmt (Just else_stmt)) =
+    doesStmtReturn if_stmt && doesStmtReturn else_stmt
 doesStmtReturn (TStmtReturn _) = True
 doesStmtReturn _ = False
 

@@ -272,8 +272,8 @@ typeCheckStmt _ lustmt@(L _ (UStmtAssign luvar luexpr)) = do
                          return (False, TStmtNothing)
 -- UStmtCompound
 typeCheckStmt ret_type (L _ (UStmtCompound lustmts)) = do
-    (does_ret, has_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
-    return (does_ret, TStmtCompound has_ret tstmts)
+    (does_ret, tstmts) <- tcCompoundStmt ret_type lustmts []
+    return (does_ret, TStmtCompound does_ret tstmts)
 -- UStmtFun
 typeCheckStmt _ (L loc (UStmtFun lf@(L _ (UFuncCall fname _)))) = do
     afunc@(AFuncCall _ ftype) <- typeCheckFunc lf
@@ -315,9 +315,9 @@ typeCheckStmt ret_type lustmt@(L _ (UStmtReturn m_expr)) = do
 -- ---------------------------
 -- Type Check compound stmts
 -- As first argument (AType) we have the return type of the block
-tcCompoundStmt :: AType -> [Located UStmt] -> [TStmt] -> TcM (Bool, Bool, [TStmt])
+tcCompoundStmt :: AType -> [Located UStmt] -> [TStmt] -> TcM (Bool, [TStmt])
 tcCompoundStmt _ [] acc = do
-    return (False, False, reverse acc)
+    return (False, reverse acc)
 tcCompoundStmt ret_type (lustmt:lustmts) acc = do
     (r1, tstmt)  <- typeCheckStmt ret_type lustmt
     if not r1
@@ -325,11 +325,10 @@ tcCompoundStmt ret_type (lustmt:lustmts) acc = do
            -- r1 is False thus we didn't get any return
            tcCompoundStmt ret_type lustmts (tstmt:acc)
        else do
-           let has_ret = isStmtReturn lustmt
            if null lustmts
               then do
                   -- we get return but this is the last command
-                  return (True, has_ret, reverse (tstmt:acc))
+                  return (True, reverse (tstmt:acc))
               else do
                   -- we get return and we have more to do
                   -- *bang*, unreachable code
@@ -337,13 +336,7 @@ tcCompoundStmt ret_type (lustmt:lustmts) acc = do
                       unreach_end   = srcSpanEnd (getLoc (last lustmts))
                       unreach_loc   = mkSrcSpan unreach_start unreach_end
                   tcUnreachableErr unreach_loc
-                  return (True, has_ret, reverse (tstmt:acc))
-
--- ---------------------------
--- Check if a UStmt is of type UStmtReturn
-isStmtReturn :: Located UStmt -> Bool
-isStmtReturn (L _ UStmtReturn {}) = True
-isStmtReturn _ = False
+                  return (True, reverse (tstmt:acc))
 
 -- ---------------------------
 -- Error when the types of expression and variable in an assigment are different

@@ -186,10 +186,13 @@ dumpUStmt ind (UStmtFun lufunc) =
 dumpUStmt ind (UStmtIf lucond ifstmt m_elsestmt) =
     indent ind ++ "if(" ++ dumpUCond (unLoc lucond) ++
         ")" ++ dumpComp (ind+1) "" (unLoc ifstmt) ++
-        case m_elsestmt of
-             Just elsestmt ->
+        case (m_elsestmt, unLoc ifstmt) of
+             (Just elsestmt, UStmtCompound {}) ->
                  " else" ++ dumpComp (ind+1) "" (unLoc elsestmt)
-             Nothing -> ""
+             (Just elsestmt, _) ->
+                 "\n" ++ indent ind
+                      ++ "else" ++ dumpComp (ind+1) "" (unLoc elsestmt)
+             (Nothing, _) -> ""
 -- UStmtWhile
 dumpUStmt ind (UStmtWhile lucond lustmt) =
     indent ind ++ "while(" ++ dumpUCond (unLoc lucond) ++
