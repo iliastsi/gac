@@ -26,7 +26,7 @@ libmath.a: Abs.o Pow.o MaxInt.o MinInt.o
 	$(ar) rcs $@ $^
 
 %.o: %.alan
-	$(gac) -XExplicitMain -c $<
+	$(gac) -XExplicitMain -O3 -c $<
 
 ##############################
 .PHONY: clean
