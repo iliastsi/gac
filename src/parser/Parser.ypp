@@ -86,16 +86,16 @@ incorrect.
 %nonassoc '(' ')'
 
 %token
-    BYTE        { L _ ITbyte        }
-    RETURN      { L _ ITreturn      }
-    ELSE        { L _ ITelse        }
-    WHILE       { L _ ITwhile       }
-    FALSE       { L _ ITfalse       }
-    TRUE        { L _ ITtrue        }
-    IF          { L _ ITif          }
-    INT         { L _ ITint         }
-    PROC        { L _ ITproc        }
-    REFERENCE   { L _ ITreference   }
+    'byte'      { L _ ITbyte        }
+    'return'    { L _ ITreturn      }
+    'else'      { L _ ITelse        }
+    'while'     { L _ ITwhile       }
+    'false'     { L _ ITfalse       }
+    'true'      { L _ ITtrue        }
+    'if'        { L _ ITif          }
+    'int'       { L _ ITint         }
+    'proc'      { L _ ITproc        }
+    'reference' { L _ ITreference   }
     ID          { L _ (ITid _)      }
     DIGIT       { L _ (ITdigit _)   }
     CHAR        { L _ (ITchar _)    }
@@ -149,7 +149,7 @@ fparlist :: { [Located UParam] }
 
 fpardef :: { Located UParam }
     : ID ':' type                   { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByVal $3 }
-    | ID ':' REFERENCE type         { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByRef $4 }
+    | ID ':' 'reference' type       { LL $ let (L span (ITid i)) = $1 in UParam (sL span i) ModeByRef $4 }
     | ID error                      {% missing ':' }
     | error                         {% srcParseFail "Expected parameter definition" }
 
@@ -173,12 +173,12 @@ type :: { Located UType }
                                            "\n\tYou have to use either int or byte") }
 
 datatype :: { Located UType }
-    : INT                           { L1 $ UTypeInt }
-    | BYTE                          { L1 $ UTypeChar }
+    : 'int'                         { L1 $ UTypeInt }
+    | 'byte'                        { L1 $ UTypeChar }
 
 rtype :: { Located UType}
     : datatype                      { $1 }
-    | PROC                          { L1 $ UTypeProc }
+    | 'proc'                        { L1 $ UTypeProc }
     | error                         {% srcParseFail ("Unknown type" ++
                                            "\n\tYou have to use int, byte or proc") }
 
@@ -229,20 +229,20 @@ stmt :: { Located UStmt }
     | compoundstmt                  { $1 }
     | funcall ';'                   { LL $ UStmtFun $1 }
     | funcall error                 {% missing ';' }
-    | IF '(' cond ')' stmt          { LL $ UStmtIf $3 $5 Nothing}
-    | IF '(' cond ')' stmt ELSE stmt
+    | 'if' '(' cond ')' stmt        { LL $ UStmtIf $3 $5 Nothing}
+    | 'if' '(' cond ')' stmt 'else' stmt
                                     { LL $ UStmtIf $3 $5 (Just $7) }
-    | IF '(' cond error             {% missing ')' }
-    | IF '(' error                  {% notValidCond }
-    | IF error                      {% missing '(' }
-    | WHILE '(' cond ')' stmt       { LL $ UStmtWhile $3 $5 }
-    | WHILE '(' cond error          {% missing ')' }
-    | WHILE '(' error               {% notValidCond }
-    | WHILE error                   {% missing '(' }
-    | RETURN ';'                    { LL $ UStmtReturn Nothing }
-    | RETURN error                  {% missing ';' }
-    | RETURN expr ';'               { LL $ UStmtReturn (Just $2) }
-    | RETURN expr error             {% missing ';' }
+    | 'if' '(' cond error           {% missing ')' }
+    | 'if' '(' error                {% notValidCond }
+    | 'if' error                    {% missing '(' }
+    | 'while' '(' cond ')' stmt     { LL $ UStmtWhile $3 $5 }
+    | 'while' '(' cond error        {% missing ')' }
+    | 'while' '(' error             {% notValidCond }
+    | 'while' error                 {% missing '(' }
+    | 'return' ';'                  { LL $ UStmtReturn Nothing }
+    | 'return' error                {% missing ';' }
+    | 'return' expr ';'             { LL $ UStmtReturn (Just $2) }
+    | 'return' expr error           {% missing ';' }
     | error                         {% srcParseFail "Not a valid statement" }
 
 compoundstmt :: { Located UStmt }
@@ -297,8 +297,8 @@ lvalue :: { Located UVariable }
     | lvalue '[' error              {% notValidExpr }
 
 cond :: { Located UCond }
-    : TRUE                          { L1 $ UCondTrue }
-    | FALSE                         { L1 $ UCondFalse }
+    : 'true'                        { L1 $ UCondTrue }
+    | 'false'                       { L1 $ UCondFalse }
     | '(' cond ')'                  { LL $ let c = unLoc $2 in c }
     | '(' cond error                {% missing ')' }
     | '!' cond                      { LL $ UCondNot $2 }
