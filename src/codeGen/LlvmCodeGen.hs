@@ -19,6 +19,7 @@ import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Data.Map as Map
 import Prelude hiding (and, or)
 import Data.Map (Map)
+import Data.Maybe
 import Data.Int
 import Data.Word
 import LLVM.Core
@@ -36,6 +37,7 @@ type Env = (Map Ide AFunc, Map Ide AValue)
 
 -- We need this to solve a rigid-something error
 data SArray = forall n. Nat n => SArray (Global (Array n Word8))
+
 
 -- -------------------------------------------------------------------
 -- Compile our module to LLVM
@@ -207,42 +209,31 @@ compileStmt env rtype (TStmtIf acond if_stmt Nothing) = do
 compileStmt env rtype (TStmtIf acond if_stmt (Just else_stmt)) = do
     -- this is a little bit trickier because if both if_stmt
     -- and ese_stmt returns then we MUST NOT define an exit basic block
-    if doesStmtReturn if_stmt && doesStmtReturn else_stmt
-       then do
-           true <- newBasicBlock
-           false <- newBasicBlock
-           ACond cond <- return acond
-           t1 <- compileCond env cond
-           condBr t1 true false
-           -- cond was True
-           defineBasicBlock true
-           compileStmt env rtype if_stmt
-           -- cond was False
-           defineBasicBlock false
-           compileStmt env rtype else_stmt
-           return ()
-       else do
-           true <- newBasicBlock
-           false <- newBasicBlock
-           exit <- newBasicBlock
-           ACond cond <- return acond
-           t1 <- compileCond env cond
-           condBr t1 true false
-           -- cond was True
-           defineBasicBlock true
-           compileStmt env rtype if_stmt
-           if doesStmtReturn if_stmt
-              then return ()
-              else br exit
-           -- cond was False
-           defineBasicBlock false
-           compileStmt env rtype else_stmt
-           if doesStmtReturn else_stmt
-              then return ()
-              else br exit
-           -- exit block
-           defineBasicBlock exit
-           return ()
+    let withExit = not (doesStmtReturn if_stmt && doesStmtReturn else_stmt)
+    true <- newBasicBlock
+    false <- newBasicBlock
+    exit <- if withExit
+               then newBasicBlock >>= return . Just
+               else return Nothing
+    ACond cond <- return acond
+    t1 <- compileCond env cond
+    condBr t1 true false
+    -- cond was True
+    defineBasicBlock true
+    compileStmt env rtype if_stmt
+    if doesStmtReturn if_stmt
+       then return ()
+       else br (fromJust exit)
+    -- cond was False
+    defineBasicBlock false
+    compileStmt env rtype else_stmt
+    if doesStmtReturn else_stmt
+       then return ()
+       else br (fromJust exit)
+    -- exit block
+    if withExit
+       then defineBasicBlock (fromJust exit)
+       else return ()
 -- TStmtWhile
 compileStmt env rtype (TStmtWhile acond tstmt) = do
     loop <- newBasicBlock
