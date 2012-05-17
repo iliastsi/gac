@@ -31,7 +31,7 @@ Executable @PACKAGE_TARNAME@
                  directory   >= 1.1.0.0,
                  bytestring  >= 0.9.1.10,
                  utf8-string >= 0.3.6,
-                 llvm        == 3.0.0.0
+                 llvm        == 3.0.1.0
   if os(windows)
      Build-Depends: Win32
   else

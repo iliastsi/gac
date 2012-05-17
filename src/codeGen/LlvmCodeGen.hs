@@ -15,7 +15,6 @@ import TypedAst
 import UnTypedAst
 import Outputable
 
-import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Data.Map as Map
 import Prelude hiding (and, or)
 import Data.Map (Map)
@@ -34,9 +33,6 @@ data AFunc = forall a. AFunc (Function a) (TType a)
 type ValueEnv = (Ide, AValue)
 type FuncEnv = (Ide, AFunc)
 type Env = (Map Ide AFunc, Map Ide AValue)
-
--- We need this to solve a rigid-something error
-data SArray = forall n. Nat n => SArray (Global (Array n Word8))
 
 
 -- -------------------------------------------------------------------
@@ -290,20 +286,8 @@ compileExpr _ (TExprInt i)    = return $ valueOf i
 compileExpr _ (TExprChar c)   = return $ valueOf c
 -- TExprString
 compileExpr _ (TExprString s) = do
-    -- Llvm binding for haskell doesn't support UTF-8 string
-    -- To solve this we use this (ugly) hack
-    let utf8_s = UTF8.encode s
-    if length s == length utf8_s
-       then do
-           -- everething is fine here and we can use the
-           -- build in `withString' function
-           SArray msg <- liftCodeGenModule $ withStringNul s (return . SArray)
-           getElementPtr msg (0::Word32, (0::Word32, ()))
-       else do
-           let arr_size = fromIntegral (length utf8_s + 1) :: Word32
-           t1 <- arrayAlloca arr_size
-           storeUTF8String t1 utf8_s
-           return t1
+    withStringNul s (\msg ->
+        getElementPtr msg (0::Word32, (0::Word32, ())))
 -- TExprVar
 compileExpr env (TExprVar v) = do
     t1 <- compileVariable env v
@@ -334,17 +318,6 @@ cmpArithOp OpTimes = mul
 cmpArithOp OpDiv   = idiv
 cmpArithOp OpMod   = irem
 cmpArithOp _ = panic "LlvmCodeGen.cmpArithOp got unexpected input"
-
--- ---------------------------
--- We use this as a hack to store a UTF8
--- string to allocated memory 
-storeUTF8String :: Value (Ptr Word8) -> [Word8] -> CodeGenFunction r ()
-storeUTF8String arr [] =
-    store (valueOf (0::Word8)) arr
-storeUTF8String arr (x:xs) = do
-    store (valueOf x) arr
-    arr' <- getElementPtr arr (1::Word32, ())
-    storeUTF8String arr' xs
 
 
 -- -------------------------------------------------------------------
