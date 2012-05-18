@@ -153,7 +153,7 @@ dnl ** figure out how to do a BSD-ish install
 AC_PROG_INSTALL
 
 dnl ** Find the path to gcc
-AC_PROG_CC(gcc)
+AC_PATH_PROGS(GCC,gcc,gcc)
 
 dnl ** Find the path to ar
 AC_PATH_PROGS(ArCmd,ar,ar)

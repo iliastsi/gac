@@ -12,7 +12,7 @@ libdir =
 gac =
 
 ghc          = @GHC@
-gcc          = @CC@
+gcc          = @GCC@
 ar           = @ArCmd@
 llc          = @LlcCmd@
 opt          = @OptCmd@
