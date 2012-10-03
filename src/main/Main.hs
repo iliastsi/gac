@@ -184,7 +184,7 @@ driverTypeCheck dflags p_messages out_file luast = do
                     cleanAndExit False dflags
                 else do
                     -- check for `-fno-code'
-                    if isObjectTarget $ alcTarget dflags
+                    if isObjectTarget $ gacTarget dflags
                        then do
                            let protos = getTcProtos tc_state'
                            driverCodeGen dflags out_file protos tast

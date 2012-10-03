@@ -22,7 +22,7 @@ module DynFlags (
     xopt_set,
     xopt_unset,
     DynFlags(..),
-    AlcTarget(..), isObjectTarget, defaultObjectTarget,
+    GacTarget(..), isObjectTarget, defaultObjectTarget,
     GacLink(..), isNoLink,
     Option(..), showOpt,
     fFlags, xFlags,
@@ -97,7 +97,7 @@ data ExtensionFlag
 -- information relating to the compilation of a single file or GHC session
 data DynFlags = DynFlags {
     gacLink             :: GacLink,
-    alcTarget           :: AlcTarget,
+    gacTarget           :: GacTarget,
     verbosity           :: Int,         -- ^ Verbosity level: see Note [Verbosity levels]
     optLevel            :: Int,         -- ^ Optimisation level (0-3)
 
@@ -142,17 +142,17 @@ data DynFlags = DynFlags {
 -- Whenever you change the target, also make sure to set 'gacLink' to
 -- something sensible.
 --
--- 'AlcNothing' can be used to aboid generating any output
+-- 'GacNothing' can be used to avoid generating any output
 --
-data AlcTarget
-    = AlcLlvm       -- ^ Generate assembly using the llvm code generator
---    | AlcAsm        -- ^ Generate assembly using the native code generator
-    | AlcNothing    -- ^ Don't generate any code
+data GacTarget
+    = GacLlvm       -- ^ Generate assembly using the llvm code generator
+--    | GacAsm        -- ^ Generate assembly using the native code generator
+    | GacNothing    -- ^ Don't generate any code
   deriving (Eq, Show)
 
 -- | Will this target result in an object file on the disk?
-isObjectTarget :: AlcTarget -> Bool
-isObjectTarget AlcLlvm  = True
+isObjectTarget :: GacTarget -> Bool
+isObjectTarget GacLlvm  = True
 isObjectTarget _        = False
 
 -- | What to do in the link step, if there is one
@@ -165,13 +165,13 @@ isNoLink :: GacLink -> Bool
 isNoLink NoLink = True
 isNoLink _      = False
 
-defaultAlcTarget :: AlcTarget
-defaultAlcTarget = defaultObjectTarget
+defaultGacTarget :: GacTarget
+defaultGacTarget = defaultObjectTarget
 
--- | The 'AlcTarget' value corresponding to the default way to create
+-- | The 'GacTarget' value corresponding to the default way to create
 -- object files on the current platform
-defaultObjectTarget :: AlcTarget
-defaultObjectTarget = AlcLlvm
+defaultObjectTarget :: GacTarget
+defaultObjectTarget = GacLlvm
 
 -- | Partially initialize a new 'DynFlags' value
 initDynFlags :: DynFlags -> IO DynFlags
@@ -186,7 +186,7 @@ defaultDynFlags :: DynFlags
 defaultDynFlags =
     DynFlags {
         gacLink             = LinkBinary,
-        alcTarget           = defaultAlcTarget,
+        gacTarget           = defaultGacTarget,
         verbosity           = 0,
         optLevel            = 1,
 
@@ -420,9 +420,9 @@ dynamic_flags =
   , Flag "O"        (OptIntSuffix (\mb_n -> upd (setOptLevel (mb_n `orElse` 1))))
 
     ---- Compiler flags ----
-  , Flag "fllvm"        (NoArg (setObjTarget AlcLlvm))
+  , Flag "fllvm"        (NoArg (setObjTarget GacLlvm))
   , Flag "fno-code"     (NoArg (do upd $ \d -> d{ gacLink=NoLink }
-                                   setTarget AlcNothing))
+                                   setTarget GacNothing))
   ]
   ++ map (mkFlag turnOn  "f"    setDynFlag  ) fFlags
   ++ map (mkFlag turnOff "fno-" unSetDynFlag) fFlags
@@ -581,21 +581,21 @@ setVerbosity mb_n = upd (\dfs -> dfs{ verbosity = mb_n `orElse` 3 })
 
 -- if we're linking a binary, then only targets that produce object
 -- code are allowed (requests for other target types are ignored).
-setTarget :: AlcTarget -> DynP ()
+setTarget :: GacTarget -> DynP ()
 setTarget l = upd set
   where
     set dfs
-      | gacLink dfs /= LinkBinary || isObjectTarget l = dfs{ alcTarget = l }
+      | gacLink dfs /= LinkBinary || isObjectTarget l = dfs{ gacTarget = l }
       | otherwise = dfs
 
 -- Changes the target only if we're compiling object code. This is
 -- used by -fasm and -fllvm, which switch from one to the other, but
 -- not from bytecode to object-code
-setObjTarget :: AlcTarget -> DynP ()
+setObjTarget :: GacTarget -> DynP ()
 setObjTarget l = upd set
   where
     set dfs
-      | isObjectTarget (alcTarget dfs) = dfs { alcTarget = l }
+      | isObjectTarget (gacTarget dfs) = dfs { gacTarget = l }
       | otherwise = dfs
 
 setOptLevel :: Int -> DynFlags -> DynFlags

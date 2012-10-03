@@ -223,7 +223,7 @@ showGacUsage = do
   putStrLn $ "input file is guided through (some of the) possible phases of a"
   putStrLn $ "compilation:"
   putStrLn $ ""
-  putStrLn $ "    - alc:  run the Haskell compiler proper"
+  putStrLn $ "    - gac:  run the Alan compiler proper"
   putStrLn $ "    - as:   run the assembler"
   putStrLn $ "    - ld:   run the linker"
   putStrLn $ ""

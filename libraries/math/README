@@ -1,7 +1,7 @@
       Alan's math Library
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- abs (n : int) : proc
+- abs (n : int) : int
     Computes the absolute value of the integer argument n.
 
 - pow (x : int, y : int) : int
